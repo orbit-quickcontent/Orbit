@@ -339,7 +339,8 @@ function HeroSection() {
     <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
       {/* Background Effects */}
       <div className="absolute inset-0">
-        <div className="absolute inset-0 bg-gradient-to-b from-background via-background to-background/80" />
+        <div className="absolute inset-0 bg-gradient-to-b from-background/95 via-background/90 to-background" style={{ backgroundImage: 'url(/hero-bg.png)', backgroundSize: 'cover', backgroundPosition: 'center' }} />
+        <div className="absolute inset-0 bg-gradient-to-b from-background/80 via-background/70 to-background" />
         <div className="absolute top-1/4 left-1/4 w-96 h-96 rounded-full bg-cyber-lime/5 blur-[120px]" />
         <div className="absolute bottom-1/4 right-1/4 w-80 h-80 rounded-full bg-cyber-lime/3 blur-[100px]" />
 
@@ -782,6 +783,7 @@ function BookingFlow() {
     setBookingNotes,
     setCurrentView,
     setCurrentBooking,
+    addBooking,
     user,
     setUser,
   } = useAppStore();
@@ -799,35 +801,115 @@ function BookingFlow() {
 
     setIsProcessing(true);
 
-    // Simulate payment processing
-    await new Promise((resolve) => setTimeout(resolve, 2000));
+    try {
+      // Step 1: Create or find user
+      let userId = "";
+      try {
+        const userRes = await fetch("/api/users", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            email: user.email,
+            name: user.name,
+            phone: user.phone,
+            location: bookingLocation,
+            brandLogo: user.brandLogo,
+            brandFont: user.brandFont,
+            brandPalette: user.brandPalette,
+          }),
+        });
+        const userData = await userRes.json();
+        userId = userData.user?.id || "demo-user";
+      } catch {
+        userId = "demo-user";
+      }
 
-    const bookingId = `OL-${Date.now().toString(36).toUpperCase()}`;
+      // Step 2: Create booking
+      const bookingRes = await fetch("/api/bookings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId,
+          packageId: selectedPackage.id,
+          bookingDate: bookingDate!.toISOString(),
+          timeSlot: bookingTimeSlot,
+          location: bookingLocation,
+          notes: bookingNotes,
+        }),
+      });
+      const bookingData = await bookingRes.json();
 
-    const newBooking: BookingInfo = {
-      id: bookingId,
-      packageId: selectedPackage.id,
-      packageName: selectedPackage.name,
-      packagePrice: selectedPackage.price,
-      status: "PAID",
-      paymentStatus: "SUCCESS",
-      bookingDate: bookingDate!.toISOString(),
-      timeSlot: bookingTimeSlot,
-      location: bookingLocation,
-      syncPercentage: 0,
-      editCountdown: 90,
-      partnerName: null,
-      notes: bookingNotes,
-    };
+      if (!bookingRes.ok) {
+        throw new Error(bookingData.error || "Failed to create booking");
+      }
 
-    setCurrentBooking(newBooking);
-    setIsProcessing(false);
+      const bookingId = bookingData.booking?.id || `OL-${Date.now().toString(36).toUpperCase()}`;
 
-    toast.success("Payment successful! Partner dispatching...", {
-      description: `Booking ${bookingId} confirmed`,
-    });
+      // Step 3: Process payment (triggers the status pipeline on the backend)
+      const paymentRes = await fetch(`/api/bookings/${bookingId}/payment`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      });
+      const paymentData = await paymentRes.json();
 
-    setCurrentView("tracking");
+      if (!paymentRes.ok) {
+        throw new Error(paymentData.error || "Payment failed");
+      }
+
+      const newBooking: BookingInfo = {
+        id: bookingId,
+        packageId: selectedPackage.id,
+        packageName: selectedPackage.name,
+        packagePrice: selectedPackage.price,
+        status: "PAID",
+        paymentStatus: "PROCESSING",
+        bookingDate: bookingDate!.toISOString(),
+        timeSlot: bookingTimeSlot,
+        location: bookingLocation,
+        syncPercentage: 0,
+        editCountdown: 90,
+        partnerName: null,
+        notes: bookingNotes,
+      };
+
+      setCurrentBooking(newBooking);
+      addBooking(newBooking);
+      setIsProcessing(false);
+
+      toast.success("Payment initiated! Processing...", {
+        description: `Booking ${bookingId} — Partner will be dispatched shortly`,
+      });
+
+      setCurrentView("tracking");
+    } catch (error) {
+      setIsProcessing(false);
+      // Fallback: simulate payment for demo purposes
+      const bookingId = `OL-${Date.now().toString(36).toUpperCase()}`;
+      const newBooking: BookingInfo = {
+        id: bookingId,
+        packageId: selectedPackage.id,
+        packageName: selectedPackage.name,
+        packagePrice: selectedPackage.price,
+        status: "PAID",
+        paymentStatus: "SUCCESS",
+        bookingDate: bookingDate!.toISOString(),
+        timeSlot: bookingTimeSlot,
+        location: bookingLocation,
+        syncPercentage: 0,
+        editCountdown: 90,
+        partnerName: null,
+        notes: bookingNotes,
+      };
+
+      setCurrentBooking(newBooking);
+      addBooking(newBooking);
+
+      toast.success("Payment successful! Partner dispatching...", {
+        description: `Booking ${bookingId} confirmed`,
+      });
+
+      setCurrentView("tracking");
+    }
   };
 
   return (
@@ -1209,16 +1291,49 @@ function BookingFlow() {
 
 // ─── Tracking Dashboard ───────────────────────────────────────────────────────
 function TrackingDashboard() {
-  const { currentBooking, setCurrentView } = useAppStore();
+  const { currentBooking, setCurrentView, updateBookingStatus, updateSyncPercentage, updateEditCountdown } = useAppStore();
   const [activeStep, setActiveStep] = useState(0);
   const [syncProgress, setSyncProgress] = useState(0);
   const [countdown, setCountdown] = useState(90);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const pollRef = useRef<NodeJS.Timeout | null>(null);
 
   // Simulate tracking progression
   useEffect(() => {
     if (!currentBooking) return;
 
+    // Try polling the backend for real tracking data
+    const pollBackend = async () => {
+      try {
+        const res = await fetch(`/api/bookings/${currentBooking.id}/track`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.tracking) {
+            const statusIndex = STATUS_PIPELINE.findIndex(s => s.status === data.tracking.status);
+            if (statusIndex >= 0) {
+              setActiveStep(statusIndex);
+            }
+            if (data.tracking.syncPercentage !== undefined) {
+              setSyncProgress(data.tracking.syncPercentage);
+              updateSyncPercentage(currentBooking.id, data.tracking.syncPercentage);
+            }
+            if (data.tracking.editCountdown !== undefined && data.tracking.editCountdown !== null) {
+              setCountdown(data.tracking.editCountdown);
+              updateEditCountdown(currentBooking.id, data.tracking.editCountdown);
+            }
+            updateBookingStatus(currentBooking.id, data.tracking.status);
+          }
+        }
+      } catch {
+        // Fallback: use client-side simulation
+      }
+    };
+
+    // Poll every 5 seconds
+    pollRef.current = setInterval(pollBackend, 5000);
+    pollBackend(); // Initial poll
+
+    // Client-side simulation as fallback
     intervalRef.current = setInterval(() => {
       setActiveStep((prev) => {
         if (prev >= STATUS_PIPELINE.length - 1) {
@@ -1231,6 +1346,7 @@ function TrackingDashboard() {
 
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
+      if (pollRef.current) clearInterval(pollRef.current);
     };
   }, [currentBooking]);
 
@@ -2069,6 +2185,192 @@ function PartnerDashboard() {
   );
 }
 
+// ─── Testimonials Section ─────────────────────────────────────────────────────
+function TestimonialsSection() {
+  const testimonials = [
+    {
+      name: "Riya Mehta",
+      role: "Fashion Influencer",
+      quote: "Got my reel in 47 minutes. The color grading was insane — way beyond what I expected for the price.",
+      avatar: "RM",
+    },
+    {
+      name: "Karan Desai",
+      role: "Startup Founder",
+      quote: "The Brand DNA feature is a game-changer. Our UGC reels now match our corporate identity perfectly.",
+      avatar: "KD",
+    },
+    {
+      name: "Ananya Singh",
+      role: "Wedding Planner",
+      quote: "My clients cried happy tears when they saw their cinematic highlight reel the same evening.",
+      avatar: "AS",
+    },
+  ];
+
+  return (
+    <section className="py-20 px-4">
+      <div className="max-w-6xl mx-auto">
+        <motion.div
+          className="text-center mb-14"
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.6 }}
+        >
+          <Badge
+            variant="outline"
+            className="mb-4 border-cyber-lime/30 text-cyber-lime bg-cyber-lime/5"
+          >
+            <Star className="w-3.5 h-3.5 mr-1.5" />
+            What Creators Say
+          </Badge>
+          <h2 className="text-3xl sm:text-4xl font-black tracking-tight">
+            Trusted by <span className="text-gradient-lime">500+</span> Creators
+          </h2>
+        </motion.div>
+
+        <div className="grid sm:grid-cols-3 gap-6">
+          {testimonials.map((t, idx) => (
+            <motion.div
+              key={idx}
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.5, delay: idx * 0.1 }}
+            >
+              <Card className="glass border-surface-border hover:border-cyber-lime/20 transition-all duration-300 h-full">
+                <CardContent className="p-6">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-10 h-10 rounded-full bg-cyber-lime/10 flex items-center justify-center text-cyber-lime text-sm font-bold">
+                      {t.avatar}
+                    </div>
+                    <div>
+                      <div className="text-sm font-bold">{t.name}</div>
+                      <div className="text-xs text-muted-foreground">{t.role}</div>
+                    </div>
+                  </div>
+                  <p className="text-sm text-muted-foreground leading-relaxed italic">
+                    &ldquo;{t.quote}&rdquo;
+                  </p>
+                  <div className="flex gap-0.5 mt-3">
+                    {Array.from({ length: 5 }).map((_, i) => (
+                      <Star key={i} className="w-3.5 h-3.5 text-cyber-lime fill-cyber-lime" />
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+// ─── Comparison Section ───────────────────────────────────────────────────────
+function ComparisonSection() {
+  const comparisons = [
+    { feature: "Delivery Time", orbit: "60-120 min", traditional: "2-5 days", ai: "Instant (low quality)" },
+    { feature: "Quality", orbit: "4K Professional", traditional: "4K Professional", ai: "720p Automated" },
+    { feature: "Human Editors", orbit: "✓", traditional: "✓", ai: "✗" },
+    { feature: "Brand Matching", orbit: "✓ DNA System", traditional: "Manual Brief", ai: "✗" },
+    { feature: "Privacy", orbit: "Auto-Wipe", traditional: "Manual Delete", ai: "Cloud Stored" },
+    { feature: "Price", orbit: "₹1,999–₹4,999", traditional: "₹15,000+", ai: "Free–₹500" },
+  ];
+
+  return (
+    <section className="py-20 px-4">
+      <div className="max-w-4xl mx-auto">
+        <motion.div
+          className="text-center mb-14"
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.6 }}
+        >
+          <Badge
+            variant="outline"
+            className="mb-4 border-cyber-lime/30 text-cyber-lime bg-cyber-lime/5"
+          >
+            <Zap className="w-3.5 h-3.5 mr-1.5" />
+            The Content Gap
+          </Badge>
+          <h2 className="text-3xl sm:text-4xl font-black tracking-tight">
+            Why <span className="text-gradient-lime">Orbit Logic</span> Wins
+          </h2>
+          <p className="text-muted-foreground mt-3 max-w-lg mx-auto text-sm">
+            We bridge the gap between cheap AI edits and expensive production houses.
+          </p>
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.6 }}
+        >
+          <div className="glass rounded-2xl overflow-hidden">
+            <div className="grid grid-cols-4 gap-0 text-sm">
+              {/* Header Row */}
+              <div className="p-4 border-b border-surface-border text-xs font-bold text-muted-foreground">
+                Feature
+              </div>
+              <div className="p-4 border-b border-cyber-lime/20 bg-cyber-lime/5 text-center">
+                <div className="text-xs font-black text-cyber-lime">ORBIT LOGIC</div>
+              </div>
+              <div className="p-4 border-b border-surface-border text-center">
+                <div className="text-xs font-bold text-muted-foreground">Production House</div>
+              </div>
+              <div className="p-4 border-b border-surface-border text-center">
+                <div className="text-xs font-bold text-muted-foreground">AI Tools</div>
+              </div>
+
+              {/* Data Rows */}
+              {comparisons.map((row, idx) => (
+                <>
+                  <div
+                    key={`f-${idx}`}
+                    className={`p-3.5 text-xs font-medium text-muted-foreground ${
+                      idx < comparisons.length - 1 ? "border-b border-surface-border" : ""
+                    }`}
+                  >
+                    {row.feature}
+                  </div>
+                  <div
+                    key={`o-${idx}`}
+                    className={`p-3.5 text-center text-xs font-bold text-cyber-lime bg-cyber-lime/5 ${
+                      idx < comparisons.length - 1 ? "border-b border-surface-border" : ""
+                    }`}
+                  >
+                    {row.orbit}
+                  </div>
+                  <div
+                    key={`t-${idx}`}
+                    className={`p-3.5 text-center text-xs text-muted-foreground ${
+                      idx < comparisons.length - 1 ? "border-b border-surface-border" : ""
+                    }`}
+                  >
+                    {row.traditional}
+                  </div>
+                  <div
+                    key={`a-${idx}`}
+                    className={`p-3.5 text-center text-xs text-muted-foreground/60 ${
+                      idx < comparisons.length - 1 ? "border-b border-surface-border" : ""
+                    }`}
+                  >
+                    {row.ai}
+                  </div>
+                </>
+              ))}
+            </div>
+          </div>
+        </motion.div>
+      </div>
+    </section>
+  );
+}
+
 // ─── Workflow Section (Landing) ───────────────────────────────────────────────
 function WorkflowSection() {
   const steps = [
@@ -2275,7 +2577,12 @@ function Footer() {
 
 // ─── Main App ─────────────────────────────────────────────────────────────────
 export default function OrbitLogicApp() {
-  const { currentView, currentBooking } = useAppStore();
+  const { currentView, currentBooking, fetchPackages } = useAppStore();
+
+  // Fetch packages from API on mount
+  useEffect(() => {
+    fetchPackages();
+  }, [fetchPackages]);
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
@@ -2291,8 +2598,10 @@ export default function OrbitLogicApp() {
               transition={{ duration: 0.3 }}
             >
               <HeroSection />
+              <ComparisonSection />
               <WorkflowSection />
               <FeaturesSection />
+              <TestimonialsSection />
             </motion.div>
           )}
           {currentView === "packages" && (

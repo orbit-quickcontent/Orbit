@@ -65,8 +65,9 @@ interface AppState {
   setUser: (user: Partial<UserProfile>) => void;
 
   // Packages
-  packages: PackageInfo[];
+  packages: PackageInfo[],
   setPackages: (packages: PackageInfo[]) => void;
+  fetchPackages: () => Promise<void>;
   selectedPackage: PackageInfo | null;
   setSelectedPackage: (pkg: PackageInfo | null) => void;
 
@@ -160,6 +161,29 @@ export const useAppStore = create<AppState>((set) => ({
     },
   ],
   setPackages: (packages) => set({ packages }),
+  fetchPackages: async () => {
+    try {
+      const res = await fetch('/api/packages');
+      if (res.ok) {
+        const data = await res.json();
+        if (data.packages && data.packages.length > 0) {
+          const mapped: PackageInfo[] = data.packages.map((pkg: Record<string, unknown>) => ({
+            id: pkg.id as string,
+            name: pkg.name as string,
+            tier: pkg.tier as string,
+            price: pkg.price as number,
+            focus: pkg.focus as string,
+            deliveryTime: pkg.deliveryTime as string,
+            features: Array.isArray(pkg.features) ? pkg.features as string[] : JSON.parse(pkg.features as string || '[]'),
+            popular: pkg.popular as boolean,
+          }));
+          set({ packages: mapped });
+        }
+      }
+    } catch {
+      // Keep client-side defaults
+    }
+  },
   selectedPackage: null,
   setSelectedPackage: (pkg) => set({ selectedPackage: pkg }),
 
