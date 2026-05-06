@@ -56,6 +56,10 @@ interface AppState {
   currentView: AppView;
   setCurrentView: (view: AppView) => void;
 
+  // Role
+  userRole: "USER" | "PARTNER";
+  setUserRole: (role: "USER" | "PARTNER") => void;
+
   // User
   user: UserProfile;
   setUser: (user: Partial<UserProfile>) => void;
@@ -76,6 +80,10 @@ interface AppState {
   updateSyncPercentage: (id: string, percentage: number) => void;
   updateEditCountdown: (id: string, minutes: number) => void;
 
+  // Partner
+  partnerActiveBooking: BookingInfo | null;
+  setPartnerActiveBooking: (booking: BookingInfo | null) => void;
+
   // Booking form
   bookingDate: Date | undefined;
   setBookingDate: (date: Date | undefined) => void;
@@ -95,6 +103,10 @@ export const useAppStore = create<AppState>((set) => ({
   // Navigation
   currentView: "landing",
   setCurrentView: (view) => set({ currentView: view }),
+
+  // Role
+  userRole: "USER",
+  setUserRole: (role) => set({ userRole: role }),
 
   // User
   user: {
@@ -197,6 +209,10 @@ export const useAppStore = create<AppState>((set) => ({
           ? { ...state.currentBooking, editCountdown }
           : state.currentBooking,
     })),
+
+  // Partner
+  partnerActiveBooking: null,
+  setPartnerActiveBooking: (booking) => set({ partnerActiveBooking: booking }),
 
   // Booking form
   bookingDate: undefined,

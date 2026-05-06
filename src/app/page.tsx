@@ -32,6 +32,16 @@ import {
   Rocket,
   CircleDot,
   PartyPopper,
+  Cloud,
+  HardDrive,
+  Palette,
+  Type,
+  ImageIcon,
+  Wifi,
+  RefreshCw,
+  History,
+  LayoutDashboard,
+  UserCog,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
@@ -39,6 +49,14 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Card,
   CardContent,
@@ -81,17 +99,103 @@ const STATUS_PIPELINE: { status: BookingStatus; label: string; icon: React.React
   { status: "DELIVERED", label: "Delivered", icon: <CheckCircle2 className="w-5 h-5" />, description: "Your cinematic reel is ready to download!" },
 ];
 
+// ─── Brand Palette Presets ────────────────────────────────────────────────────
+const BRAND_PALETTES = [
+  { name: "Minimalist", colors: ["#FFFFFF", "#1A1A1A", "#CCFF00"] },
+  { name: "Sunset", colors: ["#FF6B35", "#F7C59F", "#004E89"] },
+  { name: "Ocean", colors: ["#0077B6", "#00B4D8", "#90E0EF"] },
+  { name: "Forest", colors: ["#2D6A4F", "#95D5B2", "#D8F3DC"] },
+  { name: "Royal", colors: ["#7B2CBF", "#C77DFF", "#E0AAFF"] },
+  { name: "Warm", colors: ["#D4A373", "#FAEDCD", "#FEFAE0"] },
+];
+
+// ─── Shot List ────────────────────────────────────────────────────────────────
+const SHOT_LIST = [
+  { id: "shot-1", name: "Establishing Shot", description: "Wide angle of location/venue" },
+  { id: "shot-2", name: "Subject Intro", description: "Introduction of the main subject" },
+  { id: "shot-3", name: "Action Sequence", description: "Key moments and activity" },
+  { id: "shot-4", name: "B-Roll", description: "Detail shots and cutaway footage" },
+  { id: "shot-5", name: "Closing Shot", description: "Final frame and wrap-up" },
+];
+
+// ─── Mock Available Bookings for Partner ──────────────────────────────────────
+const MOCK_AVAILABLE_BOOKINGS: BookingInfo[] = [
+  {
+    id: "OL-AVAIL001",
+    packageId: "pkg-professional",
+    packageName: "Professional (UGC)",
+    packagePrice: 4999,
+    status: "PAID",
+    paymentStatus: "SUCCESS",
+    bookingDate: new Date(Date.now() + 86400000).toISOString(),
+    timeSlot: "10:00 AM",
+    location: "Connaught Place, New Delhi",
+    syncPercentage: 0,
+    editCountdown: null,
+    partnerName: null,
+    notes: "Brand shoot for tech startup. Need corporate aesthetic.",
+  },
+  {
+    id: "OL-AVAIL002",
+    packageId: "pkg-personalized",
+    packageName: "Personalized",
+    packagePrice: 1999,
+    status: "PAID",
+    paymentStatus: "SUCCESS",
+    bookingDate: new Date(Date.now() + 86400000).toISOString(),
+    timeSlot: "02:00 PM",
+    location: "Juhu Beach, Mumbai",
+    syncPercentage: 0,
+    editCountdown: null,
+    partnerName: null,
+    notes: "Pre-wedding candid reel. Golden hour preferred.",
+  },
+  {
+    id: "OL-AVAIL003",
+    packageId: "pkg-professional",
+    packageName: "Professional (UGC)",
+    packagePrice: 4999,
+    status: "PAID",
+    paymentStatus: "SUCCESS",
+    bookingDate: new Date(Date.now() + 172800000).toISOString(),
+    timeSlot: "11:00 AM",
+    location: "Koramangala, Bangalore",
+    syncPercentage: 0,
+    editCountdown: null,
+    partnerName: null,
+    notes: "Product launch video. Brand assets will be shared.",
+  },
+];
+
 // ─── Navigation Component ─────────────────────────────────────────────────────
 function Navbar() {
-  const { currentView, setCurrentView, currentBooking } = useAppStore();
+  const { currentView, setCurrentView, currentBooking, userRole, setUserRole } = useAppStore();
   const [mobileOpen, setMobileOpen] = useState(false);
 
-  const navItems: { label: string; view: AppView; show: boolean }[] = [
+  const userNavItems: { label: string; view: AppView; show: boolean }[] = [
     { label: "Home", view: "landing", show: true },
     { label: "Packages", view: "packages", show: true },
     { label: "Book Now", view: "booking", show: true },
     { label: "Track Order", view: "tracking", show: !!currentBooking },
   ];
+
+  const partnerNavItems: { label: string; view: AppView; show: boolean }[] = [
+    { label: "Dashboard", view: "partner", show: true },
+    { label: "Active Shoot", view: "partner", show: true },
+    { label: "History", view: "partner", show: true },
+  ];
+
+  const navItems = userRole === "USER" ? userNavItems : partnerNavItems;
+
+  const handleRoleSwitch = (role: "USER" | "PARTNER") => {
+    setUserRole(role);
+    if (role === "PARTNER") {
+      setCurrentView("partner");
+    } else {
+      setCurrentView("landing");
+    }
+    setMobileOpen(false);
+  };
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 glass-strong">
@@ -99,7 +203,7 @@ function Navbar() {
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
           <button
-            onClick={() => setCurrentView("landing")}
+            onClick={() => setCurrentView(userRole === "PARTNER" ? "partner" : "landing")}
             className="flex items-center gap-2 group"
           >
             <div className="relative w-8 h-8">
@@ -114,13 +218,37 @@ function Navbar() {
             </span>
           </button>
 
-          {/* Desktop Nav */}
-          <div className="hidden md:flex items-center gap-1">
+          {/* Desktop Nav + Role Toggle */}
+          <div className="hidden md:flex items-center gap-3">
+            {/* Role Toggle */}
+            <div className="flex items-center bg-white/5 rounded-lg p-0.5 border border-surface-border mr-2">
+              <button
+                onClick={() => handleRoleSwitch("USER")}
+                className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all duration-200 ${
+                  userRole === "USER"
+                    ? "bg-cyber-lime text-black"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                Client
+              </button>
+              <button
+                onClick={() => handleRoleSwitch("PARTNER")}
+                className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all duration-200 ${
+                  userRole === "PARTNER"
+                    ? "bg-cyber-lime text-black"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                Partner
+              </button>
+            </div>
+
             {navItems
               .filter((n) => n.show)
               .map((item) => (
                 <button
-                  key={item.view}
+                  key={item.view + item.label}
                   onClick={() => setCurrentView(item.view)}
                   className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
                     currentView === item.view
@@ -152,12 +280,36 @@ function Navbar() {
             exit={{ opacity: 0, height: 0 }}
             className="md:hidden glass-strong border-t border-surface-border"
           >
-            <div className="px-4 py-3 space-y-1">
+            <div className="px-4 py-3 space-y-3">
+              {/* Role Toggle Mobile */}
+              <div className="flex items-center bg-white/5 rounded-lg p-0.5 border border-surface-border">
+                <button
+                  onClick={() => handleRoleSwitch("USER")}
+                  className={`flex-1 px-3 py-2 rounded-md text-sm font-bold transition-all duration-200 ${
+                    userRole === "USER"
+                      ? "bg-cyber-lime text-black"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  Client
+                </button>
+                <button
+                  onClick={() => handleRoleSwitch("PARTNER")}
+                  className={`flex-1 px-3 py-2 rounded-md text-sm font-bold transition-all duration-200 ${
+                    userRole === "PARTNER"
+                      ? "bg-cyber-lime text-black"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  Partner
+                </button>
+              </div>
+
               {navItems
                 .filter((n) => n.show)
                 .map((item) => (
                   <button
-                    key={item.view}
+                    key={item.view + item.label}
                     onClick={() => {
                       setCurrentView(item.view);
                       setMobileOpen(false);
@@ -480,6 +632,142 @@ function PackageDashboard() {
   );
 }
 
+// ─── Brand DNA Component ─────────────────────────────────────────────────────
+function BrandDNASection() {
+  const { user, setUser } = useAppStore();
+  const [selectedPalette, setSelectedPalette] = useState<string | null>(null);
+
+  const handlePaletteSelect = (palette: typeof BRAND_PALETTES[0]) => {
+    setSelectedPalette(palette.name);
+    setUser({ brandPalette: JSON.stringify(palette.colors) });
+  };
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, height: 0 }}
+      animate={{ opacity: 1, height: "auto" }}
+      exit={{ opacity: 0, height: 0 }}
+      className="space-y-4"
+    >
+      <Separator className="bg-surface-border" />
+      <div className="flex items-center gap-2 text-cyber-lime">
+        <Sparkles className="w-4 h-4" />
+        <span className="text-sm font-bold">Brand DNA</span>
+        <Badge variant="outline" className="text-[10px] border-cyber-lime/30 text-cyber-lime">
+          PRO
+        </Badge>
+      </div>
+      <p className="text-xs text-muted-foreground">
+        Upload your brand assets for logo, font, and palette matching in your reels.
+      </p>
+
+      {/* Brand Logo Upload */}
+      <div>
+        <label className="text-sm font-medium text-muted-foreground mb-1.5 block">
+          Brand Logo
+        </label>
+        <div className="glass rounded-xl p-4 border border-dashed border-surface-border hover:border-cyber-lime/30 transition-colors">
+          {user.brandLogo ? (
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-lg bg-cyber-lime/10 flex items-center justify-center">
+                <ImageIcon className="w-6 h-6 text-cyber-lime" />
+              </div>
+              <div className="flex-1">
+                <div className="text-sm font-medium">{user.brandLogo}</div>
+                <div className="text-xs text-muted-foreground">Logo uploaded</div>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setUser({ brandLogo: null })}
+                className="text-muted-foreground hover:text-foreground"
+              >
+                <X className="w-4 h-4" />
+              </Button>
+            </div>
+          ) : (
+            <label className="flex flex-col items-center gap-2 cursor-pointer">
+              <div className="w-10 h-10 rounded-lg bg-white/5 flex items-center justify-center">
+                <Upload className="w-5 h-5 text-muted-foreground" />
+              </div>
+              <span className="text-xs text-muted-foreground">
+                Click to upload logo (PNG, SVG)
+              </span>
+              <input
+                type="file"
+                className="hidden"
+                accept="image/*"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) {
+                    setUser({ brandLogo: file.name });
+                    toast.success("Logo uploaded", { description: file.name });
+                  }
+                }}
+              />
+            </label>
+          )}
+        </div>
+      </div>
+
+      {/* Brand Font Selector */}
+      <div>
+        <label className="text-sm font-medium text-muted-foreground mb-1.5 block">
+          Brand Font
+        </label>
+        <Select
+          value={user.brandFont || ""}
+          onValueChange={(value) => setUser({ brandFont: value })}
+        >
+          <SelectTrigger className="bg-white/5 border-surface-border focus:border-cyber-lime/50 focus:ring-cyber-lime/20">
+            <SelectValue placeholder="Select a font" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="Inter">Inter</SelectItem>
+            <SelectItem value="Playfair Display">Playfair Display</SelectItem>
+            <SelectItem value="Montserrat">Montserrat</SelectItem>
+            <SelectItem value="Roboto">Roboto</SelectItem>
+            <SelectItem value="Custom">Custom</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* Brand Palette */}
+      <div>
+        <label className="text-sm font-medium text-muted-foreground mb-1.5 block">
+          Brand Palette
+        </label>
+        <div className="grid grid-cols-3 gap-2">
+          {BRAND_PALETTES.map((palette) => (
+            <button
+              key={palette.name}
+              onClick={() => handlePaletteSelect(palette)}
+              className={`glass rounded-lg p-2.5 text-left transition-all ${
+                selectedPalette === palette.name
+                  ? "border-cyber-lime/50 bg-cyber-lime/5"
+                  : "border-surface-border hover:border-cyber-lime/20"
+              }`}
+            >
+              <div className="flex gap-1 mb-1.5">
+                {palette.colors.map((color, i) => (
+                  <div
+                    key={i}
+                    className="w-5 h-5 rounded-full border border-white/10"
+                    style={{ backgroundColor: color }}
+                  />
+                ))}
+              </div>
+              <div className="text-[10px] font-medium text-muted-foreground">
+                {palette.name}
+              </div>
+            </button>
+          ))}
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+
 // ─── Booking Flow ─────────────────────────────────────────────────────────────
 function BookingFlow() {
   const {
@@ -500,11 +788,11 @@ function BookingFlow() {
 
   const [step, setStep] = useState(1);
   const [isProcessing, setIsProcessing] = useState(false);
-  const totalSteps = 3;
 
   const canProceedStep1 = user.name && user.email && user.phone;
   const canProceedStep2 = bookingDate && bookingTimeSlot && bookingLocation;
   const canProceedStep3 = selectedPackage;
+  const isProfessionalTier = selectedPackage && selectedPackage.price >= 4999;
 
   const handlePayment = async () => {
     if (!selectedPackage) return;
@@ -635,6 +923,9 @@ function BookingFlow() {
                     className="bg-white/5 border-surface-border focus:border-cyber-lime/50 focus:ring-cyber-lime/20"
                   />
                 </div>
+
+                {/* Brand DNA Section - Only for Professional Tier */}
+                {isProfessionalTier && <BrandDNASection />}
               </div>
               <div className="mt-8 flex justify-end">
                 <Button
@@ -802,6 +1093,39 @@ function BookingFlow() {
                           {bookingLocation}
                         </span>
                       </div>
+                      {/* Brand DNA Summary */}
+                      {isProfessionalTier && (user.brandLogo || user.brandFont || user.brandPalette) && (
+                        <>
+                          <Separator className="bg-surface-border" />
+                          <div className="text-xs font-medium text-cyber-lime mb-1">Brand DNA</div>
+                          {user.brandLogo && (
+                            <div className="flex justify-between">
+                              <span className="text-muted-foreground">Logo</span>
+                              <span className="font-medium text-xs">{user.brandLogo}</span>
+                            </div>
+                          )}
+                          {user.brandFont && (
+                            <div className="flex justify-between">
+                              <span className="text-muted-foreground">Font</span>
+                              <span className="font-medium text-xs">{user.brandFont}</span>
+                            </div>
+                          )}
+                          {user.brandPalette && (
+                            <div className="flex justify-between items-center">
+                              <span className="text-muted-foreground">Palette</span>
+                              <div className="flex gap-1">
+                                {JSON.parse(user.brandPalette).map((color: string, i: number) => (
+                                  <div
+                                    key={i}
+                                    className="w-4 h-4 rounded-full border border-white/10"
+                                    style={{ backgroundColor: color }}
+                                  />
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </>
+                      )}
                       <Separator className="bg-surface-border" />
                       <div className="flex justify-between text-base">
                         <span className="font-semibold">Total</span>
@@ -913,13 +1237,11 @@ function TrackingDashboard() {
   // Sync progress animation
   useEffect(() => {
     if (activeStep >= 5) {
-      // DELIVERED step - use interval to avoid direct setState
       const syncTimeout = setTimeout(() => {
         setSyncProgress(() => 100);
       }, 0);
       return () => clearTimeout(syncTimeout);
     } else if (activeStep >= 3) {
-      // SYNCING or EDITING step
       const targetProgress = activeStep >= 4 ? 75 : 25;
       const syncInterval = setInterval(() => {
         setSyncProgress((prev) => {
@@ -945,7 +1267,7 @@ function TrackingDashboard() {
           }
           return prev - 1;
         });
-      }, 60000); // Every minute
+      }, 60000);
       return () => clearInterval(countdownInterval);
     }
   }, [activeStep]);
@@ -1024,7 +1346,6 @@ function TrackingDashboard() {
               {STATUS_PIPELINE.map((step, idx) => {
                 const isActive = idx === activeStep;
                 const isCompleted = idx < activeStep;
-                const isPending = idx > activeStep;
 
                 return (
                   <div
@@ -1076,7 +1397,6 @@ function TrackingDashboard() {
 
         {/* Live Stats Grid */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-          {/* Sync Percentage */}
           <motion.div
             className="glass rounded-xl p-4"
             initial={{ opacity: 0, y: 10 }}
@@ -1096,7 +1416,6 @@ function TrackingDashboard() {
             />
           </motion.div>
 
-          {/* Countdown */}
           <motion.div
             className="glass rounded-xl p-4"
             initial={{ opacity: 0, y: 10 }}
@@ -1113,7 +1432,6 @@ function TrackingDashboard() {
             </div>
           </motion.div>
 
-          {/* Package */}
           <motion.div
             className="glass rounded-xl p-4"
             initial={{ opacity: 0, y: 10 }}
@@ -1129,7 +1447,6 @@ function TrackingDashboard() {
             </div>
           </motion.div>
 
-          {/* Status */}
           <motion.div
             className="glass rounded-xl p-4"
             initial={{ opacity: 0, y: 10 }}
@@ -1207,6 +1524,546 @@ function TrackingDashboard() {
             </div>
           </div>
         </div>
+      </div>
+    </section>
+  );
+}
+
+// ─── Partner Dashboard ────────────────────────────────────────────────────────
+function PartnerDashboard() {
+  const { partnerActiveBooking, setPartnerActiveBooking } = useAppStore();
+  const [partnerPhase, setPartnerPhase] = useState<"available" | "shooting" | "syncing" | "privacy">("available");
+  const [completedShots, setCompletedShots] = useState<Set<string>>(new Set());
+  const [syncProgress, setSyncProgress] = useState(0);
+  const [syncSpeed, setSyncSpeed] = useState(0);
+  const [currentFile, setCurrentFile] = useState("");
+  const syncIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Partner stats
+  const [partnerStats, setPartnerStats] = useState({
+    completedProjects: 47,
+    rating: 4.9,
+    earnings: 84500,
+  });
+
+  // Simulated file names for sync
+  const syncFiles = [
+    "clip_001_4k.mov",
+    "clip_002_4k.mov",
+    "clip_003_4k.mov",
+    "clip_004_4k.mov",
+    "clip_005_4k.mov",
+    "clip_006_4k.mov",
+    "clip_007_4k.mov",
+  ];
+
+  const handleAcceptBooking = (booking: BookingInfo) => {
+    setPartnerActiveBooking(booking);
+    setPartnerPhase("shooting");
+    setCompletedShots(new Set());
+    toast.success("Booking accepted!", {
+      description: `Heading to ${booking.location}`,
+    });
+  };
+
+  const handleStartShooting = () => {
+    toast.success("Orbit Capture Module activated", {
+      description: "Recording in 4K at 60fps",
+    });
+  };
+
+  const handleShotCheck = (shotId: string) => {
+    setCompletedShots((prev) => {
+      const next = new Set(prev);
+      if (next.has(shotId)) {
+        next.delete(shotId);
+      } else {
+        next.add(shotId);
+      }
+      return next;
+    });
+  };
+
+  const handleCompleteShooting = () => {
+    setPartnerPhase("syncing");
+    setSyncProgress(0);
+    setCurrentFile(syncFiles[0]);
+    setSyncSpeed(42);
+
+    // Simulate sync progress
+    let fileIdx = 0;
+    syncIntervalRef.current = setInterval(() => {
+      setSyncProgress((prev) => {
+        const next = prev + 1;
+        if (next >= 100) {
+          if (syncIntervalRef.current) clearInterval(syncIntervalRef.current);
+          setTimeout(() => {
+            setPartnerPhase("privacy");
+          }, 500);
+          return 100;
+        }
+
+        // Update file name based on progress
+        const newFileIdx = Math.min(Math.floor((next / 100) * syncFiles.length), syncFiles.length - 1);
+        if (newFileIdx !== fileIdx) {
+          fileIdx = newFileIdx;
+          setCurrentFile(syncFiles[newFileIdx]);
+        }
+
+        // Vary speed
+        setSyncSpeed(Math.floor(35 + Math.random() * 20));
+
+        return next;
+      });
+    }, 150);
+  };
+
+  const handleCompleteAndReturn = () => {
+    setPartnerPhase("available");
+    setPartnerActiveBooking(null);
+    setCompletedShots(new Set());
+    setSyncProgress(0);
+    setPartnerStats((prev) => ({ ...prev, completedProjects: prev.completedProjects + 1 }));
+    toast.success("Project completed successfully!", {
+      description: "Returning to dashboard",
+    });
+  };
+
+  return (
+    <section className="min-h-screen pt-24 pb-20 px-4">
+      <div className="max-w-5xl mx-auto">
+        {/* Partner Stats Bar */}
+        <motion.div
+          className="grid grid-cols-3 gap-4 mb-8"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+        >
+          <div className="glass rounded-xl p-4 text-center">
+            <div className="flex items-center justify-center gap-2 mb-1">
+              <CheckCircle2 className="w-4 h-4 text-cyber-lime" />
+              <span className="text-xs text-muted-foreground">Completed</span>
+            </div>
+            <div className="text-2xl font-black text-cyber-lime">
+              {partnerStats.completedProjects}
+            </div>
+          </div>
+          <div className="glass rounded-xl p-4 text-center">
+            <div className="flex items-center justify-center gap-2 mb-1">
+              <Star className="w-4 h-4 text-cyber-lime" />
+              <span className="text-xs text-muted-foreground">Rating</span>
+            </div>
+            <div className="text-2xl font-black text-cyber-lime">
+              {partnerStats.rating}
+            </div>
+          </div>
+          <div className="glass rounded-xl p-4 text-center">
+            <div className="flex items-center justify-center gap-2 mb-1">
+              <CreditCard className="w-4 h-4 text-cyber-lime" />
+              <span className="text-xs text-muted-foreground">This Month</span>
+            </div>
+            <div className="text-2xl font-black text-cyber-lime">
+              ₹{(partnerStats.earnings).toLocaleString("en-IN")}
+            </div>
+          </div>
+        </motion.div>
+
+        {/* Header */}
+        <motion.div
+          className="text-center mb-8"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+        >
+          <Badge
+            variant="outline"
+            className="mb-4 border-cyber-lime/30 text-cyber-lime bg-cyber-lime/5"
+          >
+            <LayoutDashboard className="w-3.5 h-3.5 mr-1.5" />
+            Partner Dashboard
+          </Badge>
+          <h2 className="text-3xl font-black tracking-tight mb-2">
+            Visual <span className="text-gradient-lime">Architect</span> Hub
+          </h2>
+          <p className="text-muted-foreground text-sm">
+            {partnerPhase === "available"
+              ? "Accept bookings and start capturing cinematic footage"
+              : partnerPhase === "shooting"
+              ? "Active shoot in progress"
+              : partnerPhase === "syncing"
+              ? "Uploading footage to cloud"
+              : "Privacy verification complete"}
+          </p>
+        </motion.div>
+
+        <AnimatePresence mode="wait">
+          {/* ─── Available Bookings Panel ─── */}
+          {partnerPhase === "available" && !partnerActiveBooking && (
+            <motion.div
+              key="available"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+            >
+              <div className="glass rounded-2xl p-6 sm:p-8">
+                <h3 className="text-lg font-bold mb-6 flex items-center gap-2">
+                  <RefreshCw className="w-5 h-5 text-cyber-lime" />
+                  Available Bookings
+                  <Badge variant="outline" className="ml-2 border-cyber-lime/30 text-cyber-lime text-xs">
+                    {MOCK_AVAILABLE_BOOKINGS.length} new
+                  </Badge>
+                </h3>
+                <div className="space-y-4 max-h-96 overflow-y-auto custom-scrollbar">
+                  {MOCK_AVAILABLE_BOOKINGS.map((booking, idx) => (
+                    <motion.div
+                      key={booking.id}
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: idx * 0.1 }}
+                      className="glass rounded-xl p-4 border border-surface-border hover:border-cyber-lime/20 transition-all"
+                    >
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                        <div className="space-y-2 flex-1">
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-bold text-foreground">{booking.id}</span>
+                            <Badge
+                              variant="outline"
+                              className={`text-[10px] ${
+                                booking.packagePrice >= 4999
+                                  ? "border-cyber-lime/30 text-cyber-lime"
+                                  : "border-surface-border text-muted-foreground"
+                              }`}
+                            >
+                              {booking.packageName}
+                            </Badge>
+                          </div>
+                          <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                            <div className="flex items-center gap-1.5">
+                              <CalendarIcon className="w-3 h-3 text-cyber-lime" />
+                              {new Date(booking.bookingDate).toLocaleDateString("en-IN", {
+                                month: "short",
+                                day: "numeric",
+                              })}
+                            </div>
+                            <div className="flex items-center gap-1.5">
+                              <Clock className="w-3 h-3 text-cyber-lime" />
+                              {booking.timeSlot}
+                            </div>
+                            <div className="flex items-center gap-1.5 col-span-2">
+                              <MapPin className="w-3 h-3 text-cyber-lime" />
+                              {booking.location}
+                            </div>
+                          </div>
+                          {booking.notes && (
+                            <p className="text-xs text-muted-foreground/60 italic">
+                              &ldquo;{booking.notes}&rdquo;
+                            </p>
+                          )}
+                        </div>
+                        <Button
+                          onClick={() => handleAcceptBooking(booking)}
+                          className="bg-cyber-lime text-black hover:bg-cyber-lime-dark font-bold whitespace-nowrap glow-lime"
+                        >
+                          Accept Booking
+                          <ArrowRight className="w-4 h-4 ml-1" />
+                        </Button>
+                      </div>
+                    </motion.div>
+                  ))}
+                </div>
+              </div>
+            </motion.div>
+          )}
+
+          {/* ─── Active Shoot Panel ─── */}
+          {partnerPhase === "shooting" && partnerActiveBooking && (
+            <motion.div
+              key="shooting"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+            >
+              <div className="glass rounded-2xl p-6 sm:p-8 mb-6">
+                <div className="flex items-center justify-between mb-6">
+                  <h3 className="text-lg font-bold flex items-center gap-2">
+                    <Camera className="w-5 h-5 text-cyber-lime" />
+                    Active Shoot
+                  </h3>
+                  <Badge
+                    variant="outline"
+                    className="border-cyber-lime/30 text-cyber-lime bg-cyber-lime/10"
+                  >
+                    {partnerActiveBooking.id}
+                  </Badge>
+                </div>
+
+                {/* Booking Info */}
+                <div className="glass rounded-xl p-4 mb-6 grid grid-cols-2 gap-3 text-sm">
+                  <div>
+                    <span className="text-xs text-muted-foreground">Location</span>
+                    <div className="font-medium">{partnerActiveBooking.location}</div>
+                  </div>
+                  <div>
+                    <span className="text-xs text-muted-foreground">Package</span>
+                    <div className="font-medium">{partnerActiveBooking.packageName}</div>
+                  </div>
+                  <div>
+                    <span className="text-xs text-muted-foreground">Time</span>
+                    <div className="font-medium">{partnerActiveBooking.timeSlot}</div>
+                  </div>
+                  <div>
+                    <span className="text-xs text-muted-foreground">Notes</span>
+                    <div className="font-medium text-xs">{partnerActiveBooking.notes || "None"}</div>
+                  </div>
+                </div>
+
+                {/* Orbit Capture Module */}
+                <div className="glass rounded-xl p-5 mb-6 border border-cyber-lime/20">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="relative">
+                      <div className="w-4 h-4 rounded-full bg-red-500 animate-pulse" />
+                      <div className="absolute inset-0 w-4 h-4 rounded-full bg-red-500 animate-ping opacity-30" />
+                    </div>
+                    <span className="text-sm font-bold text-red-400">REC</span>
+                    <span className="text-xs text-muted-foreground">Orbit Capture Module — 4K 60fps</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <HardDrive className="w-3 h-3 text-cyber-lime" />
+                    <span>Storage: 24.8 GB available</span>
+                    <span className="text-surface-border">|</span>
+                    <Wifi className="w-3 h-3 text-cyber-lime" />
+                    <span>Cloud: Connected</span>
+                  </div>
+                </div>
+
+                {/* Shot List */}
+                <div className="space-y-3 mb-6">
+                  <h4 className="text-sm font-semibold text-muted-foreground">Shot List</h4>
+                  {SHOT_LIST.map((shot, idx) => (
+                    <motion.div
+                      key={shot.id}
+                      initial={{ opacity: 0, x: -10 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: idx * 0.08 }}
+                      className={`flex items-center gap-3 glass rounded-lg p-3 transition-all ${
+                        completedShots.has(shot.id)
+                          ? "border-cyber-lime/30 bg-cyber-lime/5"
+                          : "border-surface-border"
+                      }`}
+                    >
+                      <Checkbox
+                        id={shot.id}
+                        checked={completedShots.has(shot.id)}
+                        onCheckedChange={() => handleShotCheck(shot.id)}
+                        className="border-cyber-lime/50 data-[state=checked]:bg-cyber-lime data-[state=checked]:text-black"
+                      />
+                      <div className="flex-1">
+                        <label
+                          htmlFor={shot.id}
+                          className={`text-sm font-medium cursor-pointer ${
+                            completedShots.has(shot.id)
+                              ? "line-through text-muted-foreground"
+                              : "text-foreground"
+                          }`}
+                        >
+                          {shot.name}
+                        </label>
+                        <p className="text-xs text-muted-foreground">{shot.description}</p>
+                      </div>
+                      {completedShots.has(shot.id) && (
+                        <CheckCircle2 className="w-4 h-4 text-cyber-lime" />
+                      )}
+                    </motion.div>
+                  ))}
+                </div>
+
+                {/* Action Buttons */}
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <Button
+                    onClick={handleStartShooting}
+                    variant="outline"
+                    className="flex-1 border-cyber-lime/30 text-cyber-lime hover:bg-cyber-lime/10 font-bold"
+                  >
+                    <Play className="w-4 h-4 mr-2" />
+                    Start Shooting
+                  </Button>
+                  <Button
+                    onClick={handleCompleteShooting}
+                    disabled={completedShots.size < SHOT_LIST.length}
+                    className="flex-1 bg-cyber-lime text-black hover:bg-cyber-lime-dark font-bold glow-lime"
+                  >
+                    <Upload className="w-4 h-4 mr-2" />
+                    Complete & Sync ({completedShots.size}/{SHOT_LIST.length})
+                  </Button>
+                </div>
+              </div>
+            </motion.div>
+          )}
+
+          {/* ─── Orbit Sync Module ─── */}
+          {partnerPhase === "syncing" && (
+            <motion.div
+              key="syncing"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+            >
+              <div className="glass rounded-2xl p-6 sm:p-8">
+                <h3 className="text-lg font-bold mb-6 flex items-center gap-2">
+                  <Cloud className="w-5 h-5 text-cyber-lime" />
+                  Orbit Sync Module
+                </h3>
+
+                {/* Sync Progress */}
+                <div className="glass rounded-xl p-5 mb-6">
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-sm font-medium">Uploading to Open Cloud Server</span>
+                    <span className="text-lg font-black text-cyber-lime">{syncProgress}%</span>
+                  </div>
+                  <Progress
+                    value={syncProgress}
+                    className="h-3 bg-white/5 mb-4"
+                  />
+                  <div className="flex items-center justify-between text-xs text-muted-foreground">
+                    <div className="flex items-center gap-2">
+                      <Film className="w-3 h-3 text-cyber-lime" />
+                      <span>{currentFile}</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <Wifi className="w-3 h-3 text-cyber-lime" />
+                      <span>{syncSpeed} MB/s</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* File List */}
+                <div className="space-y-2 mb-6">
+                  <h4 className="text-sm font-semibold text-muted-foreground mb-3">Upload Queue</h4>
+                  {syncFiles.map((file, idx) => {
+                    const fileProgress = Math.min(
+                      100,
+                      Math.max(0, Math.floor(((syncProgress - (idx * (100 / syncFiles.length))) / (100 / syncFiles.length)) * 100))
+                    );
+                    const isDone = syncProgress > ((idx + 1) / syncFiles.length) * 100;
+                    const isActive = !isDone && syncProgress > (idx / syncFiles.length) * 100;
+
+                    return (
+                      <div
+                        key={file}
+                        className={`flex items-center gap-3 glass rounded-lg p-3 text-xs ${
+                          isDone
+                            ? "border-cyber-lime/20"
+                            : isActive
+                            ? "border-cyber-lime/40 bg-cyber-lime/5"
+                            : "border-surface-border"
+                        }`}
+                      >
+                        {isDone ? (
+                          <CheckCircle2 className="w-4 h-4 text-cyber-lime shrink-0" />
+                        ) : isActive ? (
+                          <Loader2 className="w-4 h-4 text-cyber-lime shrink-0 animate-spin" />
+                        ) : (
+                          <Film className="w-4 h-4 text-muted-foreground shrink-0" />
+                        )}
+                        <span className={isDone ? "text-muted-foreground line-through" : "text-foreground"}>
+                          {file}
+                        </span>
+                        {isActive && (
+                          <span className="ml-auto text-cyber-lime font-medium">{fileProgress}%</span>
+                        )}
+                        {isDone && (
+                          <span className="ml-auto text-cyber-lime/60">Done</span>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+
+                <div className="flex items-center gap-2 text-xs text-muted-foreground justify-center">
+                  <Loader2 className="w-3 h-3 animate-spin text-cyber-lime" />
+                  <span>Syncing in progress... Please wait</span>
+                </div>
+              </div>
+            </motion.div>
+          )}
+
+          {/* ─── Privacy Shield ─── */}
+          {partnerPhase === "privacy" && (
+            <motion.div
+              key="privacy"
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+            >
+              <div className="glass rounded-2xl p-8 sm:p-10 text-center glow-lime">
+                {/* Animated Shield Icon */}
+                <motion.div
+                  className="w-20 h-20 mx-auto mb-6 rounded-full bg-green-500/10 flex items-center justify-center border-2 border-green-500/30"
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  transition={{ type: "spring", duration: 0.8 }}
+                >
+                  <motion.div
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    transition={{ delay: 0.3, type: "spring" }}
+                  >
+                    <Shield className="w-10 h-10 text-green-400" />
+                  </motion.div>
+                </motion.div>
+
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.5 }}
+                >
+                  <h3 className="text-2xl font-black mb-3">
+                    <span className="text-green-400">Privacy Shield</span> Activated
+                  </h3>
+                  <div className="flex items-center justify-center gap-2 mb-4">
+                    <CheckCircle2 className="w-5 h-5 text-green-400" />
+                    <span className="text-sm font-medium text-green-400">
+                      100% Synced & Verified
+                    </span>
+                  </div>
+                  <p className="text-muted-foreground mb-8 max-w-md mx-auto text-sm leading-relaxed">
+                    All local footage has been securely wiped from your device.
+                    The raw footage is now safely on the Open Cloud Server for
+                    professional editing.
+                  </p>
+
+                  <div className="glass rounded-xl p-4 mb-8 max-w-sm mx-auto border border-green-500/20">
+                    <div className="grid grid-cols-2 gap-3 text-xs">
+                      <div>
+                        <span className="text-muted-foreground">Files Synced</span>
+                        <div className="font-bold text-foreground">{syncFiles.length}</div>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">Local Wipe</span>
+                        <div className="font-bold text-green-400">Complete</div>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">Cloud Status</span>
+                        <div className="font-bold text-green-400">Verified</div>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">Encryption</span>
+                        <div className="font-bold text-green-400">AES-256</div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <Button
+                    onClick={handleCompleteAndReturn}
+                    className="bg-cyber-lime text-black hover:bg-cyber-lime-dark font-bold glow-lime px-8"
+                  >
+                    Complete & Return to Dashboard
+                    <CheckCircle2 className="w-4 h-4 ml-2" />
+                  </Button>
+                </motion.div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     </section>
   );
@@ -1418,7 +2275,7 @@ function Footer() {
 
 // ─── Main App ─────────────────────────────────────────────────────────────────
 export default function OrbitLogicApp() {
-  const { currentView } = useAppStore();
+  const { currentView, currentBooking } = useAppStore();
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
@@ -1469,6 +2326,17 @@ export default function OrbitLogicApp() {
               transition={{ duration: 0.3 }}
             >
               <TrackingDashboard />
+            </motion.div>
+          )}
+          {currentView === "partner" && (
+            <motion.div
+              key="partner"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.3 }}
+            >
+              <PartnerDashboard />
             </motion.div>
           )}
         </AnimatePresence>
