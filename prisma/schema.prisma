@@ -1,0 +1,88 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String    @id @default(cuid())
+  email        String    @unique
+  name         String?
+  phone        String?
+  location     String?
+  role         String    @default("USER") // USER, PARTNER, ADMIN
+  brandLogo    String?    // URL to brand logo
+  brandFont    String?    // Brand font name
+  brandPalette String?    // JSON string of brand colors
+  avatar       String?    // URL to avatar
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  bookings     Booking[]
+  partner      Partner?
+}
+
+model Package {
+  id           String   @id @default(cuid())
+  name         String   // Personalized, Professional (UGC)
+  tier         String   @unique // PERSONALIZED, PROFESSIONAL
+  price        Int      // Price in INR (1999, 4999)
+  focus        String   // Description of focus area
+  deliveryTime String   // "60-120 mins"
+  features     String   // JSON array of features
+  popular      Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  bookings     Booking[]
+}
+
+model Partner {
+  id                String   @id @default(cuid())
+  userId            String   @unique
+  user              User     @relation(fields: [userId], references: [id])
+  location          String
+  latitude          Float?
+  longitude         Float?
+  availability      Boolean  @default(true)
+  rating            Float    @default(0.0)
+  completedProjects Int      @default(0)
+  deviceInfo        String?  // iPhone 15 Pro, Pixel 8, etc.
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  bookings          Booking[]
+}
+
+model Booking {
+  id             String   @id @default(cuid())
+  userId         String
+  user           User     @relation(fields: [userId], references: [id])
+  packageId      String
+  package        Package  @relation(fields: [packageId], references: [id])
+  partnerId      String?
+  partner        Partner? @relation(fields: [partnerId], references: [id])
+
+  status         String   @default("PENDING") // PENDING, PAID, PARTNER_DISPATCHED, SHOOTING, SYNCING, EDITING, DELIVERED, CANCELLED
+  paymentStatus  String   @default("UNPAID") // UNPAID, PROCESSING, SUCCESS, FAILED, REFUNDED
+  paymentId      String?  // External payment gateway ID
+  paymentMethod  String?  // razorpay, stripe
+
+  bookingDate    DateTime // Selected date for the shoot
+  timeSlot       String   // "10:00 AM", "12:00 PM", etc.
+  location       String?  // Shoot location
+
+  syncPercentage Int      @default(0) // 0-100
+  editCountdown  Int?     // Minutes remaining for delivery
+  deliveredAt    DateTime?
+
+  notes          String?  // Additional notes from user
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
