@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Clock,
@@ -161,12 +162,13 @@ function Navbar() {
             onClick={() => setCurrentView(userRole === "PARTNER" ? "partner" : "landing")}
             className="flex items-center gap-2 group"
           >
-            <div className="relative w-8 h-8">
-              <div className="absolute inset-0 rounded-full border-2 border-orbit-cyan opacity-60 group-hover:opacity-100 transition-opacity animate-orbit" />
-              <div className="absolute inset-1.5 rounded-full bg-gradient-to-br from-orbit-cyan/20 to-orbit-purple/20 flex items-center justify-center">
-                <div className="w-2 h-2 rounded-full bg-gradient-to-br from-orbit-cyan to-orbit-purple" />
-              </div>
-            </div>
+            <Image
+              src="/orbit-logo.png"
+              alt="Orbit Logic Logo"
+              width={36}
+              height={36}
+              className="rounded-full group-hover:scale-110 transition-transform duration-200"
+            />
             <span className="text-lg font-bold tracking-tight">
               <span className="text-gradient-orbit">ORBIT</span>
               <span className="text-foreground ml-1">LOGIC</span>
