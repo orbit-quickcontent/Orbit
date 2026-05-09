@@ -14,9 +14,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Orbit Logic — Professional Cinema at On-Demand Speed",
+  title: "Orbit Logic — Professional Cinema. Delivered in 60 Minutes.",
   description:
-    "Desktop-grade professional edits within 60–120 minutes. Impact over Speed — using professional human editors at the speed of AI.",
+    "Desktop-grade professional edits within 60–120 minutes. The Orbit Edge: Fluidity & Precision — using professional human editors at the speed of AI.",
   keywords: [
     "Orbit Logic",
     "Cinema",
@@ -46,9 +46,9 @@ export default function RootLayout({
           position="top-right"
           toastOptions={{
             style: {
-              background: "#1A1A1A",
-              border: "1px solid #222222",
-              color: "#F5F5F5",
+              background: "#0A2860",
+              border: "1px solid #123566",
+              color: "#FFFFFF",
             },
           }}
         />
