@@ -14,18 +14,18 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Orbit Logic — Professional Cinema. Delivered in 60 Minutes.",
+  title: "Orbit — Professional Cinema. Delivered in 60 Minutes.",
   description:
     "Desktop-grade professional edits within 60–120 minutes. The Orbit Edge: Fluidity & Precision — using professional human editors at the speed of AI.",
   keywords: [
-    "Orbit Logic",
+    "Orbit",
     "Cinema",
     "Video Editing",
     "Professional Reels",
     "UGC",
     "On-Demand",
   ],
-  authors: [{ name: "Orbit Logic Team" }],
+  authors: [{ name: "Orbit Team" }],
   icons: {
     icon: "/orbit-logo.png",
   },

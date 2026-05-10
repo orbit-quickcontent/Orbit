@@ -164,15 +164,12 @@ function Navbar() {
           >
             <Image
               src="/orbit-logo.png"
-              alt="Orbit Logic Logo"
+              alt="Orbit Logo"
               width={36}
               height={36}
               className="rounded-full group-hover:scale-110 transition-transform duration-200"
             />
-            <span className="text-lg font-bold tracking-tight">
-              <span className="text-gradient-orbit">ORBIT</span>
-              <span className="text-foreground ml-1">LOGIC</span>
-            </span>
+            <span className="text-lg font-bold tracking-tight text-gradient-orbit">ORBIT</span>
           </button>
 
           {/* Desktop Nav */}
@@ -437,7 +434,7 @@ function ComparisonSection() {
             The Content Gap
           </Badge>
           <h2 className="text-3xl sm:text-4xl font-black tracking-tight">
-            Why <span className="text-gradient-orbit">Orbit Logic</span> Wins
+            Why <span className="text-gradient-orbit">Orbit</span> Wins
           </h2>
           <p className="text-muted-foreground mt-3 max-w-lg mx-auto text-sm">
             We bridge the gap between cheap AI edits and expensive production houses.
@@ -449,7 +446,7 @@ function ComparisonSection() {
             <div className="grid grid-cols-4 gap-0 text-sm">
               <div className="p-4 border-b border-orbit-border text-xs font-bold text-muted-foreground">Feature</div>
               <div className="p-4 border-b border-orbit-cyan/20 bg-gradient-to-r from-orbit-cyan/5 to-orbit-purple/5 text-center">
-                <div className="text-xs font-black text-gradient-orbit">ORBIT LOGIC</div>
+                <div className="text-xs font-black text-gradient-orbit">ORBIT</div>
               </div>
               <div className="p-4 border-b border-orbit-border text-center text-xs font-bold text-muted-foreground">Production House</div>
               <div className="p-4 border-b border-orbit-border text-center text-xs font-bold text-muted-foreground">AI Tools</div>
@@ -1468,13 +1465,10 @@ function Footer() {
                 <div className="w-1.5 h-1.5 rounded-full bg-gradient-to-br from-orbit-cyan to-orbit-purple" />
               </div>
             </div>
-            <span className="text-sm font-bold">
-              <span className="text-gradient-orbit">ORBIT</span>
-              <span className="text-foreground ml-1">LOGIC</span>
-            </span>
+            <span className="text-sm font-bold text-gradient-orbit">ORBIT</span>
           </div>
           <div className="text-xs text-muted-foreground">Professional Cinema. Delivered in 60 Minutes.</div>
-          <div className="text-xs text-muted-foreground">&copy; {new Date().getFullYear()} Orbit Logic. All rights reserved.</div>
+          <div className="text-xs text-muted-foreground">&copy; {new Date().getFullYear()} Orbit. All rights reserved.</div>
         </div>
       </div>
     </footer>
@@ -1496,7 +1490,6 @@ export default function OrbitLogicApp() {
             <motion.div key="landing" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.3 }}>
               <HeroSection />
               <ComparisonSection />
-              <WorkflowSection />
               <FeaturesSection />
               <TestimonialsSection />
             </motion.div>
