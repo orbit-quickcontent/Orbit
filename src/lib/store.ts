@@ -51,21 +51,25 @@ export interface UserProfile {
   brandPalette: string | null;
 }
 
+type UserRole = "USER" | "PARTNER";
+
 interface AppState {
+  // Auth
+  isAuthenticated: boolean;
+  userRole: UserRole;
+  login: (role: UserRole) => void;
+  logout: () => void;
+
   // Navigation
   currentView: AppView;
   setCurrentView: (view: AppView) => void;
-
-  // Role
-  userRole: "USER" | "PARTNER";
-  setUserRole: (role: "USER" | "PARTNER") => void;
 
   // User
   user: UserProfile;
   setUser: (user: Partial<UserProfile>) => void;
 
   // Packages
-  packages: PackageInfo[],
+  packages: PackageInfo[];
   setPackages: (packages: PackageInfo[]) => void;
   fetchPackages: () => Promise<void>;
   selectedPackage: PackageInfo | null;
@@ -101,13 +105,15 @@ interface AppState {
 }
 
 export const useAppStore = create<AppState>((set) => ({
+  // Auth
+  isAuthenticated: false,
+  userRole: "USER",
+  login: (role) => set({ isAuthenticated: true, userRole: role, currentView: role === "PARTNER" ? "partner" : "landing" }),
+  logout: () => set({ isAuthenticated: false, userRole: "USER", currentView: "landing", currentBooking: null, partnerActiveBooking: null }),
+
   // Navigation
   currentView: "landing",
   setCurrentView: (view) => set({ currentView: view }),
-
-  // Role
-  userRole: "USER",
-  setUserRole: (role) => set({ userRole: role }),
 
   // User
   user: {
