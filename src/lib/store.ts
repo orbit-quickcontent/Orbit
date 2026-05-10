@@ -70,7 +70,6 @@ interface AppState {
 
   // Packages
   packages: PackageInfo[];
-  setPackages: (packages: PackageInfo[]) => void;
   fetchPackages: () => Promise<void>;
   selectedPackage: PackageInfo | null;
   setSelectedPackage: (pkg: PackageInfo | null) => void;
@@ -99,9 +98,6 @@ interface AppState {
   bookingNotes: string;
   setBookingNotes: (notes: string) => void;
 
-  // UI
-  isLoading: boolean;
-  setIsLoading: (loading: boolean) => void;
 }
 
 export const useAppStore = create<AppState>((set) => ({
@@ -166,7 +162,6 @@ export const useAppStore = create<AppState>((set) => ({
       popular: true,
     },
   ],
-  setPackages: (packages) => set({ packages }),
   fetchPackages: async () => {
     try {
       const res = await fetch('/api/packages');
@@ -253,8 +248,4 @@ export const useAppStore = create<AppState>((set) => ({
   setBookingLocation: (location) => set({ bookingLocation: location }),
   bookingNotes: "",
   setBookingNotes: (notes) => set({ bookingNotes: notes }),
-
-  // UI
-  isLoading: false,
-  setIsLoading: (loading) => set({ isLoading: loading }),
 }));

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -40,7 +40,6 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select,
   SelectContent,
@@ -197,6 +196,15 @@ function ClientNavbar() {
 // ─── Hero Section ──────────────────────────────────────────────────────────────
 function HeroSection() {
   const { setCurrentView } = useAppStore();
+  const particles = useMemo(() =>
+    Array.from({ length: 16 }, (_, i) => ({
+      top: ((i * 37 + 13) % 100),
+      left: ((i * 53 + 29) % 100),
+      delay: (i * 0.25) % 4,
+      dur: 3 + (i % 5),
+      cyan: i % 2 === 0,
+    })), []
+  );
 
   return (
     <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
@@ -232,16 +240,16 @@ function HeroSection() {
           />
         </div>
 
-        {Array.from({ length: 16 }).map((_, i) => (
+        {particles.map((p, i) => (
           <div
             key={i}
             className="absolute w-1 h-1 rounded-full animate-float"
             style={{
-              top: `${Math.random() * 100}%`,
-              left: `${Math.random() * 100}%`,
-              animationDelay: `${Math.random() * 4}s`,
-              animationDuration: `${3 + Math.random() * 4}s`,
-              background: i % 2 === 0 ? "rgba(0, 191, 255, 0.3)" : "rgba(160, 32, 240, 0.3)",
+              top: `${p.top}%`,
+              left: `${p.left}%`,
+              animationDelay: `${p.delay}s`,
+              animationDuration: `${p.dur}s`,
+              background: p.cyan ? "rgba(0, 191, 255, 0.3)" : "rgba(160, 32, 240, 0.3)",
             }}
           />
         ))}
@@ -1112,8 +1120,6 @@ function ClientFooter() {
 }
 
 // ─── Main Client App ──────────────────────────────────────────────────────────
-import React from "react";
-
 export default function ClientApp() {
   const { currentView, currentBooking, fetchPackages } = useAppStore();
 

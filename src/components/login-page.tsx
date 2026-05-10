@@ -17,6 +17,15 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useAppStore } from "@/lib/store";
 
+// Pre-computed particle positions (avoids hydration mismatch)
+const LOGIN_PARTICLES = Array.from({ length: 20 }, (_, i) => ({
+  top: ((i * 41 + 17) % 100),
+  left: ((i * 59 + 23) % 100),
+  delay: (i * 0.2) % 4,
+  dur: 3 + (i % 5),
+  cyan: i % 2 === 0,
+}));
+
 export default function LoginPage() {
   const { login } = useAppStore();
   const [hoveredRole, setHoveredRole] = useState<"USER" | "PARTNER" | null>(null);
@@ -43,16 +52,16 @@ export default function LoginPage() {
         </div>
 
         {/* Floating Particles */}
-        {Array.from({ length: 20 }).map((_, i) => (
+        {LOGIN_PARTICLES.map((p, i) => (
           <div
             key={i}
             className="absolute w-1 h-1 rounded-full animate-float"
             style={{
-              top: `${Math.random() * 100}%`,
-              left: `${Math.random() * 100}%`,
-              animationDelay: `${Math.random() * 4}s`,
-              animationDuration: `${3 + Math.random() * 4}s`,
-              background: i % 2 === 0 ? "rgba(0, 191, 255, 0.3)" : "rgba(160, 32, 240, 0.3)",
+              top: `${p.top}%`,
+              left: `${p.left}%`,
+              animationDelay: `${p.delay}s`,
+              animationDuration: `${p.dur}s`,
+              background: p.cyan ? "rgba(0, 191, 255, 0.3)" : "rgba(160, 32, 240, 0.3)",
             }}
           />
         ))}
