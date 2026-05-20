@@ -1,3 +1,16 @@
+/**
+ * ⚪ APP ENTRY | Global Styles
+ * 
+ * Tailwind CSS v4 configuration with Orbit brand theme:
+ * - Space Navy (#081C43) background + Orbit Gradient (#00BFFF → #A020F0)
+ * - Custom utility classes: orbit-card, orbit-glow, text-gradient-orbit
+ * - Custom animations: orbit-spin, float, pulse-ring, data-stream, shimmer
+ * - Custom scrollbar styling
+ * 
+ * Used by: layout.tsx (global import)
+ * Category: App Entry
+ */
+
 @import "tailwindcss";
 @import "tw-animate-css";
 
@@ -251,4 +264,46 @@
   background: linear-gradient(90deg, transparent 0%, rgba(0, 191, 255, 0.08) 50%, transparent 100%);
   background-size: 200% 100%;
   animation: shimmer-orbit 3s ease-in-out infinite;
+}
+
+/* Hide scrollbar for horizontal scroll areas */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+/* Smooth page transitions */
+@keyframes slide-up-fade {
+  0% { opacity: 0; transform: translateY(12px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+.animate-slide-up-fade {
+  animation: slide-up-fade 0.4s ease-out forwards;
+}
+
+/* ─── Floating Navigation Pill ──────────────────────────────────────────────── */
+.orbit-nav-pill {
+  background: rgba(8, 28, 67, 0.75);
+  backdrop-filter: blur(28px) saturate(1.4);
+  -webkit-backdrop-filter: blur(28px) saturate(1.4);
+  border: 1px solid rgba(0, 191, 255, 0.12);
+  border-radius: 28px;
+  box-shadow:
+    0 -4px 24px rgba(0, 0, 0, 0.3),
+    0 8px 32px rgba(0, 191, 255, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+/* FAB pulse animation */
+@keyframes fab-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(0, 191, 255, 0.4); }
+  50% { box-shadow: 0 0 0 8px rgba(0, 191, 255, 0); }
+}
+
+.animate-fab-pulse {
+  animation: fab-pulse 2.5s ease-in-out infinite;
 }

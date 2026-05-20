@@ -1,3 +1,14 @@
+/**
+ * 🔴 BACKEND | Bookings API
+ * 
+ * Booking management endpoints:
+ * - GET  /api/bookings — List all bookings with user, package, and partner info
+ * - POST /api/bookings — Create a new booking (userId, packageId, bookingDate, timeSlot required)
+ * 
+ * Used by: booking-flow.tsx (booking creation during payment)
+ * Category: Backend API
+ */
+
 import { db } from '@/lib/db'
 import { NextRequest, NextResponse } from 'next/server'
 

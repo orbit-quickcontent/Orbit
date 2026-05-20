@@ -1,5 +1,20 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
+/**
+ * 🟠 CORE | Prisma Database Schema
+ * 
+ * SQLite database schema for Orbit platform.
+ * Models: User, Package, Partner, Booking
+ * 
+ * Relationships:
+ * - User 1:N Booking (client bookings)
+ * - User 1:1 Partner (partner profile)
+ * - Package 1:N Booking (booked packages)
+ * - Partner 1:N Booking (assigned bookings)
+ * 
+ * To sync: bun run db:push
+ * Category: Backend Database
+ */
+
+// Prisma schema docs: https://pris.ly/d/prisma-schema
 
 generator client {
   provider = "prisma-client-js"
@@ -19,7 +34,8 @@ model User {
   role         String    @default("USER") // USER, PARTNER, ADMIN
   brandLogo    String?    // URL to brand logo
   brandFont    String?    // Brand font name
-  brandPalette String?    // JSON string of brand colors
+  brandColor   String?    // Brand hex color
+  editorRequirements String?    // Editor requirements from client
   avatar       String?    // URL to avatar
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt

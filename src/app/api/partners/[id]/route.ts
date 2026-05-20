@@ -1,3 +1,14 @@
+/**
+ * 🔴 BACKEND | Partner Detail API
+ * 
+ * Individual partner endpoints:
+ * - GET   /api/partners/[id] — Get partner with bookings, active/completed counts, and earnings
+ * - PATCH /api/partners/[id] — Update partner (availability, location, device info, rating)
+ * 
+ * Used by: partner management flows
+ * Category: Backend API
+ */
+
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 
@@ -22,7 +33,8 @@ export async function GET(
             avatar: true,
             brandLogo: true,
             brandFont: true,
-            brandPalette: true,
+            brandColor: true,
+            editorRequirements: true,
           },
         },
         bookings: {

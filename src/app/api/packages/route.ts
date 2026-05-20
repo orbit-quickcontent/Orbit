@@ -1,3 +1,14 @@
+/**
+ * 🔴 BACKEND | Packages API
+ * 
+ * Package listing endpoint:
+ * - GET /api/packages — List all packages, seeded if none exist.
+ *   Features are stored as JSON strings and parsed on read.
+ * 
+ * Used by: store.ts (fetchPackages on app load)
+ * Category: Backend API
+ */
+
 import { db } from '@/lib/db'
 import { NextResponse } from 'next/server'
 

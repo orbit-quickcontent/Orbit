@@ -1,3 +1,12 @@
+/**
+ * 🟠 HOOKS | useIsMobile
+ * 
+ * Custom hook for detecting mobile viewport (< 768px).
+ * Used for responsive layout decisions.
+ * 
+ * Category: Shared Hook
+ */
+
 import * as React from "react"
 
 const MOBILE_BREAKPOINT = 768

@@ -1,59 +1,72 @@
+/**
+ * 🟠 CORE | Zustand State Management
+ * 
+ * Central application state using Zustand with localStorage persistence.
+ * Manages auth, navigation, user profile, packages, bookings, and partner state.
+ * 
+ * IMPORTANT: localStorage is read AFTER mount (via useHydrate hook) to avoid
+ * server/client hydration mismatches.
+ * 
+ * Used by: page.tsx, client-app.tsx, partner-app.tsx, all components
+ * Category: Core
+ */
+
 import { create } from "zustand";
+import { type AppView, type AppPhase, type BookingStatus, type PaymentStatus, type UserRole, type PackageInfo, type BookingInfo, type UserProfile, type ReviewInfo } from "./types";
 
-export type AppView = "landing" | "packages" | "booking" | "tracking" | "partner";
+// ─── localStorage helpers ─────────────────────────────────────────────────────
+const STORAGE_KEY = "orbit-app-state";
 
-export type BookingStatus =
-  | "PENDING"
-  | "PAID"
-  | "PARTNER_DISPATCHED"
-  | "SHOOTING"
-  | "SYNCING"
-  | "EDITING"
-  | "DELIVERED"
-  | "CANCELLED";
-
-export type PaymentStatus = "UNPAID" | "PROCESSING" | "SUCCESS" | "FAILED" | "REFUNDED";
-
-export interface PackageInfo {
-  id: string;
-  name: string;
-  tier: string;
-  price: number;
-  focus: string;
-  deliveryTime: string;
-  features: string[];
-  popular: boolean;
+function loadFromStorage(): Record<string, unknown> | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) return JSON.parse(raw);
+  } catch { /* ignore */ }
+  return null;
 }
 
-export interface BookingInfo {
-  id: string;
-  packageId: string;
-  packageName: string;
-  packagePrice: number;
-  status: BookingStatus;
-  paymentStatus: PaymentStatus;
-  bookingDate: string;
-  timeSlot: string;
-  location: string;
-  syncPercentage: number;
-  editCountdown: number | null;
-  partnerName: string | null;
-  notes: string;
+function saveToStorage(state: Record<string, unknown>) {
+  if (typeof window === "undefined") return;
+  try {
+    const toSave = {
+      isAuthenticated: state.isAuthenticated,
+      userRole: state.userRole,
+      user: state.user,
+      currentView: state.currentView,
+      bookings: state.bookings,
+      reviews: state.reviews,
+    };
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(toSave));
+  } catch { /* ignore */ }
 }
 
-export interface UserProfile {
-  name: string;
-  email: string;
-  phone: string;
-  location: string;
-  brandLogo: string | null;
-  brandFont: string | null;
-  brandPalette: string | null;
+function clearStorage() {
+  if (typeof window === "undefined") return;
+  try { localStorage.removeItem(STORAGE_KEY); } catch { /* ignore */ }
 }
 
-type UserRole = "USER" | "PARTNER";
+const defaultUser: UserProfile = {
+  name: "",
+  email: "",
+  phone: "",
+  location: "",
+  avatar: null,
+  brandLogo: null,
+  brandFont: null,
+  brandColor: null,
+  editorRequirements: "",
+};
 
 interface AppState {
+  // Hydration
+  _hydrated: boolean;
+  _hydrate: () => void;
+
+  // App phase
+  appPhase: AppPhase;
+  setAppPhase: (phase: AppPhase) => void;
+
   // Auth
   isAuthenticated: boolean;
   userRole: UserRole;
@@ -83,6 +96,7 @@ interface AppState {
   updatePaymentStatus: (id: string, status: PaymentStatus) => void;
   updateSyncPercentage: (id: string, percentage: number) => void;
   updateEditCountdown: (id: string, minutes: number) => void;
+  completeBooking: (id: string) => void;
 
   // Partner
   partnerActiveBooking: BookingInfo | null;
@@ -98,31 +112,77 @@ interface AppState {
   bookingNotes: string;
   setBookingNotes: (notes: string) => void;
 
+  // Reviews
+  reviews: ReviewInfo[];
+  submitReview: (review: ReviewInfo) => void;
 }
 
-export const useAppStore = create<AppState>((set) => ({
+export const useAppStore = create<AppState>((set, get) => ({
+  // Hydration — starts false, set to true after localStorage is read
+  _hydrated: false,
+  _hydrate: () => {
+    const stored = loadFromStorage();
+    if (stored) {
+      set({
+        _hydrated: true,
+        isAuthenticated: (stored.isAuthenticated as boolean) ?? false,
+        userRole: (stored.userRole as UserRole) ?? "USER",
+        user: (stored.user as UserProfile) ?? defaultUser,
+        currentView: (stored.currentView as AppView) ?? "landing",
+        bookings: (stored.bookings as BookingInfo[]) ?? [],
+        reviews: (stored.reviews as ReviewInfo[]) ?? [],
+        appPhase: stored.isAuthenticated ? "app" : "splash",
+      });
+    } else {
+      set({ _hydrated: true });
+    }
+  },
+
+  // App phase — always starts at "splash" on server, corrected after hydration
+  appPhase: "splash",
+  setAppPhase: (phase) => set({ appPhase: phase }),
+
   // Auth
   isAuthenticated: false,
   userRole: "USER",
-  login: (role) => set({ isAuthenticated: true, userRole: role, currentView: role === "PARTNER" ? "partner" : "landing" }),
-  logout: () => set({ isAuthenticated: false, userRole: "USER", currentView: "landing", currentBooking: null, partnerActiveBooking: null }),
+  login: (role) => {
+    const newState = {
+      isAuthenticated: true,
+      userRole: role,
+      currentView: (role === "PARTNER" ? "partner" : "landing") as AppView,
+      appPhase: "app" as AppPhase,
+    };
+    set(newState);
+    saveToStorage({ ...get(), ...newState });
+  },
+  logout: () => {
+    set({
+      isAuthenticated: false,
+      userRole: "USER" as UserRole,
+      currentView: "landing" as AppView,
+      currentBooking: null,
+      partnerActiveBooking: null,
+      appPhase: "auth" as AppPhase,
+      user: defaultUser,
+      bookings: [],
+      reviews: [],
+    });
+    clearStorage();
+  },
 
   // Navigation
   currentView: "landing",
   setCurrentView: (view) => set({ currentView: view }),
 
   // User
-  user: {
-    name: "",
-    email: "",
-    phone: "",
-    location: "",
-    brandLogo: null,
-    brandFont: null,
-    brandPalette: null,
-  },
+  user: defaultUser,
   setUser: (user) =>
-    set((state) => ({ user: { ...state.user, ...user } })),
+    set((state) => {
+      const newUser = { ...state.user, ...user };
+      const newState = { user: newUser };
+      saveToStorage({ ...get(), ...newState });
+      return newState;
+    }),
 
   // Packages
   packages: [
@@ -132,13 +192,13 @@ export const useAppStore = create<AppState>((set) => ({
       tier: "PERSONALIZED",
       price: 1999,
       focus: "Individual/Event cinematic reels",
-      deliveryTime: "60–120 mins",
+      deliveryTime: "60-120 mins",
       features: [
         "Professional cinematic edit",
         "1 Reel (up to 60 sec)",
         "Color grading & transitions",
         "Background music sync",
-        "60–120 min delivery",
+        "60-120 min delivery",
         "1 revision round",
       ],
       popular: false,
@@ -149,11 +209,11 @@ export const useAppStore = create<AppState>((set) => ({
       tier: "PROFESSIONAL",
       price: 4999,
       focus: "Brand-focused storytelling with Brand DNA",
-      deliveryTime: "60–120 mins",
+      deliveryTime: "60-120 mins",
       features: [
         "All Personalized features",
         "Brand DNA integration",
-        "Logo/Font/Palette matching",
+        "Logo/Font matching & Editor chat",
         "Up to 3 Reels (60 sec each)",
         "Multi-platform optimization",
         "2 revision rounds",
@@ -193,7 +253,11 @@ export const useAppStore = create<AppState>((set) => ({
   setCurrentBooking: (booking) => set({ currentBooking: booking }),
   bookings: [],
   addBooking: (booking) =>
-    set((state) => ({ bookings: [...state.bookings, booking] })),
+    set((state) => {
+      const newBookings = [...state.bookings, booking];
+      saveToStorage({ ...get(), bookings: newBookings });
+      return { bookings: newBookings };
+    }),
   updateBookingStatus: (id, status) =>
     set((state) => ({
       bookings: state.bookings.map((b) =>
@@ -234,6 +298,18 @@ export const useAppStore = create<AppState>((set) => ({
           ? { ...state.currentBooking, editCountdown }
           : state.currentBooking,
     })),
+  completeBooking: (id) =>
+    set((state) => {
+      const updatedBookings = state.bookings.map((b) =>
+        b.id === id ? { ...b, status: "DELIVERED" as BookingStatus } : b
+      );
+      const newState = {
+        bookings: updatedBookings,
+        currentBooking: null as BookingInfo | null,
+      };
+      saveToStorage({ ...get(), ...newState });
+      return newState;
+    }),
 
   // Partner
   partnerActiveBooking: null,
@@ -248,4 +324,13 @@ export const useAppStore = create<AppState>((set) => ({
   setBookingLocation: (location) => set({ bookingLocation: location }),
   bookingNotes: "",
   setBookingNotes: (notes) => set({ bookingNotes: notes }),
+
+  // Reviews
+  reviews: [],
+  submitReview: (review) =>
+    set((state) => {
+      const newReviews = [...state.reviews.filter((r) => r.bookingId !== review.bookingId), review];
+      saveToStorage({ ...get(), reviews: newReviews });
+      return { reviews: newReviews };
+    }),
 }));

@@ -1,3 +1,14 @@
+/**
+ * 🔴 BACKEND | Partners API
+ * 
+ * Partner management endpoints:
+ * - GET  /api/partners — List all partners with user info and booking stats
+ * - POST /api/partners — Create a new partner (links to existing user, updates user role)
+ * 
+ * Used by: partner management flows
+ * Category: Backend API
+ */
+
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 

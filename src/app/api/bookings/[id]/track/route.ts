@@ -1,3 +1,15 @@
+/**
+ * 🔴 BACKEND | Tracking API
+ * 
+ * Real-time booking tracking endpoint:
+ * - GET /api/bookings/[id]/track — Get tracking data including status label,
+ *   description, sync percentage, edit countdown, overall progress,
+ *   estimated time remaining, and partner info.
+ * 
+ * Used by: tracking-dashboard.tsx (polls every 5 seconds)
+ * Category: Backend API
+ */
+
 import { db } from '@/lib/db'
 import { NextRequest, NextResponse } from 'next/server'
 

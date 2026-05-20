@@ -1,3 +1,14 @@
+/**
+ * 🔴 BACKEND | Users API
+ * 
+ * User management endpoints:
+ * - GET  /api/users — List all users with booking counts
+ * - POST /api/users — Create a new user (email required, unique)
+ * 
+ * Used by: booking-flow.tsx (user creation during payment)
+ * Category: Backend API
+ */
+
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 
@@ -14,7 +25,8 @@ export async function GET() {
         role: true,
         brandLogo: true,
         brandFont: true,
-        brandPalette: true,
+        brandColor: true,
+        editorRequirements: true,
         avatar: true,
         createdAt: true,
         updatedAt: true,
@@ -34,7 +46,8 @@ export async function GET() {
       role: user.role,
       brandLogo: user.brandLogo,
       brandFont: user.brandFont,
-      brandPalette: user.brandPalette,
+      brandColor: user.brandColor,
+      editorRequirements: user.editorRequirements,
       avatar: user.avatar,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
@@ -55,7 +68,7 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { email, name, phone, location, role, brandLogo, brandFont, brandPalette } = body;
+    const { email, name, phone, location, role, brandLogo, brandFont, brandColor, editorRequirements } = body;
 
     if (!email) {
       return NextResponse.json(
@@ -82,7 +95,8 @@ export async function POST(request: NextRequest) {
         role: role ?? "USER",
         brandLogo: brandLogo ?? null,
         brandFont: brandFont ?? null,
-        brandPalette: brandPalette ?? null,
+        brandColor: brandColor ?? null,
+        editorRequirements: editorRequirements ?? null,
       },
     });
 

@@ -1,3 +1,14 @@
+/**
+ * 🔴 BACKEND | Booking Detail API
+ * 
+ * Individual booking endpoints:
+ * - GET   /api/bookings/[id] — Get booking with full details (user, package, partner)
+ * - PATCH /api/bookings/[id] — Update booking (status, payment, sync, partner assignment)
+ * 
+ * Used by: payment API, tracking API
+ * Category: Backend API
+ */
+
 import { db } from '@/lib/db'
 import { NextRequest, NextResponse } from 'next/server'
 
@@ -32,7 +43,8 @@ export async function GET(
             location: true,
             brandLogo: true,
             brandFont: true,
-            brandPalette: true,
+            brandColor: true,
+            editorRequirements: true,
             avatar: true,
           },
         },

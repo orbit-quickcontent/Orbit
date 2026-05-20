@@ -1,3 +1,15 @@
+/**
+ * 🔴 BACKEND | Payment API
+ * 
+ * Payment processing endpoint:
+ * - POST /api/bookings/[id]/payment — Initiate payment for a booking
+ *   Sets paymentStatus to PROCESSING, then asynchronously to SUCCESS.
+ *   Triggers the booking pipeline (partner dispatch → shooting → syncing → editing → delivered).
+ * 
+ * Used by: booking-flow.tsx (payment initiation)
+ * Category: Backend API
+ */
+
 import { db } from '@/lib/db'
 import { NextRequest, NextResponse } from 'next/server'
 

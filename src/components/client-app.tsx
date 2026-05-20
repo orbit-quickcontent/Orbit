@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef, useMemo } from "react";
+import React, { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -33,6 +33,11 @@ import {
   Cloud,
   ImageIcon,
   LogOut,
+  Send,
+  MessageSquare,
+  Palette,
+  Navigation,
+  Zap as ZapIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
@@ -58,37 +63,22 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
 import { useAppStore, type AppView, type BookingInfo, type BookingStatus } from "@/lib/store";
+import AnimatedBackground from "@/components/animated-background";
 
-// ─── Time Slots ─────────────────────────────────────────────────────────────────
-const TIME_SLOTS = [
-  { value: "09:00 AM", label: "9:00 AM", available: true },
-  { value: "10:00 AM", label: "10:00 AM", available: true },
-  { value: "11:00 AM", label: "11:00 AM", available: true },
-  { value: "12:00 PM", label: "12:00 PM", available: true },
-  { value: "02:00 PM", label: "2:00 PM", available: true },
-  { value: "03:00 PM", label: "3:00 PM", available: false },
-  { value: "04:00 PM", label: "4:00 PM", available: true },
-  { value: "05:00 PM", label: "5:00 PM", available: true },
-];
+// ─── Time Picker Helpers ────────────────────────────────────────────────────────
+const HOURS = Array.from({ length: 12 }, (_, i) => i + 1); // 1-12
+const MINUTES = Array.from({ length: 12 }, (_, i) => i * 5); // 0,5,10...55
+const PERIODS = ["AM", "PM"] as const;
 
 // ─── Status Pipeline ────────────────────────────────────────────────────────────
 const STATUS_PIPELINE: { status: BookingStatus; label: string; icon: React.ReactNode; description: string }[] = [
   { status: "PAID", label: "Payment Confirmed", icon: <CreditCard className="w-5 h-5" />, description: "Payment verified. Dispatching partner..." },
-  { status: "PARTNER_DISPATCHED", label: "Partner Dispatched", icon: <Users className="w-5 h-5" />, description: "Visual Architect en route to your location." },
+  { status: "PARTNER_DISPATCHED", label: "Partner Dispatched", icon: <Users className="w-5 h-5" />, description: "Visual Architect assigned and notified." },
+  { status: "EN_ROUTE", label: "En Route", icon: <Navigation className="w-5 h-5" />, description: "Partner navigating to your location. Track live!" },
   { status: "SHOOTING", label: "Shooting", icon: <Camera className="w-5 h-5" />, description: "Capturing your cinematic footage in real-time." },
   { status: "SYNCING", label: "Syncing", icon: <Upload className="w-5 h-5" />, description: "Raw footage streaming to the editing hub." },
   { status: "EDITING", label: "Editing", icon: <Film className="w-5 h-5" />, description: "Professional editors crafting your masterpiece." },
   { status: "DELIVERED", label: "Delivered", icon: <CheckCircle2 className="w-5 h-5" />, description: "Your cinematic reel is ready to download!" },
-];
-
-// ─── Brand Palettes ────────────────────────────────────────────────────────────
-const BRAND_PALETTES = [
-  { name: "Orbit Default", colors: ["#00BFFF", "#A020F0", "#081C43"] },
-  { name: "Sunset", colors: ["#FF6B35", "#F7C59F", "#004E89"] },
-  { name: "Ocean", colors: ["#0077B6", "#00B4D8", "#90E0EF"] },
-  { name: "Forest", colors: ["#2D6A4F", "#95D5B2", "#D8F3DC"] },
-  { name: "Royal", colors: ["#7B2CBF", "#C77DFF", "#E0AAFF"] },
-  { name: "Warm", colors: ["#D4A373", "#FAEDCD", "#FEFAE0"] },
 ];
 
 // ─── Client Navbar ────────────────────────────────────────────────────────────
@@ -264,7 +254,7 @@ function HeroSection() {
         </motion.div>
 
         <motion.h1
-          className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-black tracking-tight leading-[0.9] mb-6"
+          className="text-4xl sm:text-5xl md:text-7xl lg:text-8xl font-black tracking-tight leading-[0.9] mb-4 sm:mb-6"
           initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, delay: 0.1 }}
         >
           <span className="text-gradient-orbit">Professional</span>
@@ -273,14 +263,14 @@ function HeroSection() {
         </motion.h1>
 
         <motion.p
-          className="text-lg sm:text-xl text-muted-foreground max-w-2xl mx-auto mb-4 leading-relaxed"
+          className="text-base sm:text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto mb-3 sm:mb-4 leading-relaxed"
           initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, delay: 0.2 }}
         >
           Delivered in <span className="text-orbit-cyan font-semibold">60 Minutes.</span>
         </motion.p>
 
         <motion.p
-          className="text-base text-muted-foreground/70 max-w-xl mx-auto mb-10"
+          className="text-sm sm:text-base text-muted-foreground/70 max-w-xl mx-auto mb-6 sm:mb-10"
           initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, delay: 0.25 }}
         >
           Desktop-grade professional edits by human editors. The Orbit Edge: Fluidity &amp; Precision.
@@ -292,7 +282,7 @@ function HeroSection() {
         >
           <Button
             size="lg"
-            className="bg-gradient-to-r from-orbit-cyan to-orbit-purple text-white hover:opacity-90 font-bold px-8 py-6 text-base orbit-glow"
+            className="bg-gradient-to-r from-orbit-cyan to-orbit-purple text-white hover:opacity-90 font-bold px-6 sm:px-8 py-5 sm:py-6 text-sm sm:text-base orbit-glow"
             onClick={() => setCurrentView("packages")}
           >
             Get Started
@@ -301,7 +291,7 @@ function HeroSection() {
           <Button
             variant="outline"
             size="lg"
-            className="border-orbit-border text-foreground hover:bg-white/5 px-8 py-6 text-base"
+            className="border-orbit-border text-foreground hover:bg-white/5 px-6 sm:px-8 py-5 sm:py-6 text-sm sm:text-base"
             onClick={() => setCurrentView("tracking")}
           >
             <Eye className="w-4 h-4 mr-2" />
@@ -310,7 +300,7 @@ function HeroSection() {
         </motion.div>
 
         <motion.div
-          className="mt-16 grid grid-cols-3 gap-8 max-w-lg mx-auto"
+          className="mt-10 sm:mt-16 grid grid-cols-3 gap-4 sm:gap-8 max-w-lg mx-auto"
           initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.8, delay: 0.5 }}
         >
           {[
@@ -319,8 +309,8 @@ function HeroSection() {
             { value: "500+", unit: "", label: "Projects" },
           ].map((stat, i) => (
             <div key={i} className="text-center">
-              <div className="text-2xl sm:text-3xl font-black text-gradient-orbit">
-                {stat.value}<span className="text-sm text-orbit-cyan/60">{stat.unit}</span>
+              <div className="text-xl sm:text-3xl font-black text-gradient-orbit">
+                {stat.value}<span className="text-xs sm:text-sm text-orbit-cyan/60">{stat.unit}</span>
               </div>
               <div className="text-xs text-muted-foreground mt-1">{stat.label}</div>
             </div>
@@ -351,10 +341,10 @@ function ComparisonSection() {
   ];
 
   return (
-    <section className="py-20 px-4">
+    <section className="py-12 sm:py-20 px-4">
       <div className="max-w-4xl mx-auto">
         <motion.div
-          className="text-center mb-14"
+          className="text-center mb-8 sm:mb-14"
           initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
         >
           <Badge variant="outline" className="mb-4 border-orbit-cyan/30 text-orbit-cyan bg-orbit-cyan/5">
@@ -423,15 +413,15 @@ function FeaturesSection() {
     { icon: <Timer className="w-5 h-5" />, title: "60-Min Delivery", description: "Professional edits faster than anyone in the market." },
     { icon: <Shield className="w-5 h-5" />, title: "Privacy Shield", description: "Auto-wipe of local footage after cloud sync verification." },
     { icon: <Camera className="w-5 h-5" />, title: "4K Quality", description: "Raw footage captured on flagship devices, edited on desktop software." },
-    { icon: <Sparkles className="w-5 h-5" />, title: "Brand DNA", description: "Logo, font, and palette matching for the Pro tier." },
+    { icon: <Sparkles className="w-5 h-5" />, title: "Brand DNA", description: "Logo, font matching & direct editor chat for the Pro tier." },
     { icon: <Users className="w-5 h-5" />, title: "Human Editors", description: "Not AI — real professionals using Premiere Pro & DaVinci." },
     { icon: <Lock className="w-5 h-5" />, title: "Payment Gate", description: "Hard stop: partners only dispatched after payment success." },
   ];
 
   return (
-    <section className="py-20 px-4">
+    <section className="py-12 sm:py-20 px-4">
       <div className="max-w-6xl mx-auto">
-        <motion.div className="text-center mb-14" initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}>
+        <motion.div className="text-center mb-8 sm:mb-14" initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}>
           <Badge variant="outline" className="mb-4 border-orbit-cyan/30 text-orbit-cyan bg-orbit-cyan/5">
             <Star className="w-3.5 h-3.5 mr-1.5" />
             The Orbit Edge
@@ -441,10 +431,10 @@ function FeaturesSection() {
           </h2>
         </motion.div>
 
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-5">
           {features.map((feature, idx) => (
             <motion.div key={idx} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.5, delay: idx * 0.08 }}>
-              <div className="orbit-card rounded-xl p-5 hover:border-orbit-cyan/20 transition-all duration-300 group h-full">
+              <div className="orbit-card rounded-xl p-4 sm:p-5 hover:border-orbit-cyan/20 transition-all duration-300 group h-full">
                 <div className="flex items-start gap-4">
                   <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-orbit-cyan/10 to-orbit-purple/10 flex items-center justify-center text-orbit-cyan shrink-0 group-hover:from-orbit-cyan/20 group-hover:to-orbit-purple/20 transition-colors">
                     {feature.icon}
@@ -472,9 +462,9 @@ function TestimonialsSection() {
   ];
 
   return (
-    <section className="py-20 px-4">
+    <section className="py-12 sm:py-20 px-4">
       <div className="max-w-6xl mx-auto">
-        <motion.div className="text-center mb-14" initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}>
+        <motion.div className="text-center mb-8 sm:mb-14" initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}>
           <Badge variant="outline" className="mb-4 border-orbit-cyan/30 text-orbit-cyan bg-orbit-cyan/5">
             <Star className="w-3.5 h-3.5 mr-1.5" />
             What Creators Say
@@ -484,11 +474,11 @@ function TestimonialsSection() {
           </h2>
         </motion.div>
 
-        <div className="grid sm:grid-cols-3 gap-6">
+        <div className="grid sm:grid-cols-3 gap-4 sm:gap-6">
           {testimonials.map((t, idx) => (
             <motion.div key={idx} initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.5, delay: idx * 0.1 }}>
               <Card className="orbit-card border-orbit-border hover:border-orbit-cyan/20 transition-all duration-300 h-full">
-                <CardContent className="p-6">
+                <CardContent className="p-4 sm:p-6">
                   <div className="flex items-center gap-3 mb-4">
                     <div className="w-10 h-10 rounded-full bg-gradient-to-br from-orbit-cyan/10 to-orbit-purple/10 flex items-center justify-center text-orbit-cyan text-sm font-bold">
                       {t.avatar}
@@ -519,22 +509,22 @@ function PackageDashboard() {
   const { packages, setSelectedPackage, setCurrentView } = useAppStore();
 
   return (
-    <section className="min-h-screen pt-24 pb-20 px-4">
+    <section className="min-h-screen pt-20 sm:pt-24 pb-12 sm:pb-20 px-4">
       <div className="max-w-6xl mx-auto">
-        <motion.div className="text-center mb-12" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+        <motion.div className="text-center mb-8 sm:mb-12" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
           <Badge variant="outline" className="mb-4 border-orbit-cyan/30 text-orbit-cyan bg-orbit-cyan/5">
             <Zap className="w-3.5 h-3.5 mr-1.5" />
             Choose Your Package
           </Badge>
-          <h2 className="text-3xl sm:text-4xl font-black tracking-tight mb-3">
+          <h2 className="text-2xl sm:text-4xl font-black tracking-tight mb-2 sm:mb-3">
             The Orbit <span className="text-gradient-orbit">Edge</span>
           </h2>
-          <p className="text-muted-foreground max-w-lg mx-auto">
+          <p className="text-sm sm:text-base text-muted-foreground max-w-lg mx-auto">
             Select the package that fits your needs. Both include professional editing delivered in 60–120 minutes.
           </p>
         </motion.div>
 
-        <div className="grid md:grid-cols-2 gap-6 lg:gap-8 max-w-4xl mx-auto">
+        <div className="grid md:grid-cols-2 gap-4 sm:gap-6 lg:gap-8 max-w-4xl mx-auto">
           {packages.map((pkg, idx) => (
             <motion.div key={pkg.id} initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: idx * 0.15 }}>
               <Card
@@ -551,25 +541,25 @@ function PackageDashboard() {
                   </div>
                 )}
 
-                <CardHeader className="pb-4">
+                <CardHeader className="p-4 sm:p-6 pb-2 sm:pb-4">
                   <div className="flex items-center gap-3 mb-2">
-                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
+                    <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center ${
                       pkg.popular ? "bg-gradient-to-br from-orbit-cyan/20 to-orbit-purple/20 text-orbit-cyan" : "bg-white/5 text-muted-foreground"
                     }`}>
-                      {pkg.popular ? <Rocket className="w-5 h-5" /> : <Star className="w-5 h-5" />}
+                      {pkg.popular ? <Rocket className="w-4 h-4 sm:w-5 sm:h-5" /> : <Star className="w-4 h-4 sm:w-5 sm:h-5" />}
                     </div>
                     <div>
-                      <CardTitle className="text-xl font-bold">{pkg.name}</CardTitle>
+                      <CardTitle className="text-lg sm:text-xl font-bold">{pkg.name}</CardTitle>
                       <CardDescription className="text-xs">{pkg.focus}</CardDescription>
                     </div>
                   </div>
                 </CardHeader>
 
-                <CardContent className="space-y-6">
+                <CardContent className="p-4 sm:p-6 space-y-4 sm:space-y-6">
                   <div>
                     <div className="flex items-baseline gap-1">
-                      <span className="text-4xl font-black text-gradient-orbit">₹{pkg.price.toLocaleString("en-IN")}</span>
-                      <span className="text-sm text-muted-foreground">/session</span>
+                      <span className="text-3xl sm:text-4xl font-black text-gradient-orbit">₹{pkg.price.toLocaleString("en-IN")}</span>
+                      <span className="text-xs sm:text-sm text-muted-foreground">/session</span>
                     </div>
                     <div className="flex items-center gap-1.5 mt-1.5 text-sm text-muted-foreground">
                       <Clock className="w-3.5 h-3.5 text-orbit-cyan" />
@@ -577,9 +567,9 @@ function PackageDashboard() {
                     </div>
                   </div>
                   <Separator className="bg-orbit-border" />
-                  <ul className="space-y-2.5">
+                  <ul className="space-y-2 sm:space-y-2.5">
                     {pkg.features.map((feature, i) => (
-                      <li key={i} className="flex items-start gap-2.5 text-sm">
+                      <li key={i} className="flex items-start gap-2 sm:gap-2.5 text-xs sm:text-sm">
                         <CheckCircle2 className="w-4 h-4 text-orbit-cyan shrink-0 mt-0.5" />
                         <span className="text-foreground/80">{feature}</span>
                       </li>
@@ -587,9 +577,9 @@ function PackageDashboard() {
                   </ul>
                 </CardContent>
 
-                <CardFooter>
+                <CardFooter className="p-4 sm:p-6">
                   <Button
-                    className={`w-full font-bold py-5 transition-all ${
+                    className={`w-full font-bold py-4 sm:py-5 text-sm sm:text-base transition-all ${
                       pkg.popular
                         ? "bg-gradient-to-r from-orbit-cyan to-orbit-purple text-white hover:opacity-90 orbit-glow"
                         : "bg-white/10 text-foreground hover:bg-white/15 border border-orbit-border"
@@ -604,7 +594,7 @@ function PackageDashboard() {
           ))}
         </div>
 
-        <motion.div className="mt-12 flex flex-wrap items-center justify-center gap-6 text-sm text-muted-foreground" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.4 }}>
+        <motion.div className="mt-8 sm:mt-12 flex flex-wrap items-center justify-center gap-4 sm:gap-6 text-xs sm:text-sm text-muted-foreground" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.4 }}>
           {[
             { icon: <Shield className="w-4 h-4 text-orbit-cyan" />, label: "Secure Payment" },
             { icon: <Lock className="w-4 h-4 text-orbit-cyan" />, label: "Privacy Protected" },
@@ -621,7 +611,35 @@ function PackageDashboard() {
 // ─── Brand DNA Component ──────────────────────────────────────────────────────
 function BrandDNASection() {
   const { user, setUser } = useAppStore();
-  const [selectedPalette, setSelectedPalette] = useState<string | null>(null);
+  const [chatInput, setChatInput] = useState("");
+  const [messages, setMessages] = useState<{ text: string; sender: "user" | "system"; time: string }[]>([
+    { text: "Welcome! Describe your editing requirements here. Tell us about the style, mood, transitions, music preference, or any specific look you want for your reel.", sender: "system", time: new Date().toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" }) },
+  ]);
+  const chatEndRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
+  const handleSendMessage = () => {
+    if (!chatInput.trim()) return;
+    const newMsg = {
+      text: chatInput.trim(),
+      sender: "user" as const,
+      time: new Date().toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" }),
+    };
+    setMessages((prev) => [...prev, newMsg]);
+    setUser({ editorRequirements: user.editorRequirements ? `${user.editorRequirements}\n${chatInput.trim()}` : chatInput.trim() });
+    setChatInput("");
+    toast.success("Requirement sent to editor!");
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      handleSendMessage();
+    }
+  };
 
   return (
     <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} className="space-y-4">
@@ -631,7 +649,7 @@ function BrandDNASection() {
         <span className="text-sm font-bold">Brand DNA</span>
         <Badge variant="outline" className="text-[10px] border-orbit-purple/30 text-orbit-purple">PRO</Badge>
       </div>
-      <p className="text-xs text-muted-foreground">Upload your brand assets for logo, font, and palette matching in your reels.</p>
+      <p className="text-xs text-muted-foreground">Upload your brand assets and tell our editors exactly what you need.</p>
 
       <div>
         <label className="text-sm font-medium text-muted-foreground mb-1.5 block">Brand Logo</label>
@@ -677,25 +695,86 @@ function BrandDNASection() {
       </div>
 
       <div>
-        <label className="text-sm font-medium text-muted-foreground mb-1.5 block">Brand Palette</label>
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-          {BRAND_PALETTES.map((palette) => (
-            <button
-              key={palette.name}
-              onClick={() => { setSelectedPalette(palette.name); setUser({ brandPalette: JSON.stringify(palette.colors) }); }}
-              className={`orbit-card rounded-lg p-2.5 text-left transition-all ${
-                selectedPalette === palette.name ? "border-orbit-cyan/50 bg-orbit-cyan/5" : "border-orbit-border hover:border-orbit-cyan/20"
-              }`}
-            >
-              <div className="flex gap-1 mb-1.5">
-                {palette.colors.map((color, i) => (
-                  <div key={i} className="w-5 h-5 rounded-full border border-white/10" style={{ backgroundColor: color }} />
-                ))}
-              </div>
-              <div className="text-[10px] font-medium text-muted-foreground">{palette.name}</div>
-            </button>
-          ))}
+        <label className="text-sm font-medium text-muted-foreground mb-1.5 flex items-center gap-1.5">
+          <Palette className="w-3.5 h-3.5" />
+          Brand Color
+        </label>
+        <div className="flex items-center gap-3">
+          <div className="relative">
+            <input
+              type="color"
+              value={user.brandColor || "#00BFFF"}
+              onChange={(e) => setUser({ brandColor: e.target.value })}
+              className="w-10 h-10 rounded-lg border border-orbit-border cursor-pointer bg-transparent [&::-webkit-color-swatch-wrapper]:p-1 [&::-webkit-color-swatch]:rounded-md [&::-webkit-color-swatch]:border-none"
+            />
+          </div>
+          <div className="flex-1">
+            <Input
+              value={user.brandColor || "#00BFFF"}
+              onChange={(e) => setUser({ brandColor: e.target.value })}
+              placeholder="#00BFFF"
+              className="bg-white/5 border-orbit-border focus:border-orbit-cyan/50 font-mono text-sm"
+            />
+          </div>
+          <div className="flex gap-1.5">
+            {["#00BFFF", "#A020F0", "#FF6B35", "#2D6A4F", "#FF4081", "#FFB300"].map((color) => (
+              <button
+                key={color}
+                onClick={() => setUser({ brandColor: color })}
+                className={`w-7 h-7 rounded-full border-2 transition-all hover:scale-110 ${
+                  user.brandColor === color ? "border-white scale-110" : "border-white/10"
+                }`}
+                style={{ backgroundColor: color }}
+              />
+            ))}
+          </div>
         </div>
+      </div>
+
+      {/* Editor Requirements Chat Box */}
+      <div>
+        <label className="text-sm font-medium text-muted-foreground mb-1.5 flex items-center gap-1.5">
+          <MessageSquare className="w-3.5 h-3.5" />
+          Editor Requirements
+        </label>
+        <div className="orbit-card rounded-xl overflow-hidden border border-orbit-cyan/10">
+          {/* Chat Messages Area */}
+          <div className="max-h-56 overflow-y-auto p-4 space-y-3" style={{ scrollbarWidth: "thin", scrollbarColor: "rgba(0,191,255,0.2) transparent" }}>
+            {messages.map((msg, idx) => (
+              <div key={idx} className={`flex ${msg.sender === "user" ? "justify-end" : "justify-start"}`}>
+                <div className={`max-w-[85%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${
+                  msg.sender === "user"
+                    ? "bg-gradient-to-r from-orbit-cyan/20 to-orbit-purple/20 text-foreground border border-orbit-cyan/10"
+                    : "bg-white/5 text-muted-foreground border border-orbit-border"
+                }`}>
+                  <p>{msg.text}</p>
+                  <p className={`text-[10px] mt-1 ${msg.sender === "user" ? "text-orbit-cyan/50" : "text-muted-foreground/40"}`}>{msg.time}</p>
+                </div>
+              </div>
+            ))}
+            <div ref={chatEndRef} />
+          </div>
+
+          {/* Chat Input */}
+          <div className="border-t border-orbit-border p-3 flex items-end gap-2 bg-white/[0.02]">
+            <textarea
+              value={chatInput}
+              onChange={(e) => setChatInput(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder="Type your editing requirements... (e.g. cinematic look, warm tones, slow-mo transitions)"
+              rows={2}
+              className="flex-1 bg-white/5 border border-orbit-border rounded-xl px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/50 focus:border-orbit-cyan/50 focus:outline-none focus:ring-1 focus:ring-orbit-cyan/20 resize-none"
+            />
+            <Button
+              onClick={handleSendMessage}
+              disabled={!chatInput.trim()}
+              className="bg-gradient-to-r from-orbit-cyan to-orbit-purple text-white hover:opacity-90 shrink-0 rounded-xl h-10 w-10 p-0 flex items-center justify-center"
+            >
+              <Send className="w-4 h-4" />
+            </Button>
+          </div>
+        </div>
+        <p className="text-[10px] text-muted-foreground/50 mt-1.5">Press Enter to send. Your requirements will be shared with our editors.</p>
       </div>
     </motion.div>
   );
@@ -725,7 +804,7 @@ function BookingFlow() {
       try {
         const userRes = await fetch("/api/users", {
           method: "POST", headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email: user.email, name: user.name, phone: user.phone, location: bookingLocation, brandLogo: user.brandLogo, brandFont: user.brandFont, brandPalette: user.brandPalette }),
+          body: JSON.stringify({ email: user.email, name: user.name, phone: user.phone, location: bookingLocation, brandLogo: user.brandLogo, brandFont: user.brandFont, brandColor: user.brandColor, editorRequirements: user.editorRequirements }),
         });
         const userData = await userRes.json();
         userId = userData.user?.id || "demo-user";
@@ -768,18 +847,18 @@ function BookingFlow() {
   };
 
   return (
-    <section className="min-h-screen pt-24 pb-20 px-4">
+    <section className="min-h-screen pt-20 sm:pt-24 pb-12 sm:pb-20 px-4">
       <div className="max-w-2xl mx-auto">
-        <motion.div className="text-center mb-8" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-          <h2 className="text-3xl font-black tracking-tight mb-2">
+        <motion.div className="text-center mb-6 sm:mb-8" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+          <h2 className="text-2xl sm:text-3xl font-black tracking-tight mb-2">
             Book Your <span className="text-gradient-orbit">Session</span>
           </h2>
-          <p className="text-muted-foreground">
+          <p className="text-sm sm:text-base text-muted-foreground">
             {selectedPackage ? `${selectedPackage.name} — ₹${selectedPackage.price.toLocaleString("en-IN")}` : "Select a package first"}
           </p>
         </motion.div>
 
-        <div className="flex items-center justify-center gap-2 mb-10">
+        <div className="flex items-center justify-center gap-2 mb-6 sm:mb-10">
           {[1, 2, 3].map((s) => (
             <div key={s} className="flex items-center gap-2">
               <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold transition-all ${
@@ -794,8 +873,8 @@ function BookingFlow() {
 
         <AnimatePresence mode="wait">
           {step === 1 && (
-            <motion.div key="step1" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="orbit-card rounded-2xl p-6 sm:p-8">
-              <h3 className="text-lg font-bold mb-6 flex items-center gap-2"><Users className="w-5 h-5 text-orbit-cyan" />Your Details</h3>
+            <motion.div key="step1" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="orbit-card rounded-2xl p-4 sm:p-6 md:p-8">
+              <h3 className="text-base sm:text-lg font-bold mb-4 sm:mb-6 flex items-center gap-2"><Users className="w-5 h-5 text-orbit-cyan" />Your Details</h3>
               <div className="space-y-4">
                 {[
                   { label: "Full Name *", value: user.name, onChange: (v: string) => setUser({ name: v }), placeholder: "Enter your name", type: "text" },
@@ -821,9 +900,44 @@ function BookingFlow() {
           )}
 
           {step === 2 && (
-            <motion.div key="step2" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="orbit-card rounded-2xl p-6 sm:p-8">
-              <h3 className="text-lg font-bold mb-6 flex items-center gap-2"><CalendarIcon className="w-5 h-5 text-orbit-cyan" />Schedule & Location</h3>
+            <motion.div key="step2" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="orbit-card rounded-2xl p-4 sm:p-6 md:p-8">
+              <h3 className="text-base sm:text-lg font-bold mb-4 sm:mb-6 flex items-center gap-2"><CalendarIcon className="w-5 h-5 text-orbit-cyan" />Schedule & Location</h3>
               <div className="space-y-6">
+                {/* Book Right Now Option */}
+                <div className="orbit-card rounded-xl p-4 border border-orbit-cyan/20 bg-gradient-to-r from-orbit-cyan/5 to-orbit-purple/5">
+                  <button
+                    onClick={() => {
+                      const now = new Date();
+                      let h = now.getHours();
+                      const m = Math.ceil(now.getMinutes() / 5) * 5;
+                      const period = h >= 12 ? "PM" : "AM";
+                      if (h > 12) h -= 12;
+                      if (h === 0) h = 12;
+                      setBookingDate(now);
+                      setBookingTimeSlot(`${h}:${String(m % 60).padStart(2, "0")} ${period}`);
+                      toast.success("Booked for right now!", { description: "A partner will be dispatched immediately." });
+                    }}
+                    className="w-full flex items-center justify-between group"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-orbit-cyan/20 to-orbit-purple/20 flex items-center justify-center">
+                        <ZapIcon className="w-5 h-5 text-orbit-cyan" />
+                      </div>
+                      <div className="text-left">
+                        <div className="text-sm font-bold text-orbit-cyan">Book Right Now</div>
+                        <div className="text-xs text-muted-foreground">Skip scheduling — get a partner immediately</div>
+                      </div>
+                    </div>
+                    <ArrowRight className="w-4 h-4 text-orbit-cyan group-hover:translate-x-1 transition-transform" />
+                  </button>
+                </div>
+
+                <div className="relative flex items-center gap-3">
+                  <div className="flex-1 h-px bg-orbit-border" />
+                  <span className="text-xs text-muted-foreground/50">or schedule a time</span>
+                  <div className="flex-1 h-px bg-orbit-border" />
+                </div>
+
                 <div>
                   <label className="text-sm font-medium text-muted-foreground mb-3 block">Select Date *</label>
                   <div className="orbit-card rounded-xl p-2 sm:p-4 inline-block overflow-x-auto max-w-full">
@@ -831,20 +945,90 @@ function BookingFlow() {
                   </div>
                 </div>
                 <div>
-                  <label className="text-sm font-medium text-muted-foreground mb-3 block">Select Time Slot *</label>
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                    {TIME_SLOTS.map((slot) => (
-                      <button
-                        key={slot.value} onClick={() => slot.available && setBookingTimeSlot(slot.value)} disabled={!slot.available}
-                        className={`px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
-                          bookingTimeSlot === slot.value ? "bg-gradient-to-r from-orbit-cyan to-orbit-purple text-white"
-                            : slot.available ? "bg-white/5 text-foreground hover:bg-white/10 border border-orbit-border"
-                            : "bg-white/3 text-muted-foreground/40 cursor-not-allowed line-through"
-                        }`}
-                      >
-                        {slot.label}
-                      </button>
-                    ))}
+                  <label className="text-sm font-medium text-muted-foreground mb-3 block flex items-center gap-2"><Clock className="w-4 h-4 text-orbit-cyan" />Select Time *</label>
+                  {/* Diagonal Clock Time Picker */}
+                  <div className="orbit-card rounded-xl p-4 border border-orbit-border">
+                    <div className="flex items-center justify-center gap-3 sm:gap-4">
+                      {/* Hour Selector */}
+                      <div className="flex flex-col items-center gap-1">
+                        <button onClick={() => {
+                          const cur = bookingTimeSlot ? parseInt(bookingTimeSlot) : 12;
+                          const next = cur >= 12 ? 1 : cur + 1;
+                          const existingPeriod = bookingTimeSlot ? (bookingTimeSlot.includes("PM") ? "PM" : "AM") : "AM";
+                          const existingMin = bookingTimeSlot ? bookingTimeSlot.split(":").pop()?.split(" ")[0] : "00";
+                          setBookingTimeSlot(`${next}:${existingMin || "00"} ${existingPeriod}`);
+                        }} className="w-10 h-8 flex items-center justify-center rounded-lg bg-white/5 hover:bg-orbit-cyan/10 text-muted-foreground hover:text-orbit-cyan transition-all">
+                          <ChevronDown className="w-4 h-4 rotate-180" />
+                        </button>
+                        <div className="text-4xl sm:text-5xl font-black text-gradient-orbit w-16 text-center tabular-nums">
+                          {bookingTimeSlot ? parseInt(bookingTimeSlot) : "--"}
+                        </div>
+                        <button onClick={() => {
+                          const cur = bookingTimeSlot ? parseInt(bookingTimeSlot) : 12;
+                          const next = cur <= 1 ? 12 : cur - 1;
+                          const existingPeriod = bookingTimeSlot ? (bookingTimeSlot.includes("PM") ? "PM" : "AM") : "AM";
+                          const existingMin = bookingTimeSlot ? bookingTimeSlot.split(":").pop()?.split(" ")[0] : "00";
+                          setBookingTimeSlot(`${next}:${existingMin || "00"} ${existingPeriod}`);
+                        }} className="w-10 h-8 flex items-center justify-center rounded-lg bg-white/5 hover:bg-orbit-cyan/10 text-muted-foreground hover:text-orbit-cyan transition-all">
+                          <ChevronDown className="w-4 h-4" />
+                        </button>
+                        <span className="text-[10px] text-muted-foreground mt-1">Hour</span>
+                      </div>
+
+                      <span className="text-4xl sm:text-5xl font-black text-orbit-cyan animate-pulse">:</span>
+
+                      {/* Minute Selector */}
+                      <div className="flex flex-col items-center gap-1">
+                        <button onClick={() => {
+                          const existingHour = bookingTimeSlot ? parseInt(bookingTimeSlot) : 12;
+                          const existingPeriod = bookingTimeSlot ? (bookingTimeSlot.includes("PM") ? "PM" : "AM") : "AM";
+                          const curMin = bookingTimeSlot ? parseInt(bookingTimeSlot.split(":").pop() || "0") : 0;
+                          const idx = MINUTES.findIndex(m => m >= curMin);
+                          const nextIdx = idx < MINUTES.length - 1 ? idx + 1 : 0;
+                          setBookingTimeSlot(`${existingHour}:${String(MINUTES[nextIdx]).padStart(2, "0")} ${existingPeriod}`);
+                        }} className="w-10 h-8 flex items-center justify-center rounded-lg bg-white/5 hover:bg-orbit-cyan/10 text-muted-foreground hover:text-orbit-cyan transition-all">
+                          <ChevronDown className="w-4 h-4 rotate-180" />
+                        </button>
+                        <div className="text-4xl sm:text-5xl font-black text-gradient-orbit w-16 text-center tabular-nums">
+                          {bookingTimeSlot ? (bookingTimeSlot.split(":").pop()?.split(" ")[0] || "00") : "--"}
+                        </div>
+                        <button onClick={() => {
+                          const existingHour = bookingTimeSlot ? parseInt(bookingTimeSlot) : 12;
+                          const existingPeriod = bookingTimeSlot ? (bookingTimeSlot.includes("PM") ? "PM" : "AM") : "AM";
+                          const curMin = bookingTimeSlot ? parseInt(bookingTimeSlot.split(":").pop() || "0") : 0;
+                          const idx = MINUTES.findIndex(m => m >= curMin);
+                          const prevIdx = idx > 0 ? idx - 1 : MINUTES.length - 1;
+                          setBookingTimeSlot(`${existingHour}:${String(MINUTES[prevIdx]).padStart(2, "0")} ${existingPeriod}`);
+                        }} className="w-10 h-8 flex items-center justify-center rounded-lg bg-white/5 hover:bg-orbit-cyan/10 text-muted-foreground hover:text-orbit-cyan transition-all">
+                          <ChevronDown className="w-4 h-4" />
+                        </button>
+                        <span className="text-[10px] text-muted-foreground mt-1">Min</span>
+                      </div>
+
+                      {/* AM/PM Toggle */}
+                      <div className="flex flex-col gap-1.5 ml-2">
+                        {PERIODS.map((p) => {
+                          const isActive = bookingTimeSlot ? bookingTimeSlot.includes(p) : p === "AM";
+                          return (
+                            <button
+                              key={p}
+                              onClick={() => {
+                                const existingHour = bookingTimeSlot ? parseInt(bookingTimeSlot) : 12;
+                                const existingMin = bookingTimeSlot ? (bookingTimeSlot.split(":").pop()?.split(" ")[0] || "00") : "00";
+                                setBookingTimeSlot(`${existingHour}:${existingMin} ${p}`);
+                              }}
+                              className={`px-3 py-2 rounded-lg text-sm font-bold transition-all ${
+                                isActive
+                                  ? "bg-gradient-to-r from-orbit-cyan to-orbit-purple text-white orbit-glow"
+                                  : "bg-white/5 text-muted-foreground hover:bg-white/10 border border-orbit-border"
+                              }`}
+                            >
+                              {p}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
                   </div>
                 </div>
                 <div>
@@ -867,12 +1051,12 @@ function BookingFlow() {
           )}
 
           {step === 3 && selectedPackage && (
-            <motion.div key="step3" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="orbit-card rounded-2xl p-6 sm:p-8">
-              <h3 className="text-lg font-bold mb-6 flex items-center gap-2"><CreditCard className="w-5 h-5 text-orbit-cyan" />Review & Payment</h3>
+            <motion.div key="step3" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="orbit-card rounded-2xl p-4 sm:p-6 md:p-8">
+              <h3 className="text-base sm:text-lg font-bold mb-4 sm:mb-6 flex items-center gap-2"><CreditCard className="w-5 h-5 text-orbit-cyan" />Review & Payment</h3>
               <div className="space-y-4">
-                <div className="orbit-card rounded-xl p-5 space-y-3">
-                  <div className="text-sm font-medium text-orbit-cyan">Order Summary</div>
-                  <div className="space-y-2 text-sm">
+                <div className="orbit-card rounded-xl p-4 sm:p-5 space-y-3">
+                  <div className="text-xs sm:text-sm font-medium text-orbit-cyan">Order Summary</div>
+                  <div className="space-y-2 text-xs sm:text-sm">
                     {[
                       { label: "Package", value: selectedPackage.name },
                       { label: "Date", value: bookingDate?.toLocaleDateString("en-IN", { weekday: "short", month: "short", day: "numeric" }) },
@@ -892,11 +1076,11 @@ function BookingFlow() {
                   </div>
                 </div>
 
-                <div className="orbit-card rounded-xl p-5 border-orbit-cyan/20">
+                <div className="orbit-card rounded-xl p-4 sm:p-5 border-orbit-cyan/20">
                   <div className="flex items-start gap-3">
                     <Lock className="w-5 h-5 text-orbit-cyan shrink-0 mt-0.5" />
                     <div>
-                      <div className="text-sm font-semibold mb-1">Payment Gate</div>
+                      <div className="text-xs sm:text-sm font-semibold mb-1">Payment Gate</div>
                       <p className="text-xs text-muted-foreground leading-relaxed">
                         The &quot;Notify Videographer&quot; process <strong className="text-orbit-cyan">cannot start</strong> until payment is confirmed.
                       </p>
@@ -906,7 +1090,7 @@ function BookingFlow() {
 
                 <div className="flex gap-3">
                   {["Razorpay", "Stripe"].map((method) => (
-                    <div key={method} className="flex-1 orbit-card rounded-xl p-3 text-center text-sm font-medium border border-orbit-cyan/20">
+                    <div key={method} className="flex-1 orbit-card rounded-xl p-3 text-center text-xs sm:text-sm font-medium border border-orbit-cyan/20">
                       <CreditCard className="w-4 h-4 mx-auto mb-1.5 text-orbit-cyan" />{method}
                     </div>
                   ))}
@@ -969,9 +1153,9 @@ function TrackingDashboard() {
   }, [currentBooking]);
 
   useEffect(() => {
-    if (activeStep >= 5) return;
-    if (activeStep >= 3) {
-      const target = activeStep >= 4 ? 75 : 25;
+    if (activeStep >= 6) return;
+    if (activeStep >= 4) {
+      const target = activeStep >= 5 ? 75 : 25;
       const iv = setInterval(() => { setSyncProgress((p) => { if (p >= target) { clearInterval(iv); return target; } return p + 1; }); }, 100);
       return () => clearInterval(iv);
     }
@@ -979,13 +1163,13 @@ function TrackingDashboard() {
 
   if (!currentBooking) {
     return (
-      <section className="min-h-screen pt-24 pb-20 px-4 flex items-center justify-center">
-        <motion.div className="text-center orbit-card rounded-2xl p-10 max-w-md" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-          <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gradient-to-br from-orbit-cyan/10 to-orbit-purple/10 flex items-center justify-center">
-            <Cloud className="w-8 h-8 text-orbit-cyan" />
+      <section className="min-h-screen pt-20 sm:pt-24 pb-12 sm:pb-20 px-4 flex items-center justify-center">
+        <motion.div className="text-center orbit-card rounded-2xl p-6 sm:p-10 max-w-md" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+          <div className="w-14 h-14 sm:w-16 sm:h-16 mx-auto mb-4 rounded-full bg-gradient-to-br from-orbit-cyan/10 to-orbit-purple/10 flex items-center justify-center">
+            <Cloud className="w-7 h-7 sm:w-8 sm:h-8 text-orbit-cyan" />
           </div>
-          <h3 className="text-xl font-bold mb-2">No Active Booking</h3>
-          <p className="text-muted-foreground mb-6 text-sm">Book a session to start tracking your edit in real-time.</p>
+          <h3 className="text-lg sm:text-xl font-bold mb-2">No Active Booking</h3>
+          <p className="text-muted-foreground mb-4 sm:mb-6 text-sm">Book a session to start tracking your edit in real-time.</p>
           <Button onClick={() => setCurrentView("packages")} className="bg-gradient-to-r from-orbit-cyan to-orbit-purple text-white hover:opacity-90 font-bold">
             Browse Packages <ArrowRight className="w-4 h-4 ml-2" />
           </Button>
@@ -997,20 +1181,20 @@ function TrackingDashboard() {
   const currentStatus = STATUS_PIPELINE[activeStep];
 
   return (
-    <section className="min-h-screen pt-24 pb-20 px-4">
+    <section className="min-h-screen pt-20 sm:pt-24 pb-12 sm:pb-20 px-4">
       <div className="max-w-4xl mx-auto">
-        <motion.div className="text-center mb-10" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+        <motion.div className="text-center mb-6 sm:mb-10" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
           <Badge variant="outline" className="mb-4 border-orbit-cyan/30 text-orbit-cyan bg-orbit-cyan/5">
             <Cloud className="w-3.5 h-3.5 mr-1.5" />Live Tracking
           </Badge>
-          <h2 className="text-3xl font-black tracking-tight mb-2">
+          <h2 className="text-2xl sm:text-3xl font-black tracking-tight mb-2">
             Your Edit is <span className="text-gradient-orbit">{currentStatus?.label}</span>
           </h2>
           <p className="text-muted-foreground text-sm">Booking ID: {currentBooking.id}</p>
         </motion.div>
 
         {/* Status Pipeline */}
-        <div className="orbit-card rounded-2xl p-4 sm:p-6 md:p-8 mb-6">
+        <div className="orbit-card rounded-2xl p-3 sm:p-6 md:p-8 mb-4 sm:mb-6">
           <div className="relative">
             <div className="hidden md:block absolute top-5 left-5 right-5 h-0.5 bg-orbit-border">
               <motion.div className="h-full bg-gradient-to-r from-orbit-cyan to-orbit-purple" initial={{ width: "0%" }} animate={{ width: `${(activeStep / (STATUS_PIPELINE.length - 1)) * 100}%` }} transition={{ duration: 0.8 }} />
@@ -1041,20 +1225,20 @@ function TrackingDashboard() {
         </div>
 
         {/* Live Stats */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 mb-4 sm:mb-6">
           {[
-            { icon: <Upload className="w-3.5 h-3.5 text-orbit-cyan" />, label: "Sync", value: `${activeStep >= 5 ? 100 : syncProgress}%`, progress: activeStep >= 5 ? 100 : syncProgress },
-            { icon: <Timer className="w-3.5 h-3.5 text-orbit-cyan" />, label: "ETA", value: `${activeStep >= 5 ? "0" : countdown}`, suffix: " min" },
+            { icon: <Upload className="w-3.5 h-3.5 text-orbit-cyan" />, label: "Sync", value: `${activeStep >= 6 ? 100 : syncProgress}%`, progress: activeStep >= 6 ? 100 : syncProgress },
+            { icon: <Timer className="w-3.5 h-3.5 text-orbit-cyan" />, label: "ETA", value: `${activeStep >= 6 ? "0" : countdown}`, suffix: " min" },
             { icon: <Film className="w-3.5 h-3.5 text-orbit-cyan" />, label: "Package", value: currentBooking.packageName },
-            { icon: <CircleDot className="w-3.5 h-3.5 text-orbit-cyan" />, label: "Status", badge: true, value: activeStep >= 5 ? "Complete" : "In Progress" },
+            { icon: <CircleDot className="w-3.5 h-3.5 text-orbit-cyan" />, label: "Status", badge: true, value: activeStep >= 6 ? "Complete" : "In Progress" },
           ].map((stat, i) => (
-            <motion.div key={i} className="orbit-card rounded-xl p-4" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.1 }}>
+            <motion.div key={i} className="orbit-card rounded-xl p-3 sm:p-4" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.1 }}>
               <div className="flex items-center gap-2 mb-2">{stat.icon}<span className="text-xs text-muted-foreground">{stat.label}</span></div>
               {stat.badge ? (
-                <Badge variant="outline" className={`text-xs font-bold ${activeStep >= 5 ? "border-green-500/30 text-green-400 bg-green-500/10" : "border-orbit-cyan/30 text-orbit-cyan bg-orbit-cyan/10"}`}>{stat.value}</Badge>
+                <Badge variant="outline" className={`text-xs font-bold ${activeStep >= 6 ? "border-green-500/30 text-green-400 bg-green-500/10" : "border-orbit-cyan/30 text-orbit-cyan bg-orbit-cyan/10"}`}>{stat.value}</Badge>
               ) : (
                 <>
-                  <div className="text-lg sm:text-2xl font-black text-foreground">{stat.value}<span className="text-sm text-muted-foreground">{stat.suffix || ""}</span></div>
+                  <div className="text-base sm:text-2xl font-black text-foreground">{stat.value}<span className="text-xs sm:text-sm text-muted-foreground">{stat.suffix || ""}</span></div>
                   {stat.progress !== undefined && <Progress value={stat.progress} className="mt-2 h-1 bg-white/5" />}
                 </>
               )}
@@ -1062,14 +1246,66 @@ function TrackingDashboard() {
           ))}
         </div>
 
+        {/* En Route Location Card */}
+        <AnimatePresence>
+          {activeStep === 2 && (
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} className="orbit-card rounded-2xl p-4 sm:p-6 border border-orbit-cyan/20 orbit-glow">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-orbit-cyan/20 to-orbit-purple/20 flex items-center justify-center">
+                  <Navigation className="w-5 h-5 text-orbit-cyan" />
+                </div>
+                <div>
+                  <h4 className="text-sm font-bold text-orbit-cyan">Partner is En Route</h4>
+                  <p className="text-xs text-muted-foreground">Your Visual Architect is heading to your location</p>
+                </div>
+              </div>
+              <div className="orbit-card rounded-xl p-4 mb-4">
+                <div className="flex items-center gap-3 mb-3">
+                  <MapPin className="w-4 h-4 text-orbit-cyan shrink-0" />
+                  <div className="flex-1">
+                    <div className="text-xs text-muted-foreground">Destination</div>
+                    <div className="text-sm font-medium">{currentBooking.location}</div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <Navigation className="w-4 h-4 text-green-400 shrink-0" />
+                  <div className="flex-1">
+                    <div className="text-xs text-muted-foreground">Estimated Arrival</div>
+                    <div className="text-sm font-medium text-green-400">~{Math.max(5, 15 - Math.floor(Date.now() / 1000) % 10)} minutes</div>
+                  </div>
+                </div>
+              </div>
+              {/* Simulated route progress */}
+              <div className="mb-3">
+                <div className="flex items-center justify-between text-xs text-muted-foreground mb-2">
+                  <span>Partner Location</span>
+                  <span>Your Location</span>
+                </div>
+                <div className="relative h-2 bg-white/5 rounded-full overflow-hidden">
+                  <motion.div
+                    className="absolute inset-y-0 left-0 bg-gradient-to-r from-orbit-cyan to-orbit-purple rounded-full"
+                    initial={{ width: "20%" }}
+                    animate={{ width: "75%" }}
+                    transition={{ duration: 8, repeat: Infinity, repeatType: "reverse" }}
+                  />
+                </div>
+              </div>
+              <div className="flex items-center gap-2 text-xs text-muted-foreground justify-center">
+                <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
+                <span>Live tracking active</span>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         {/* Delivery Card */}
         <AnimatePresence>
-          {activeStep >= 5 && (
-            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="orbit-card rounded-2xl p-8 text-center orbit-glow">
+          {activeStep >= 6 && (
+            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="orbit-card rounded-2xl p-4 sm:p-8 text-center orbit-glow">
               <PartyPopper className="w-12 h-12 mx-auto mb-4 text-orbit-cyan" />
-              <h3 className="text-2xl font-black mb-2">Your Reel is <span className="text-gradient-orbit">Ready!</span></h3>
-              <p className="text-muted-foreground mb-6">Professional cinematic edit delivered in record time.</p>
-              <Button className="bg-gradient-to-r from-orbit-cyan to-orbit-purple text-white hover:opacity-90 font-bold orbit-glow px-8">
+              <h3 className="text-xl sm:text-2xl font-black mb-2">Your Reel is <span className="text-gradient-orbit">Ready!</span></h3>
+              <p className="text-sm sm:text-base text-muted-foreground mb-4 sm:mb-6">Professional cinematic edit delivered in record time.</p>
+              <Button className="bg-gradient-to-r from-orbit-cyan to-orbit-purple text-white hover:opacity-90 font-bold orbit-glow px-6 sm:px-8">
                 <Play className="w-4 h-4 mr-2" />Download Reel
               </Button>
             </motion.div>
@@ -1077,9 +1313,9 @@ function TrackingDashboard() {
         </AnimatePresence>
 
         {/* Booking Details */}
-        <div className="orbit-card rounded-2xl p-6 mt-6">
-          <h4 className="text-sm font-semibold mb-4 text-muted-foreground">Booking Details</h4>
-          <div className="grid grid-cols-2 gap-4 text-sm">
+        <div className="orbit-card rounded-2xl p-4 sm:p-6 mt-4 sm:mt-6">
+          <h4 className="text-xs sm:text-sm font-semibold mb-3 sm:mb-4 text-muted-foreground">Booking Details</h4>
+          <div className="grid grid-cols-2 gap-3 sm:gap-4 text-xs sm:text-sm">
             {[
               { label: "Date", value: new Date(currentBooking.bookingDate).toLocaleDateString("en-IN", { weekday: "short", month: "short", day: "numeric" }) },
               { label: "Time", value: currentBooking.timeSlot },
@@ -1126,7 +1362,8 @@ export default function ClientApp() {
   useEffect(() => { fetchPackages(); }, [fetchPackages]);
 
   return (
-    <div className="min-h-screen flex flex-col bg-background">
+    <div className="min-h-screen flex flex-col bg-background relative">
+      <AnimatedBackground />
       <ClientNavbar />
       <main className="flex-1">
         <AnimatePresence mode="wait">
