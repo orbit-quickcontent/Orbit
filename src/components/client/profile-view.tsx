@@ -52,6 +52,29 @@ export function ProfileView() {
   const avatarGradient = user.avatar || "from-orbit-cyan to-orbit-purple";
   const initials = getInitials(user.name);
 
+  // Render avatar based on type
+  const renderProfileAvatar = (size: string, textSize: string) => {
+    if (user.avatarType === "photo" && user.avatarPhotoUrl) {
+      return (
+        <div className={`${size} rounded-full overflow-hidden shadow-xl`}>
+          <img src={user.avatarPhotoUrl} alt="Profile" className="w-full h-full object-cover" />
+        </div>
+      );
+    }
+    if (user.avatarType === "emoji" && user.avatarEmoji) {
+      return (
+        <div className={`${size} rounded-full bg-gradient-to-br from-orbit-purple/20 to-orbit-cyan/20 backdrop-blur-sm flex items-center justify-center ${textSize} shadow-xl`}>
+          {user.avatarEmoji}
+        </div>
+      );
+    }
+    return (
+      <div className={`${size} rounded-full bg-gradient-to-br ${avatarGradient} flex items-center justify-center ${textSize} font-black text-white shadow-xl`}>
+        {initials}
+      </div>
+    );
+  };
+
   const completedBookings = bookings.filter((b) => b.status === "DELIVERED").length;
   const activeBookings = bookings.filter((b) => !["DELIVERED", "CANCELLED"].includes(b.status)).length;
 
@@ -61,6 +84,9 @@ export function ProfileView() {
       email: editEmail.trim(),
       phone: editPhone.trim(),
       avatar: AVATAR_COLORS[editAvatar],
+      avatarType: "color",
+      avatarEmoji: null,
+      avatarPhotoUrl: null,
     });
     setIsEditing(false);
   }, [editName, editEmail, editPhone, editAvatar, setUser]);
@@ -87,9 +113,7 @@ export function ProfileView() {
         <div className="flex flex-col sm:flex-row items-center gap-6">
           {/* Avatar */}
           <div className="relative">
-            <div className={`w-24 h-24 sm:w-28 sm:h-28 rounded-full bg-gradient-to-br ${avatarGradient} flex items-center justify-center text-3xl sm:text-4xl font-black text-white shadow-xl`}>
-              {initials}
-            </div>
+            {renderProfileAvatar("w-24 h-24 sm:w-28 sm:h-28", "text-3xl sm:text-4xl")}
             {/* Online indicator */}
             <div className="absolute bottom-1 right-1 w-4 h-4 rounded-full bg-green-400 border-2 border-[#0A2860]" />
           </div>

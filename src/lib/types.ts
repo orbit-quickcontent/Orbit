@@ -64,6 +64,9 @@ export interface UserProfile {
   phone: string;
   location: string;
   avatar: string | null;
+  avatarType: "color" | "emoji" | "photo";
+  avatarEmoji: string | null;
+  avatarPhotoUrl: string | null;
   brandLogo: string | null;
   brandFont: string | null;
   brandColor: string | null;

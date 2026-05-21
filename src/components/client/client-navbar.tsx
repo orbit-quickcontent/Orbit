@@ -5,36 +5,168 @@
  * 
  * Personalized greeting header inspired by modern app dashboards.
  * Shows user avatar, greeting ("Hi, {Name}"), subtitle, and notification bell.
+ * Includes functional search bar with suggestions and notification panel.
  * No traditional nav links — navigation is handled by BottomNav.
  * 
  * Used by: client-app.tsx
  * Category: Client UI
  */
 
-import { useState } from "react";
-import Image from "next/image";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Bell, LogOut, Settings, ChevronDown, Search } from "lucide-react";
+import { Bell, LogOut, Settings, ChevronDown, Search, X, CheckCircle2, CreditCard, Clock, Film } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useAppStore } from "@/lib/store";
 import { getInitials, getGreeting } from "@/lib/utils";
 
+type NotificationItem = {
+  id: string;
+  title: string;
+  description: string;
+  time: string;
+  read: boolean;
+  icon: "booking" | "payment" | "status" | "delivery";
+};
+
 export function ClientNavbar() {
   const { user, currentBooking, bookings, logout, setCurrentView } = useAppStore();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [notifOpen, setNotifOpen] = useState(false);
+  const [readNotifIds, setReadNotifIds] = useState<Set<string>>(new Set());
+
+  const searchRef = useRef<HTMLDivElement>(null);
+  const notifRef = useRef<HTMLDivElement>(null);
 
   const avatarGradient = user.avatar || "from-orbit-cyan to-orbit-purple";
   const initials = getInitials(user.name);
+
+  // Render avatar based on type (color gradient, emoji, or photo)
+  const renderAvatar = (size: string, textSize: string) => {
+    if (user.avatarType === "photo" && user.avatarPhotoUrl) {
+      return (
+        <div className={`${size} rounded-full overflow-hidden shadow-lg`}>
+          <img src={user.avatarPhotoUrl} alt="Profile" className="w-full h-full object-cover" />
+        </div>
+      );
+    }
+    if (user.avatarType === "emoji" && user.avatarEmoji) {
+      return (
+        <div className={`${size} rounded-full bg-gradient-to-br from-orbit-purple/20 to-orbit-cyan/20 backdrop-blur-sm flex items-center justify-center ${textSize} shadow-lg`}>
+          {user.avatarEmoji}
+        </div>
+      );
+    }
+    return (
+      <div className={`${size} rounded-full bg-gradient-to-br ${avatarGradient} flex items-center justify-center ${textSize} font-bold text-white shadow-lg`}>
+        {initials}
+      </div>
+    );
+  };
 
   const firstName = user.name ? user.name.split(" ")[0] : "there";
   const activeBookings = bookings.filter(
     (b) => !["DELIVERED", "CANCELLED"].includes(b.status)
   ).length;
-  // Only show notification for truly active (non-completed) bookings
   const hasActiveBooking = currentBooking
     ? !["DELIVERED", "CANCELLED"].includes(currentBooking.status)
     : false;
-  const unreadNotifications = hasActiveBooking ? 1 : activeBookings > 0 ? activeBookings : 0;
+  // Generate notifications from bookings via useMemo
+  const notifications = useMemo(() => {
+    const notifs: NotificationItem[] = [];
+    bookings.forEach((b) => {
+      const isActive = !["DELIVERED", "CANCELLED"].includes(b.status);
+      const bookingDate = new Date(b.bookingDate);
+      const timeAgo = getTimeAgo(bookingDate);
+
+      if (b.paymentStatus === "SUCCESS") {
+        const id = `${b.id}-payment`;
+        notifs.push({
+          id,
+          title: "Payment Confirmed",
+          description: `${b.packageName} - Payment successful`,
+          time: timeAgo,
+          read: readNotifIds.has(id) || !isActive,
+          icon: "payment",
+        });
+      }
+
+      if (isActive) {
+        const id = `${b.id}-status`;
+        notifs.push({
+          id,
+          title: getStatusTitle(b.status),
+          description: `${b.packageName} - ${b.status.replace(/_/g, " ")}`,
+          time: timeAgo,
+          read: readNotifIds.has(id),
+          icon: "status",
+        });
+      }
+
+      if (b.status === "DELIVERED") {
+        const id = `${b.id}-delivered`;
+        notifs.push({
+          id,
+          title: "Edit Delivered",
+          description: `${b.packageName} - Your edit is ready!`,
+          time: timeAgo,
+          read: readNotifIds.has(id) || true,
+          icon: "delivery",
+        });
+      }
+    });
+    return notifs.reverse();
+  }, [bookings, readNotifIds]);
+
+  const unreadCount = notifications.filter((n) => !n.read).length;
+
+  // Close search/notif on outside click
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (searchRef.current && !searchRef.current.contains(e.target as Node)) {
+        setSearchOpen(false);
+      }
+      if (notifRef.current && !notifRef.current.contains(e.target as Node)) {
+        setNotifOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, []);
+
+  // Close search on Escape
+  useEffect(() => {
+    function handleKey(e: KeyboardEvent) {
+      if (e.key === "Escape") {
+        setSearchOpen(false);
+        setNotifOpen(false);
+      }
+    }
+    document.addEventListener("keydown", handleKey);
+    return () => document.removeEventListener("keydown", handleKey);
+  }, []);
+
+  const searchSuggestions = [
+    { label: "Book a session", view: "packages" as const },
+    { label: "Track my order", view: "tracking" as const },
+    { label: "View packages", view: "packages" as const },
+    { label: "Brand DNA", view: "booking" as const },
+  ];
+
+  const filteredSuggestions = searchQuery
+    ? searchSuggestions.filter((s) =>
+        s.label.toLowerCase().includes(searchQuery.toLowerCase())
+      )
+    : searchSuggestions;
+
+  function markAllRead() {
+    setReadNotifIds((prev) => {
+      const next = new Set(prev);
+      notifications.forEach((n) => next.add(n.id));
+      return next;
+    });
+  }
 
   return (
     <header className="sticky top-0 z-50">
@@ -49,10 +181,8 @@ export function ClientNavbar() {
                 onClick={() => setCurrentView("profile")}
                 className="relative group"
               >
-                <div
-                  className={`w-11 h-11 sm:w-12 sm:h-12 rounded-full bg-gradient-to-br ${avatarGradient} flex items-center justify-center text-sm sm:text-base font-bold text-white shadow-lg transition-transform duration-200 group-hover:scale-105 group-active:scale-95`}
-                >
-                  {initials}
+                <div className="transition-transform duration-200 group-hover:scale-105 group-active:scale-95">
+                  {renderAvatar("w-11 h-11 sm:w-12 sm:h-12", "text-sm sm:text-base")}
                 </div>
                 {/* Online indicator */}
                 <div className="absolute bottom-0 right-0 w-3 h-3 sm:w-3.5 sm:h-3.5 rounded-full bg-green-400 border-2 border-[#0A2860]" />
@@ -71,27 +201,197 @@ export function ClientNavbar() {
 
             {/* Right: Search + Notification + Menu */}
             <div className="flex items-center gap-2 sm:gap-3">
-              {/* Search button */}
-              <button className="w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-white/[0.06] backdrop-blur-xl flex items-center justify-center text-muted-foreground hover:text-orbit-cyan hover:bg-white/10 transition-all duration-200">
-                <Search className="w-4 h-4 sm:w-5 sm:h-5" />
-              </button>
+              {/* Search bar */}
+              <div ref={searchRef} className="relative">
+                <AnimatePresence>
+                  {searchOpen && (
+                    <motion.div
+                      initial={{ width: 40, opacity: 0 }}
+                      animate={{ width: 220, opacity: 1 }}
+                      exit={{ width: 40, opacity: 0 }}
+                      transition={{ duration: 0.25, ease: "easeInOut" }}
+                      className="absolute right-0 top-0 z-10 flex items-center"
+                    >
+                      <div className="w-full flex items-center gap-2 bg-white/[0.08] backdrop-blur-xl rounded-full px-3 h-10 sm:h-11 border border-white/10">
+                        <Search className="w-4 h-4 text-muted-foreground shrink-0" />
+                        <input
+                          autoFocus
+                          value={searchQuery}
+                          onChange={(e) => setSearchQuery(e.target.value)}
+                          placeholder="Search..."
+                          className="flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground/50 outline-none min-w-0"
+                        />
+                        {searchQuery && (
+                          <button
+                            onClick={() => setSearchQuery("")}
+                            className="shrink-0 text-muted-foreground hover:text-foreground"
+                          >
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+
+                {/* Search suggestions dropdown */}
+                <AnimatePresence>
+                  {searchOpen && filteredSuggestions.length > 0 && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -4, scale: 0.95 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: -4, scale: 0.95 }}
+                      transition={{ duration: 0.15 }}
+                      className="absolute right-0 top-12 sm:top-13 w-56 orbit-card-strong rounded-2xl overflow-hidden shadow-2xl z-[70]"
+                    >
+                      <div className="p-2">
+                        <p className="px-3 py-1.5 text-[10px] font-semibold text-muted-foreground/60 uppercase tracking-wider">
+                          Quick Actions
+                        </p>
+                        {filteredSuggestions.map((s, i) => (
+                          <button
+                            key={i}
+                            onClick={() => {
+                              setCurrentView(s.view);
+                              setSearchOpen(false);
+                              setSearchQuery("");
+                            }}
+                            className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl hover:bg-white/5 transition-colors text-left text-sm text-foreground/80 hover:text-foreground"
+                          >
+                            <Search className="w-3.5 h-3.5 text-muted-foreground/50" />
+                            {s.label}
+                          </button>
+                        ))}
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+
+                <button
+                  onClick={() => {
+                    setSearchOpen(!searchOpen);
+                    setNotifOpen(false);
+                    if (searchOpen) setSearchQuery("");
+                  }}
+                  className="w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-white/[0.06] backdrop-blur-xl flex items-center justify-center text-muted-foreground hover:text-orbit-cyan hover:bg-white/10 transition-all duration-200"
+                >
+                  <Search className="w-4 h-4 sm:w-5 sm:h-5" />
+                </button>
+              </div>
 
               {/* Notification bell */}
-              <button
-                className="relative w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-white/[0.06] backdrop-blur-xl flex items-center justify-center text-muted-foreground hover:text-orbit-cyan hover:bg-white/10 transition-all duration-200"
-                onClick={() => setMenuOpen(!menuOpen)}
-              >
-                <Bell className="w-4 h-4 sm:w-5 sm:h-5" />
-                {unreadNotifications > 0 && (
-                  <span className="absolute -top-0.5 -right-0.5 w-5 h-5 sm:w-5.5 sm:h-5.5 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center shadow-lg animate-pulse">
-                    {unreadNotifications}
-                  </span>
-                )}
-              </button>
+              <div ref={notifRef} className="relative">
+                <button
+                  className="relative w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-white/[0.06] backdrop-blur-xl flex items-center justify-center text-muted-foreground hover:text-orbit-cyan hover:bg-white/10 transition-all duration-200"
+                  onClick={() => {
+                    setNotifOpen(!notifOpen);
+                    setSearchOpen(false);
+                    setSearchQuery("");
+                  }}
+                >
+                  <Bell className="w-4 h-4 sm:w-5 sm:h-5" />
+                  {unreadCount > 0 && (
+                    <span className="absolute -top-0.5 -right-0.5 w-5 h-5 sm:w-5.5 sm:h-5.5 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center shadow-lg animate-pulse">
+                      {unreadCount}
+                    </span>
+                  )}
+                </button>
+
+                {/* Notification panel */}
+                <AnimatePresence>
+                  {notifOpen && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -8, scale: 0.95 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: -8, scale: 0.95 }}
+                      transition={{ duration: 0.2 }}
+                      className="absolute right-0 top-12 sm:top-13 w-72 sm:w-80 orbit-card-strong rounded-2xl overflow-hidden shadow-2xl z-[70]"
+                    >
+                      <div className="p-3 border-b border-white/5">
+                        <div className="flex items-center justify-between">
+                          <h3 className="text-sm font-bold text-foreground">Notifications</h3>
+                          {unreadCount > 0 && (
+                            <button
+                              onClick={markAllRead}
+                              className="text-[11px] text-orbit-cyan hover:underline font-medium"
+                            >
+                              Mark all read
+                            </button>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="max-h-80 overflow-y-auto custom-scrollbar">
+                        {notifications.length === 0 ? (
+                          <div className="p-6 text-center">
+                            <Bell className="w-8 h-8 text-muted-foreground/20 mx-auto mb-2" />
+                            <p className="text-sm text-muted-foreground/50">No new notifications</p>
+                          </div>
+                        ) : (
+                          <div className="p-2">
+                            {notifications.map((notif) => (
+                              <div
+                                key={notif.id}
+                                className={`flex items-start gap-3 px-3 py-2.5 rounded-xl transition-colors ${
+                                  notif.read
+                                    ? "hover:bg-white/[0.02]"
+                                    : "bg-white/[0.04] hover:bg-white/[0.06]"
+                                }`}
+                              >
+                                <div
+                                  className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 mt-0.5 ${
+                                    notif.icon === "payment"
+                                      ? "bg-green-500/10 text-green-400"
+                                      : notif.icon === "status"
+                                      ? "bg-orbit-cyan/10 text-orbit-cyan"
+                                      : notif.icon === "delivery"
+                                      ? "bg-orbit-purple/10 text-orbit-purple"
+                                      : "bg-white/5 text-muted-foreground"
+                                  }`}
+                                >
+                                  {notif.icon === "payment" ? (
+                                    <CreditCard className="w-4 h-4" />
+                                  ) : notif.icon === "status" ? (
+                                    <Film className="w-4 h-4" />
+                                  ) : notif.icon === "delivery" ? (
+                                    <CheckCircle2 className="w-4 h-4" />
+                                  ) : (
+                                    <Clock className="w-4 h-4" />
+                                  )}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-2">
+                                    <p className="text-xs font-semibold text-foreground truncate">
+                                      {notif.title}
+                                    </p>
+                                    {!notif.read && (
+                                      <div className="w-1.5 h-1.5 rounded-full bg-orbit-cyan shrink-0" />
+                                    )}
+                                  </div>
+                                  <p className="text-[11px] text-muted-foreground/70 truncate">
+                                    {notif.description}
+                                  </p>
+                                  <p className="text-[10px] text-muted-foreground/40 mt-0.5">
+                                    {notif.time}
+                                  </p>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
 
               {/* Quick menu dropdown toggle (mobile) */}
               <button
-                onClick={() => setMenuOpen(!menuOpen)}
+                onClick={() => {
+                  setMenuOpen(!menuOpen);
+                  setSearchOpen(false);
+                  setNotifOpen(false);
+                }}
                 className="md:hidden w-10 h-10 rounded-full bg-white/[0.06] backdrop-blur-xl flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
               >
                 <ChevronDown
@@ -104,7 +404,7 @@ export function ClientNavbar() {
           </div>
 
           {/* Subtitle / Status line */}
-          <div className="pb-3 sm:pb-4 flex items-center gap-2">
+          <div className="pb-3 sm:pb-4 min-h-[3rem] flex items-center gap-2">
             {hasActiveBooking ? (
               <div className="flex items-center gap-2">
                 <div className="w-2 h-2 rounded-full bg-orbit-cyan animate-pulse" />
@@ -119,7 +419,7 @@ export function ClientNavbar() {
                 </p>
               </div>
             ) : (
-              <p className="text-xs sm:text-sm text-muted-foreground/70">
+              <p className="text-xs sm:text-sm text-muted-foreground/70 whitespace-nowrap truncate">
                 Ready to create something cinematic?
               </p>
             )}
@@ -127,7 +427,7 @@ export function ClientNavbar() {
         </div>
       </div>
 
-      {/* Dropdown Menu */}
+      {/* Dropdown Menu (mobile) */}
       <AnimatePresence>
         {menuOpen && (
           <motion.div
@@ -199,4 +499,34 @@ export function ClientNavbar() {
       </AnimatePresence>
     </header>
   );
+}
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function getStatusTitle(status: string): string {
+  const map: Record<string, string> = {
+    PENDING: "Booking Confirmed",
+    PAID: "Payment Received",
+    PARTNER_DISPATCHED: "Editor Assigned",
+    EN_ROUTE: "Editor En Route",
+    SHOOTING: "Shooting in Progress",
+    SYNCING: "Media Syncing",
+    EDITING: "Edit in Progress",
+    DELIVERED: "Edit Delivered",
+    CANCELLED: "Booking Cancelled",
+  };
+  return map[status] || "Booking Update";
+}
+
+function getTimeAgo(date: Date): string {
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffMins = Math.floor(diffMs / 60000);
+  if (diffMins < 1) return "Just now";
+  if (diffMins < 60) return `${diffMins}m ago`;
+  const diffHours = Math.floor(diffMins / 60);
+  if (diffHours < 24) return `${diffHours}h ago`;
+  const diffDays = Math.floor(diffHours / 24);
+  if (diffDays < 7) return `${diffDays}d ago`;
+  return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }

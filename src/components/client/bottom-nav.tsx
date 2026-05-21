@@ -33,6 +33,29 @@ export function BottomNav() {
   const avatarInitial = getInitials(user.name);
   const avatarGradient = user.avatar || "from-orbit-cyan to-orbit-purple";
 
+  // Render avatar based on type (color gradient, emoji, or photo)
+  const renderNavAvatar = (size: string, textSize: string) => {
+    if (user.avatarType === "photo" && user.avatarPhotoUrl) {
+      return (
+        <div className={`${size} rounded-full overflow-hidden`}>
+          <img src={user.avatarPhotoUrl} alt="Profile" className="w-full h-full object-cover" />
+        </div>
+      );
+    }
+    if (user.avatarType === "emoji" && user.avatarEmoji) {
+      return (
+        <div className={`${size} rounded-full bg-gradient-to-br from-orbit-purple/20 to-orbit-cyan/20 flex items-center justify-center ${textSize}`}>
+          {user.avatarEmoji}
+        </div>
+      );
+    }
+    return (
+      <div className={`${size} rounded-full bg-gradient-to-br ${avatarGradient} flex items-center justify-center ${textSize} font-bold text-white`}>
+        {avatarInitial}
+      </div>
+    );
+  };
+
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50">
       <div className="px-3 sm:px-4 pb-[env(safe-area-inset-bottom,8px)] pt-1">
@@ -60,13 +83,13 @@ export function BottomNav() {
 
                     <div className="relative z-10">
                       <div
-                        className={`w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-gradient-to-br ${avatarGradient} flex items-center justify-center text-[9px] sm:text-[10px] font-bold text-white transition-all duration-200 ${
+                        className={`transition-all duration-200 ${
                           isActive
                             ? "scale-110 ring-2 ring-orbit-purple/40"
                             : "opacity-60 group-hover:opacity-100 group-hover:scale-105"
                         }`}
                       >
-                        {avatarInitial}
+                        {renderNavAvatar("w-6 h-6 sm:w-7 sm:h-7", "text-[10px] sm:text-xs")}
                       </div>
                     </div>
 

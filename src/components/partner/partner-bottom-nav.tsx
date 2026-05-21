@@ -42,6 +42,28 @@ export function PartnerBottomNav() {
   const avatarGradient = user.avatar || "from-orbit-purple to-orbit-cyan";
   const initials = getInitials(user.name);
 
+  const renderNavAvatar = (size: string, textSize: string) => {
+    if (user.avatarType === "photo" && user.avatarPhotoUrl) {
+      return (
+        <div className={`${size} rounded-full overflow-hidden`}>
+          <img src={user.avatarPhotoUrl} alt="Profile" className="w-full h-full object-cover" />
+        </div>
+      );
+    }
+    if (user.avatarType === "emoji" && user.avatarEmoji) {
+      return (
+        <div className={`${size} rounded-full bg-gradient-to-br from-orbit-purple/20 to-orbit-cyan/20 backdrop-blur-sm flex items-center justify-center ${textSize}`}>
+          {user.avatarEmoji}
+        </div>
+      );
+    }
+    return (
+      <div className={`${size} rounded-full bg-gradient-to-br ${avatarGradient} flex items-center justify-center ${textSize} font-bold text-white`}>
+        {initials}
+      </div>
+    );
+  };
+
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50">
       <div className="px-4 sm:px-6 pb-[env(safe-area-inset-bottom,8px)] pt-1">
@@ -68,16 +90,12 @@ export function PartnerBottomNav() {
                       />
                     )}
 
-                    <div className="relative z-10">
-                      <div
-                        className={`w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-gradient-to-br ${avatarGradient} flex items-center justify-center text-[9px] sm:text-[10px] font-bold text-white transition-all duration-200 ${
-                          isActive
-                            ? "ring-2 ring-white/30 scale-110"
-                            : "opacity-50 group-hover:opacity-80 group-hover:scale-105"
-                        }`}
-                      >
-                        {initials}
-                      </div>
+                    <div className={`relative z-10 transition-all duration-200 ${
+                      isActive
+                        ? "ring-2 ring-white/30 scale-110"
+                        : "opacity-50 group-hover:opacity-80 group-hover:scale-105"
+                    }`}>
+                      {renderNavAvatar("w-7 h-7 sm:w-8 sm:h-8", "text-[9px] sm:text-[10px]")}
                     </div>
 
                     <span

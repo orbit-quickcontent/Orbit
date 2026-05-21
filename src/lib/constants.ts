@@ -16,6 +16,12 @@ export const AVATAR_COLORS = [
   "from-rose-400 to-pink-500",
 ] as const;
 
+// Human-like avatar emojis for selection
+export const AVATAR_EMOJIS = [
+  "👤", "🧑", "👨", "👩", "🧔", "👱‍♀️", "👨‍🦱", "👩‍🦰",
+  "🧑‍💻", "👨‍🎨", "👩‍🎤", "🧑‍🚀", "👨‍🍳", "👩‍🔬", "🦊", "🐱",
+] as const;
+
 // Default partner stats (mock data for demo)
 export const DEFAULT_PARTNER_STATS = {
   completed: 47,

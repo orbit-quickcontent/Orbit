@@ -270,7 +270,7 @@ export function DashboardHome() {
                 className="w-full text-left group"
               >
                 <div
-                  className={`orbit-card rounded-2xl p-4 sm:p-5 transition-all duration-300 hover:scale-[1.02] hover:border-orbit-cyan/30 h-full ${
+                  className={`orbit-card rounded-2xl p-4 sm:p-5 transition-all duration-300 hover:scale-[1.02] hover:border-orbit-cyan/30 h-full flex flex-col ${
                     pkg.popular
                       ? "border-orbit-cyan/30 orbit-glow"
                       : "border-orbit-border"
@@ -312,7 +312,7 @@ export function DashboardHome() {
                       /session
                     </span>
                   </div>
-                  <div className="space-y-1.5 mb-3">
+                  <div className="space-y-1.5 mb-3 flex-1">
                     {pkg.features.slice(0, 3).map((f, fi) => (
                       <div
                         key={fi}
@@ -328,7 +328,7 @@ export function DashboardHome() {
                       </p>
                     )}
                   </div>
-                  <div className="flex items-center justify-between">
+                  <div className="flex items-center justify-between mt-auto">
                     <span className="text-[11px] text-orbit-cyan font-medium group-hover:underline">
                       Book Now
                     </span>

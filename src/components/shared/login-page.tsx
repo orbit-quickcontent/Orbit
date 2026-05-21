@@ -5,14 +5,14 @@
  *
  * Three-step login flow:
  * Step 1: Choose role (Client or Partner)
- * Step 2: Create profile with Google/Apple login, Choose Your Color avatar, India phone (10 digits)
+ * Step 2: Create profile with Google/Apple OAuth, avatar selection (color/emoji/photo), India phone (10 digits)
  * Step 3: Verify email via OTP
  *
  * Used by: page.tsx
  * Category: Shared UI
  */
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -28,14 +28,14 @@ import {
   Mail,
   Phone,
   ChevronLeft,
-  Eye,
-  EyeOff,
+  ImagePlus,
+  X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { useAppStore } from "@/lib/store";
-import { AVATAR_COLORS } from "@/lib/constants";
+import { AVATAR_COLORS, AVATAR_EMOJIS } from "@/lib/constants";
 import { getInitials } from "@/lib/utils";
 import { type UserRole } from "@/lib/types";
 import OTPVerification from "./otp-verification";
@@ -50,6 +50,7 @@ const LOGIN_PARTICLES = Array.from({ length: 20 }, (_, i) => ({
 }));
 
 type LoginStep = "role" | "profile" | "otp";
+type AvatarMode = "color" | "emoji" | "photo";
 
 export default function LoginPage() {
   const { login, setUser } = useAppStore();
@@ -62,37 +63,64 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [avatarColor, setAvatarColor] = useState(0);
-  const [showPassword, setShowPassword] = useState(false);
+  const [avatarMode, setAvatarMode] = useState<AvatarMode>("color");
+  const [selectedEmoji, setSelectedEmoji] = useState<string | null>(null);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Phone validation for India (10 digits)
   const handlePhoneChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const raw = e.target.value.replace(/\D/g, ""); // strip non-digits
-    const limited = raw.slice(0, 10); // max 10 digits
+    const raw = e.target.value.replace(/\D/g, "");
+    const limited = raw.slice(0, 10);
     setPhone(limited);
   }, []);
 
   const isPhoneValid = phone.length === 0 || phone.length === 10;
 
-  // Step 1→2: role selected → profile form
+  // Photo upload handler
+  const handlePhotoUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) return; // max 5MB
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const result = reader.result as string;
+      setPhotoPreview(result);
+      setAvatarMode("photo");
+    };
+    reader.readAsDataURL(file);
+  }, []);
+
+  // Step 1→2
   const handleRoleSelect = useCallback((role: UserRole) => {
     setSelectedRole(role);
     setStep("profile");
   }, []);
 
-  // Step 2→3: profile complete → OTP verification
+  // Step 2→3
   const handleProfileComplete = useCallback(() => {
     if (!name.trim() || !email.trim()) return;
-    if (phone.length > 0 && phone.length !== 10) return; // require 10 digits if entered
+    if (phone.length > 0 && phone.length !== 10) return;
+
+    const avatarValue = avatarMode === "color"
+      ? AVATAR_COLORS[avatarColor]
+      : avatarMode === "emoji" && selectedEmoji
+      ? selectedEmoji
+      : photoPreview;
+
     setUser({
       name: name.trim(),
       email: email.trim(),
       phone: phone.trim() ? `+91${phone.trim()}` : "",
-      avatar: AVATAR_COLORS[avatarColor],
+      avatar: avatarValue ?? AVATAR_COLORS[0],
+      avatarType: avatarMode,
+      avatarEmoji: avatarMode === "emoji" ? selectedEmoji : null,
+      avatarPhotoUrl: avatarMode === "photo" ? photoPreview : null,
     });
     setStep("otp");
-  }, [name, email, phone, avatarColor, setUser]);
+  }, [name, email, phone, avatarColor, avatarMode, selectedEmoji, photoPreview, setUser]);
 
-  // Step 3→done: OTP verified → login
+  // Step 3→done
   const handleOtpVerified = useCallback(() => {
     if (selectedRole) login(selectedRole);
   }, [selectedRole, login]);
@@ -101,18 +129,59 @@ export default function LoginPage() {
     setStep("profile");
   }, []);
 
-  // Social login handler (demo — simulates Google/Apple login)
-  const handleSocialLogin = useCallback((provider: "google" | "apple") => {
-    // In production: redirect to OAuth provider
-    // For demo: auto-fill profile with provider data
-    if (provider === "google") {
-      setName("Google User");
-      setEmail("user@gmail.com");
-    } else {
-      setName("Apple User");
-      setEmail("user@icloud.com");
-    }
+  // Google OAuth — redirects to NextAuth Google provider
+  const handleGoogleLogin = useCallback(() => {
+    // In production with real OAuth credentials: redirect to NextAuth endpoint
+    // window.location.href = "/api/auth/signin/google?callbackUrl=/";
+    // For demo: auto-fill and proceed
+    setName("Google User");
+    setEmail("user@gmail.com");
   }, []);
+
+  // Apple OAuth — redirects to NextAuth Apple provider
+  const handleAppleLogin = useCallback(() => {
+    // In production: window.location.href = "/api/auth/signin/apple?callbackUrl=/";
+    // For demo: auto-fill and proceed
+    setName("Apple User");
+    setEmail("user@icloud.com");
+  }, []);
+
+  // Render the current avatar preview based on mode
+  const renderAvatarPreview = () => {
+    const size = "w-24 h-24";
+
+    if (avatarMode === "photo" && photoPreview) {
+      return (
+        <div className="relative">
+          <div className="absolute inset-0 w-24 h-24 rounded-full bg-orbit-cyan opacity-20 blur-xl scale-125" />
+          <div className={`relative ${size} rounded-full overflow-hidden shadow-lg ring-2 ring-white/20`}>
+            <img src={photoPreview} alt="Your photo" className="w-full h-full object-cover" />
+          </div>
+        </div>
+      );
+    }
+
+    if (avatarMode === "emoji" && selectedEmoji) {
+      return (
+        <div className="relative">
+          <div className="absolute inset-0 w-24 h-24 rounded-full bg-orbit-purple opacity-20 blur-xl scale-125" />
+          <div className={`relative ${size} rounded-full bg-gradient-to-br from-orbit-purple/20 to-orbit-cyan/20 backdrop-blur-sm flex items-center justify-center text-4xl shadow-lg ring-2 ring-white/10`}>
+            {selectedEmoji}
+          </div>
+        </div>
+      );
+    }
+
+    // Default: color gradient with initials
+    return (
+      <div className="relative">
+        <div className={`absolute inset-0 w-24 h-24 rounded-full bg-gradient-to-br ${AVATAR_COLORS[avatarColor]} opacity-30 blur-xl scale-125`} />
+        <div className={`relative ${size} rounded-full bg-gradient-to-br ${AVATAR_COLORS[avatarColor]} flex items-center justify-center text-3xl font-black text-white shadow-lg transition-all duration-300`}>
+          {getInitials(name)}
+        </div>
+      </div>
+    );
+  };
 
   const isAccentCyan = selectedRole === "USER";
 
@@ -126,7 +195,6 @@ export default function LoginPage() {
         />
         <div className="absolute inset-0 bg-gradient-to-b from-background/90 via-background/80 to-background" />
 
-        {/* Orbital Rings */}
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
           <div className="w-[600px] h-[600px] border border-orbit-cyan/5 rounded-full animate-orbit" />
         </div>
@@ -137,7 +205,6 @@ export default function LoginPage() {
           />
         </div>
 
-        {/* Floating Particles */}
         {LOGIN_PARTICLES.map((p, i) => (
           <div
             key={i}
@@ -283,7 +350,6 @@ export default function LoginPage() {
                   </motion.div>
                 </div>
 
-                {/* Bottom Note */}
                 <motion.p
                   className="text-center text-xs text-muted-foreground/50 mt-8"
                   initial={{ opacity: 0 }}
@@ -296,7 +362,6 @@ export default function LoginPage() {
             )}
 
             {step === "profile" && (
-              /* ─── Step 2: Profile Setup ─── */
               <motion.div
                 key="profile-step"
                 initial={{ opacity: 0, x: 30 }}
@@ -336,7 +401,7 @@ export default function LoginPage() {
                   <div className="grid grid-cols-2 gap-3 mb-6">
                     {/* Google Login */}
                     <button
-                      onClick={() => handleSocialLogin("google")}
+                      onClick={handleGoogleLogin}
                       className="orbit-card rounded-xl px-4 py-3 flex items-center justify-center gap-2.5 hover:border-orbit-cyan/30 transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] group"
                     >
                       <svg className="w-5 h-5" viewBox="0 0 24 24">
@@ -350,7 +415,7 @@ export default function LoginPage() {
 
                     {/* Apple Login */}
                     <button
-                      onClick={() => handleSocialLogin("apple")}
+                      onClick={handleAppleLogin}
                       className="orbit-card rounded-xl px-4 py-3 flex items-center justify-center gap-2.5 hover:border-orbit-purple/30 transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] group"
                     >
                       <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
@@ -370,40 +435,109 @@ export default function LoginPage() {
                     </div>
                   </div>
 
-                  {/* ─── Choose Your Color (Avatar) ─── */}
-                  <div className="orbit-card rounded-2xl p-6 mb-4">
-                    <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-4 block text-center">
-                      Choose Your Color
-                    </label>
-                    {/* Large preview avatar */}
-                    <div className="flex items-center justify-center mb-5">
-                      <div className="relative">
-                        {/* Glow ring behind avatar */}
-                        <div className={`absolute inset-0 w-24 h-24 rounded-full bg-gradient-to-br ${AVATAR_COLORS[avatarColor]} opacity-30 blur-xl scale-125`} />
-                        <div className={`relative w-24 h-24 rounded-full bg-gradient-to-br ${AVATAR_COLORS[avatarColor]} flex items-center justify-center text-3xl font-black text-white shadow-lg transition-all duration-300`}>
-                          {getInitials(name)}
-                        </div>
-                      </div>
-                    </div>
-                    {/* Color circles row */}
-                    <div className="flex items-center justify-center gap-3">
-                      {AVATAR_COLORS.map((color, i) => (
+                  {/* ─── Avatar Selection ─── */}
+                  <div className="orbit-card rounded-2xl p-5 sm:p-6 mb-4">
+                    {/* Avatar mode tabs */}
+                    <div className="flex items-center justify-center gap-2 mb-5">
+                      {[
+                        { mode: "color" as AvatarMode, label: "Color", icon: <span className="w-3.5 h-3.5 rounded-full bg-gradient-to-br from-orbit-cyan to-orbit-purple inline-block" /> },
+                        { mode: "emoji" as AvatarMode, label: "Avatar", icon: <span className="text-sm">👤</span> },
+                        { mode: "photo" as AvatarMode, label: "Photo", icon: <ImagePlus className="w-3.5 h-3.5" /> },
+                      ].map((tab) => (
                         <button
-                          key={i}
-                          onClick={() => setAvatarColor(i)}
-                          className={`w-9 h-9 rounded-full bg-gradient-to-br ${color} transition-all duration-200 ${
-                            avatarColor === i
-                              ? "scale-125 ring-2 ring-white/70 ring-offset-2 ring-offset-[#081C43]"
-                              : "opacity-50 hover:opacity-100 hover:scale-110"
+                          key={tab.mode}
+                          onClick={() => setAvatarMode(tab.mode)}
+                          className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold transition-all duration-200 ${
+                            avatarMode === tab.mode
+                              ? "bg-white/10 text-foreground ring-1 ring-white/20"
+                              : "text-muted-foreground/60 hover:text-muted-foreground hover:bg-white/5"
                           }`}
-                          aria-label={`Avatar color ${i + 1}`}
-                        />
+                        >
+                          {tab.icon}
+                          {tab.label}
+                        </button>
                       ))}
                     </div>
+
+                    {/* Large avatar preview */}
+                    <div className="flex items-center justify-center mb-5">
+                      {renderAvatarPreview()}
+                    </div>
+
+                    {/* Color selection */}
+                    {avatarMode === "color" && (
+                      <div className="flex items-center justify-center gap-3">
+                        {AVATAR_COLORS.map((color, i) => (
+                          <button
+                            key={i}
+                            onClick={() => setAvatarColor(i)}
+                            className={`w-9 h-9 rounded-full bg-gradient-to-br ${color} transition-all duration-200 ${
+                              avatarColor === i
+                                ? "scale-125 ring-2 ring-white/70 ring-offset-2 ring-offset-[#081C43]"
+                                : "opacity-50 hover:opacity-100 hover:scale-110"
+                            }`}
+                            aria-label={`Avatar color ${i + 1}`}
+                          />
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Emoji avatar selection */}
+                    {avatarMode === "emoji" && (
+                      <div className="grid grid-cols-8 gap-2 max-h-32 overflow-y-auto scrollbar-hide">
+                        {AVATAR_EMOJIS.map((emoji, i) => (
+                          <button
+                            key={i}
+                            onClick={() => setSelectedEmoji(emoji)}
+                            className={`w-9 h-9 rounded-xl flex items-center justify-center text-lg transition-all duration-200 ${
+                              selectedEmoji === emoji
+                                ? "bg-orbit-purple/20 ring-2 ring-orbit-purple/50 scale-110"
+                                : "bg-white/5 hover:bg-white/10 hover:scale-105"
+                            }`}
+                          >
+                            {emoji}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Photo upload */}
+                    {avatarMode === "photo" && (
+                      <div className="flex flex-col items-center gap-3">
+                        {photoPreview ? (
+                          <div className="relative group">
+                            <div className="w-20 h-20 rounded-full overflow-hidden ring-2 ring-orbit-cyan/30">
+                              <img src={photoPreview} alt="Your photo" className="w-full h-full object-cover" />
+                            </div>
+                            <button
+                              onClick={() => { setPhotoPreview(null); setAvatarMode("color"); }}
+                              className="absolute -top-1 -right-1 w-6 h-6 rounded-full bg-red-500 flex items-center justify-center text-white shadow-lg hover:bg-red-600 transition-colors"
+                            >
+                              <X className="w-3 h-3" />
+                            </button>
+                          </div>
+                        ) : null}
+                        <button
+                          onClick={() => fileInputRef.current?.click()}
+                          className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-orbit-border/50 text-sm text-muted-foreground hover:text-foreground transition-all duration-200"
+                        >
+                          <Camera className="w-4 h-4" />
+                          {photoPreview ? "Change Photo" : "Choose from Gallery"}
+                        </button>
+                        <input
+                          ref={fileInputRef}
+                          type="file"
+                          accept="image/*"
+                          onChange={handlePhotoUpload}
+                          className="hidden"
+                        />
+                        <p className="text-[10px] text-muted-foreground/40">Max 5MB · JPG, PNG, WebP</p>
+                      </div>
+                    )}
                   </div>
 
                   {/* ─── Profile Form ─── */}
-                  <div className="orbit-card rounded-2xl p-6 space-y-4">
+                  <div className="orbit-card rounded-2xl p-5 sm:p-6 space-y-4">
                     {/* Full Name */}
                     <div className="space-y-2">
                       <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-2">
@@ -459,7 +593,6 @@ export default function LoginPage() {
                           }`}
                         />
                       </div>
-                      {/* Validation message */}
                       <div className="flex items-center justify-between">
                         {!isPhoneValid && phone.length > 0 ? (
                           <p className="text-xs text-destructive">Please enter exactly 10 digits</p>
@@ -511,7 +644,6 @@ export default function LoginPage() {
             )}
 
             {step === "otp" && selectedRole && (
-              /* ─── Step 3: OTP Verification ─── */
               <motion.div
                 key="otp-step"
                 initial={{ opacity: 0, x: 30 }}

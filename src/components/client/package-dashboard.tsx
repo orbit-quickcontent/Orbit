@@ -42,7 +42,7 @@ export function PackageDashboard() {
           {packages.map((pkg, idx) => (
             <motion.div key={pkg.id} initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: idx * 0.15 }}>
               <Card
-                className={`relative overflow-hidden orbit-card transition-all duration-300 hover:scale-[1.02] cursor-pointer group ${
+                className={`relative overflow-hidden orbit-card transition-all duration-300 hover:scale-[1.02] cursor-pointer group h-full flex flex-col ${
                   pkg.popular ? "border-orbit-cyan/30 hover:border-orbit-cyan/60 orbit-glow" : "border-orbit-border hover:border-orbit-cyan/20"
                 }`}
                 onClick={() => { setSelectedPackage(pkg); setCurrentView("booking"); }}
@@ -69,7 +69,7 @@ export function PackageDashboard() {
                   </div>
                 </CardHeader>
 
-                <CardContent className="p-4 sm:p-6 space-y-4 sm:space-y-6">
+                <CardContent className="p-4 sm:p-6 space-y-4 sm:space-y-6 flex-1">
                   <div>
                     <div className="flex items-baseline gap-1">
                       <span className="text-3xl sm:text-4xl font-black text-gradient-orbit">{formatCurrency(pkg.price)}</span>
@@ -91,7 +91,7 @@ export function PackageDashboard() {
                   </ul>
                 </CardContent>
 
-                <CardFooter className="p-4 sm:p-6">
+                <CardFooter className="p-4 sm:p-6 mt-auto">
                   <Button
                     className={`w-full font-bold py-4 sm:py-5 text-sm sm:text-base transition-all ${
                       pkg.popular

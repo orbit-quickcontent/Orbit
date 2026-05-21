@@ -25,6 +25,28 @@ export function PartnerNavbar() {
   const avatarGradient = user.avatar || "from-orbit-purple to-orbit-cyan";
   const initials = getInitials(user.name);
 
+  const renderAvatar = (size: string, textSize: string) => {
+    if (user.avatarType === "photo" && user.avatarPhotoUrl) {
+      return (
+        <div className={`${size} rounded-full overflow-hidden shadow-lg`}>
+          <img src={user.avatarPhotoUrl} alt="Profile" className="w-full h-full object-cover" />
+        </div>
+      );
+    }
+    if (user.avatarType === "emoji" && user.avatarEmoji) {
+      return (
+        <div className={`${size} rounded-full bg-gradient-to-br from-orbit-purple/20 to-orbit-cyan/20 backdrop-blur-sm flex items-center justify-center ${textSize} shadow-lg`}>
+          {user.avatarEmoji}
+        </div>
+      );
+    }
+    return (
+      <div className={`${size} rounded-full bg-gradient-to-br ${avatarGradient} flex items-center justify-center ${textSize} font-bold text-white shadow-lg`}>
+        {initials}
+      </div>
+    );
+  };
+
   const firstName = user.name ? user.name.split(" ")[0] : "there";
 
   // Only count truly active bookings for notifications
@@ -42,10 +64,8 @@ export function PartnerNavbar() {
             {/* Left: Avatar + Greeting */}
             <div className="flex items-center gap-3 sm:gap-4">
               <button className="relative group">
-                <div
-                  className={`w-11 h-11 sm:w-12 sm:h-12 rounded-full bg-gradient-to-br ${avatarGradient} flex items-center justify-center text-sm sm:text-base font-bold text-white shadow-lg transition-transform duration-200 group-hover:scale-105 group-active:scale-95`}
-                >
-                  {initials}
+                <div className="transition-transform duration-200 group-hover:scale-105 group-active:scale-95">
+                  {renderAvatar("w-11 h-11 sm:w-12 sm:h-12", "text-sm sm:text-base")}
                 </div>
                 <div className="absolute bottom-0 right-0 w-3 h-3 sm:w-3.5 sm:h-3.5 rounded-full bg-green-400 border-2 border-[#0A2860]" />
               </button>
