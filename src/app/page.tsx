@@ -1,51 +1,29 @@
 /**
  * ⚪ APP ENTRY | Main Page
- * 
+ *
  * Root page component that manages app phases:
  * - splash → Animated loading screen with Orbit logo
  * - auth → LoginPage (role selection + profile creation)
  * - app → ClientApp or PartnerApp based on role
- * 
- * Auth state is persisted in localStorage so users stay logged in.
- * Hydration-safe: localStorage is read AFTER mount to avoid SSR mismatch.
- * 
- * Project Structure:
+ *
+ * Project Structure (4 sections):
  * └── src/
- *     ├── app/                        # Next.js App Router
- *     │   ├── page.tsx                # ← This file: Main entry & phase routing
- *     │   ├── layout.tsx              # Root layout with providers
- *     │   ├── globals.css             # Global styles & Tailwind config
- *     │   └── api/                    # 🔴 BACKEND: API Routes
+ *     ├── client/
+ *     │   ├── frontend/               # 🔵 CLIENT FRONTEND: Client UI components
+ *     │   └── backend/                # 🔵 CLIENT BACKEND: Client API handlers
  *     │
- *     ├── components/
- *     │   ├── client/                 # 🔵 CLIENT FRONTEND: Client-specific UI
- *     │   │   ├── client-app.tsx      #   Client orchestrator
- *     │   │   ├── client-navbar.tsx   #   Navigation bar
- *     │   │   ├── bottom-nav.tsx      #   Instagram-style bottom nav
- *     │   │   ├── profile-view.tsx    #   User profile page
- *     │   │   ├── hero-section.tsx    #   Landing page hero
- *     │   │   ├── booking-flow.tsx    #   3-step booking + Brand DNA
- *     │   │   ├── tracking-dashboard.tsx # Real-time tracking
- *     │   │   └── ...                 #   Other client sections
- *     │   │
- *     │   ├── partner/                # 🟣 PARTNER FRONTEND: Partner-specific UI
- *     │   │   ├── partner-app.tsx     #   Partner orchestrator
- *     │   │   └── ...                 #   Other partner sections
- *     │   │
- *     │   ├── shared/                 # 🟡 SHARED: Common across Client & Partner
- *     │   │   ├── login-page.tsx      #   Login with role + profile creation
- *     │   │   ├── splash-screen.tsx   #   Animated loading screen
- *     │   │   └── animated-background.tsx # Moving graphic background
- *     │   │
- *     │   └── ui/                     # ⚪ UI LIB: shadcn/ui components
+ *     ├── partner/
+ *     │   ├── frontend/               # 🟣 PARTNER FRONTEND: Partner UI components
+ *     │   └── backend/                # 🟣 PARTNER BACKEND: Partner API handlers
  *     │
- *     ├── lib/                        # 🟠 CORE: Backend & shared utilities
- *     │   ├── types.ts               #   Shared type definitions
- *     │   ├── store.ts               #   Zustand state (with localStorage)
- *     │   ├── db.ts                  #   Prisma database client
- *     │   └── utils.ts               #   Utility functions
+ *     ├── shared/
+ *     │   ├── frontend/               # 🟡 SHARED FRONTEND: Login, splash, etc.
+ *     │   └── backend/                # 🟡 SHARED BACKEND: Auth handlers
  *     │
- *     └── hooks/                      # 🟠 HOOKS: Custom React hooks
+ *     ├── app/                        # Next.js App Router (thin API route wrappers)
+ *     ├── lib/                        # Core: types, store, db, utils
+ *     ├── hooks/                      # Custom React hooks
+ *     └── components/ui/              # shadcn/ui components
  */
 
 "use client";
@@ -53,9 +31,9 @@
 import { useEffect, useCallback } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useAppStore } from "@/lib/store";
-import { LoginPage, SplashScreen } from "@/components/shared";
-import ClientApp from "@/components/client/client-app";
-import PartnerApp from "@/components/partner/partner-app";
+import { LoginPage, SplashScreen } from "@/shared/frontend";
+import ClientApp from "@/client/frontend/client-app";
+import PartnerApp from "@/partner/frontend/partner-app";
 
 export default function OrbitApp() {
   const { appPhase, setAppPhase, isAuthenticated, userRole, _hydrated, _hydrate } = useAppStore();

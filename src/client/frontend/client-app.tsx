@@ -14,7 +14,7 @@
 import { useEffect } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useAppStore } from "@/lib/store";
-import { AnimatedBackground } from "@/components/shared";
+import { AnimatedBackground } from "@/shared/frontend";
 import { ClientNavbar } from "./client-navbar";
 import { DashboardHome } from "./dashboard-home";
 import { PackageDashboard } from "./package-dashboard";

@@ -15,13 +15,13 @@
 
 import { AnimatePresence, motion } from "framer-motion";
 import { useAppStore } from "@/lib/store";
-import { AnimatedBackground } from "@/components/shared";
-import { PartnerNavbar } from "@/components/partner/partner-navbar";
-import { PartnerDashboard } from "@/components/partner/partner-dashboard";
-import { PartnerWork } from "@/components/partner/partner-work";
-import { PartnerEarnings } from "@/components/partner/partner-earnings";
-import { PartnerBottomNav } from "@/components/partner/partner-bottom-nav";
-import { PartnerProfileView } from "@/components/partner/partner-profile-view";
+import { AnimatedBackground } from "@/shared/frontend";
+import { PartnerNavbar } from "./partner-navbar";
+import { PartnerDashboard } from "./partner-dashboard";
+import { PartnerWork } from "./partner-work";
+import { PartnerEarnings } from "./partner-earnings";
+import { PartnerBottomNav } from "./partner-bottom-nav";
+import { PartnerProfileView } from "./partner-profile-view";
 
 export default function PartnerApp() {
   const { currentView } = useAppStore();

@@ -17,7 +17,7 @@ import { Progress } from "@/components/ui/progress";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { type BookingInfo } from "@/lib/types";
-import { SHOT_LIST } from "@/components/partner/constants";
+import { SHOT_LIST } from "./constants";
 
 interface ShootingPhaseProps {
   booking: BookingInfo;

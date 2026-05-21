@@ -1,9 +1,3 @@
-/**
- * 🟣 PARTNER FRONTEND — Barrel Export
- *
- * All partner-specific UI components.
- * Import from here: import { PartnerApp, PartnerDashboard } from "@/components/partner"
- */
 export { default as PartnerApp } from "./partner-app";
 export { PartnerNavbar } from "./partner-navbar";
 export { PartnerDashboard } from "./partner-dashboard";

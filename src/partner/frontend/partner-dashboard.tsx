@@ -25,14 +25,14 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { useAppStore } from "@/lib/store";
 import { type BookingInfo } from "@/lib/types";
-import { SHOT_LIST, MOCK_AVAILABLE_BOOKINGS } from "@/components/partner/constants";
+import { SHOT_LIST, MOCK_AVAILABLE_BOOKINGS } from "./constants";
 import { formatCurrency } from "@/lib/constants";
 import { staggerContainer, staggerItem } from "@/lib/animations";
-import { MapNavigation } from "@/components/partner/map-navigation";
-import { ShootingPhase } from "@/components/partner/shooting-phase";
-import { SyncModule } from "@/components/partner/sync-module";
-import { PrivacyShield } from "@/components/partner/privacy-shield";
-import { PaymentReceived } from "@/components/partner/payment-received";
+import { MapNavigation } from "./map-navigation";
+import { ShootingPhase } from "./shooting-phase";
+import { SyncModule } from "./sync-module";
+import { PrivacyShield } from "./privacy-shield";
+import { PaymentReceived } from "./payment-received";
 
 type PartnerPhase = "available" | "navigating" | "shooting" | "syncing" | "privacy" | "payment";
 

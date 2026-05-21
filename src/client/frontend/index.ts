@@ -1,9 +1,3 @@
-/**
- * 🔵 CLIENT FRONTEND — Barrel Export
- *
- * All client-specific UI components.
- * Import from here: import { ClientApp } from "@/components/client"
- */
 export { default as ClientApp } from "./client-app";
 export { ClientNavbar } from "./client-navbar";
 export { DashboardHome } from "./dashboard-home";
