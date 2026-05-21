@@ -48,6 +48,7 @@ import { Progress } from "@/components/ui/progress";
 import { useAppStore } from "@/lib/store";
 import { formatCurrency } from "@/lib/constants";
 import { type BookingStatus } from "@/lib/types";
+import { toast } from "sonner";
 
 // ─── Status Pipeline ────────────────────────────────────────────────────────────
 export const STATUS_PIPELINE: { status: BookingStatus; label: string; icon: React.ReactNode; description: string }[] = [
@@ -232,7 +233,7 @@ function ReviewSection({ bookingId, onReviewDone }: { bookingId: string; onRevie
 
 // ─── Main Tracking Dashboard ─────────────────────────────────────────────────────
 export function TrackingDashboard() {
-  const { currentBooking, setCurrentView, completeBooking, updateBookingStatus, updateSyncPercentage, updateEditCountdown } = useAppStore();
+  const { currentBooking, setCurrentView, completeBooking, updateBookingStatus, updateSyncPercentage, updateEditCountdown, cancelBooking, markBookingDelivered, markBookingDownloaded } = useAppStore();
   const [activeStep, setActiveStep] = useState(0);
   const [syncProgress, setSyncProgress] = useState(0);
   const [countdown, setCountdown] = useState(90);
@@ -372,7 +373,11 @@ export function TrackingDashboard() {
   // ─── Download handler ─────────────────────────────────────
   const handleDownload = useCallback(() => {
     setIsDownloaded(true);
-  }, []);
+    if (currentBooking) {
+      markBookingDelivered(currentBooking.id);
+      markBookingDownloaded(currentBooking.id);
+    }
+  }, [currentBooking, markBookingDelivered, markBookingDownloaded]);
 
   // ─── No Active Booking ────────────────────────────────────
   if (!currentBooking) {
@@ -446,6 +451,23 @@ export function TrackingDashboard() {
             )}
           </h2>
           <p className="text-muted-foreground text-xs sm:text-sm">Booking ID: {currentBooking.id}</p>
+          {/* Cancel Booking Button */}
+          {!isComplete && !isDownloaded && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                if (confirm("Are you sure you want to cancel this booking? This action cannot be undone.")) {
+                  cancelBooking(currentBooking.id, "CLIENT");
+                  toast.success("Booking cancelled.");
+                  setCurrentView("packages");
+                }
+              }}
+              className="mt-3 border-red-500/20 text-red-400 hover:bg-red-500/10 hover:border-red-500/30 text-xs"
+            >
+              Cancel Booking
+            </Button>
+          )}
         </motion.div>
 
         {/* Status Pipeline */}

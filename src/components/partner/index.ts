@@ -16,4 +16,4 @@ export { PrivacyShield } from "./privacy-shield";
 export { PaymentReceived } from "./payment-received";
 export { PartnerBottomNav } from "./partner-bottom-nav";
 export { PartnerProfileView } from "./partner-profile-view";
-export { SHOT_LIST, MOCK_AVAILABLE_BOOKINGS, MOCK_COMPLETED_HISTORY } from "./constants";
+export { SHOT_LIST, MOCK_AVAILABLE_BOOKINGS } from "./constants";

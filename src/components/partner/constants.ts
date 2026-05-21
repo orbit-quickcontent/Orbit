@@ -25,6 +25,7 @@ export const MOCK_AVAILABLE_BOOKINGS: BookingInfo[] = [
     bookingDate: new Date(Date.now() + 86400000).toISOString(), timeSlot: "10:00 AM",
     location: "Connaught Place, New Delhi", syncPercentage: 0, editCountdown: null,
     partnerName: null, notes: "Brand shoot for tech startup. Need corporate aesthetic.",
+    deliveredAt: null, downloaded: false, cancelledBy: null, declinedByPartners: [],
   },
   {
     id: "OL-AVAIL002", packageId: "pkg-personalized", packageName: "Personalized",
@@ -32,6 +33,7 @@ export const MOCK_AVAILABLE_BOOKINGS: BookingInfo[] = [
     bookingDate: new Date(Date.now() + 86400000).toISOString(), timeSlot: "02:00 PM",
     location: "Juhu Beach, Mumbai", syncPercentage: 0, editCountdown: null,
     partnerName: null, notes: "Pre-wedding candid reel. Golden hour preferred.",
+    deliveredAt: null, downloaded: false, cancelledBy: null, declinedByPartners: [],
   },
   {
     id: "OL-AVAIL003", packageId: "pkg-professional", packageName: "Professional (UGC)",
@@ -39,6 +41,7 @@ export const MOCK_AVAILABLE_BOOKINGS: BookingInfo[] = [
     bookingDate: new Date(Date.now() + 172800000).toISOString(), timeSlot: "11:00 AM",
     location: "Koramangala, Bangalore", syncPercentage: 0, editCountdown: null,
     partnerName: null, notes: "Product launch video. Brand assets will be shared.",
+    deliveredAt: null, downloaded: false, cancelledBy: null, declinedByPartners: [],
   },
 ];
 

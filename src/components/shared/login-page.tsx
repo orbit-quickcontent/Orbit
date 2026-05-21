@@ -5,11 +5,8 @@
  *
  * Three-step login flow:
  * Step 1: Choose role (Client or Partner)
- * Step 2: Create profile with Google/Apple OAuth, avatar selection (color/emoji/photo), India phone (10 digits)
+ * Step 2: Create profile with Google/Apple OAuth, 4 creative avatars + photo upload, India phone
  * Step 3: Verify email via OTP
- *
- * Used by: page.tsx
- * Category: Shared UI
  */
 
 import { useState, useCallback, useRef } from "react";
@@ -30,12 +27,13 @@ import {
   ChevronLeft,
   ImagePlus,
   X,
+  Palette,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { useAppStore } from "@/lib/store";
-import { AVATAR_COLORS, AVATAR_EMOJIS } from "@/lib/constants";
+import { AVATAR_COLORS, AVATAR_PRESETS } from "@/lib/constants";
 import { getInitials } from "@/lib/utils";
 import { type UserRole } from "@/lib/types";
 import OTPVerification from "./otp-verification";
@@ -50,7 +48,7 @@ const LOGIN_PARTICLES = Array.from({ length: 20 }, (_, i) => ({
 }));
 
 type LoginStep = "role" | "profile" | "otp";
-type AvatarMode = "color" | "emoji" | "photo";
+type AvatarMode = "color" | "avatar" | "photo";
 
 export default function LoginPage() {
   const { login, setUser } = useAppStore();
@@ -64,7 +62,7 @@ export default function LoginPage() {
   const [phone, setPhone] = useState("");
   const [avatarColor, setAvatarColor] = useState(0);
   const [avatarMode, setAvatarMode] = useState<AvatarMode>("color");
-  const [selectedEmoji, setSelectedEmoji] = useState<string | null>(null);
+  const [selectedAvatarPreset, setSelectedAvatarPreset] = useState<string | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -81,7 +79,7 @@ export default function LoginPage() {
   const handlePhotoUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.size > 5 * 1024 * 1024) return; // max 5MB
+    if (file.size > 5 * 1024 * 1024) return;
     const reader = new FileReader();
     reader.onloadend = () => {
       const result = reader.result as string;
@@ -104,8 +102,8 @@ export default function LoginPage() {
 
     const avatarValue = avatarMode === "color"
       ? AVATAR_COLORS[avatarColor]
-      : avatarMode === "emoji" && selectedEmoji
-      ? selectedEmoji
+      : avatarMode === "avatar" && selectedAvatarPreset
+      ? AVATAR_PRESETS.find(p => p.id === selectedAvatarPreset)?.gradient ?? AVATAR_COLORS[0]
       : photoPreview;
 
     setUser({
@@ -114,11 +112,11 @@ export default function LoginPage() {
       phone: phone.trim() ? `+91${phone.trim()}` : "",
       avatar: avatarValue ?? AVATAR_COLORS[0],
       avatarType: avatarMode,
-      avatarEmoji: avatarMode === "emoji" ? selectedEmoji : null,
+      avatarEmoji: avatarMode === "avatar" ? (AVATAR_PRESETS.find(p => p.id === selectedAvatarPreset)?.emoji ?? null) : null,
       avatarPhotoUrl: avatarMode === "photo" ? photoPreview : null,
     });
     setStep("otp");
-  }, [name, email, phone, avatarColor, avatarMode, selectedEmoji, photoPreview, setUser]);
+  }, [name, email, phone, avatarColor, avatarMode, selectedAvatarPreset, photoPreview, setUser]);
 
   // Step 3→done
   const handleOtpVerified = useCallback(() => {
@@ -129,22 +127,21 @@ export default function LoginPage() {
     setStep("profile");
   }, []);
 
-  // Google OAuth — redirects to NextAuth Google provider
+  // Google OAuth
   const handleGoogleLogin = useCallback(() => {
-    // In production with real OAuth credentials: redirect to NextAuth endpoint
-    // window.location.href = "/api/auth/signin/google?callbackUrl=/";
-    // For demo: auto-fill and proceed
-    setName("Google User");
-    setEmail("user@gmail.com");
-  }, []);
+    // In production with real OAuth credentials, this redirects to Google OAuth
+    // For now, we simulate the OAuth flow by auto-filling and marking the provider
+    setName("");
+    setEmail("");
+    setUser({ authProvider: "google" });
+    // Show a prompt for user to enter their name since OAuth would provide it
+  }, [setUser]);
 
-  // Apple OAuth — redirects to NextAuth Apple provider
+  // Apple OAuth
   const handleAppleLogin = useCallback(() => {
-    // In production: window.location.href = "/api/auth/signin/apple?callbackUrl=/";
-    // For demo: auto-fill and proceed
-    setName("Apple User");
-    setEmail("user@icloud.com");
-  }, []);
+    // In production with real OAuth credentials, this redirects to Apple OAuth
+    setUser({ authProvider: "apple" });
+  }, [setUser]);
 
   // Render the current avatar preview based on mode
   const renderAvatarPreview = () => {
@@ -154,22 +151,25 @@ export default function LoginPage() {
       return (
         <div className="relative">
           <div className="absolute inset-0 w-24 h-24 rounded-full bg-orbit-cyan opacity-20 blur-xl scale-125" />
-          <div className={`relative ${size} rounded-full overflow-hidden shadow-lg ring-2 ring-white/20`}>
+          <div className={`relative ${size} rounded-full overflow-hidden shadow-lg ring-2 ring-white/30`}>
             <img src={photoPreview} alt="Your photo" className="w-full h-full object-cover" />
           </div>
         </div>
       );
     }
 
-    if (avatarMode === "emoji" && selectedEmoji) {
-      return (
-        <div className="relative">
-          <div className="absolute inset-0 w-24 h-24 rounded-full bg-orbit-purple opacity-20 blur-xl scale-125" />
-          <div className={`relative ${size} rounded-full bg-gradient-to-br from-orbit-purple/20 to-orbit-cyan/20 backdrop-blur-sm flex items-center justify-center text-4xl shadow-lg ring-2 ring-white/10`}>
-            {selectedEmoji}
+    if (avatarMode === "avatar" && selectedAvatarPreset) {
+      const preset = AVATAR_PRESETS.find(p => p.id === selectedAvatarPreset);
+      if (preset) {
+        return (
+          <div className="relative">
+            <div className={`absolute inset-0 w-24 h-24 rounded-full bg-gradient-to-br ${preset.gradient} opacity-30 blur-xl scale-125`} />
+            <div className={`relative ${size} rounded-full bg-gradient-to-br ${preset.gradient} flex items-center justify-center shadow-lg ring-2 ring-white/30`}>
+              <span className="text-4xl">{preset.emoji}</span>
+            </div>
           </div>
-        </div>
-      );
+        );
+      }
     }
 
     // Default: color gradient with initials
@@ -276,10 +276,10 @@ export default function LoginPage() {
                     className="group cursor-pointer"
                     onClick={() => handleRoleSelect("USER")}
                   >
-                    <div className={`relative orbit-card rounded-2xl p-6 sm:p-8 h-full transition-all duration-300 ${
-                      hoveredRole === "USER" ? "border-orbit-cyan/50 scale-[1.02] orbit-glow" : "border-orbit-border hover:border-orbit-cyan/20"
+                    <div className={`relative bg-white/[0.07] backdrop-blur-xl rounded-2xl p-6 sm:p-8 h-full transition-all duration-300 border ${
+                      hoveredRole === "USER" ? "border-orbit-cyan/50 scale-[1.02] shadow-lg shadow-orbit-cyan/10" : "border-white/10 hover:border-orbit-cyan/20"
                     }`}>
-                      <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-gradient-to-br from-orbit-cyan/10 to-orbit-purple/10 flex items-center justify-center mb-6 group-hover:from-orbit-cyan/20 group-hover:to-orbit-purple/20 transition-colors">
+                      <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-gradient-to-br from-orbit-cyan/15 to-orbit-purple/15 flex items-center justify-center mb-6 group-hover:from-orbit-cyan/25 group-hover:to-orbit-purple/25 transition-colors">
                         <Film className="w-8 h-8 sm:w-10 sm:h-10 text-orbit-cyan" />
                       </div>
                       <h2 className="text-2xl sm:text-3xl font-black mb-2">Client</h2>
@@ -299,7 +299,7 @@ export default function LoginPage() {
                           </li>
                         ))}
                       </ul>
-                      <Button className="w-full bg-gradient-to-r from-orbit-cyan to-orbit-purple text-white hover:opacity-90 font-bold py-5 sm:py-6 text-base orbit-glow">
+                      <Button className="w-full bg-gradient-to-r from-orbit-cyan to-orbit-purple text-white hover:opacity-90 font-bold py-5 sm:py-6 text-base shadow-lg shadow-orbit-cyan/20">
                         Enter as Client
                         <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
                       </Button>
@@ -316,10 +316,10 @@ export default function LoginPage() {
                     className="group cursor-pointer"
                     onClick={() => handleRoleSelect("PARTNER")}
                   >
-                    <div className={`relative orbit-card rounded-2xl p-6 sm:p-8 h-full transition-all duration-300 ${
-                      hoveredRole === "PARTNER" ? "border-orbit-purple/50 scale-[1.02] orbit-glow" : "border-orbit-border hover:border-orbit-purple/20"
+                    <div className={`relative bg-white/[0.07] backdrop-blur-xl rounded-2xl p-6 sm:p-8 h-full transition-all duration-300 border ${
+                      hoveredRole === "PARTNER" ? "border-orbit-purple/50 scale-[1.02] shadow-lg shadow-orbit-purple/10" : "border-white/10 hover:border-orbit-purple/20"
                     }`}>
-                      <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-gradient-to-br from-orbit-purple/10 to-orbit-cyan/10 flex items-center justify-center mb-6 group-hover:from-orbit-purple/20 group-hover:to-orbit-cyan/20 transition-colors">
+                      <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-gradient-to-br from-orbit-purple/15 to-orbit-cyan/15 flex items-center justify-center mb-6 group-hover:from-orbit-purple/25 group-hover:to-orbit-cyan/25 transition-colors">
                         <Camera className="w-8 h-8 sm:w-10 sm:h-10 text-orbit-purple" />
                       </div>
                       <h2 className="text-2xl sm:text-3xl font-black mb-2">Partner</h2>
@@ -340,8 +340,7 @@ export default function LoginPage() {
                         ))}
                       </ul>
                       <Button
-                        className="w-full bg-gradient-to-r from-orbit-purple to-orbit-cyan text-white hover:opacity-90 font-bold py-5 sm:py-6 text-base"
-                        style={{ boxShadow: hoveredRole === "PARTNER" ? "0 0 30px rgba(160, 32, 240, 0.3)" : undefined }}
+                        className="w-full bg-gradient-to-r from-orbit-purple to-orbit-cyan text-white hover:opacity-90 font-bold py-5 sm:py-6 text-base shadow-lg shadow-orbit-purple/20"
                       >
                         Enter as Partner
                         <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
@@ -398,11 +397,11 @@ export default function LoginPage() {
                   </div>
 
                   {/* ─── Social Login Buttons ─── */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6">
+                  <div className="grid grid-cols-2 gap-3 mb-6">
                     {/* Google Login */}
                     <button
                       onClick={handleGoogleLogin}
-                      className="orbit-card rounded-xl px-4 py-3 flex items-center justify-center gap-2.5 hover:border-orbit-cyan/30 transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] group"
+                      className="bg-white rounded-xl px-4 py-3.5 flex items-center justify-center gap-2.5 hover:bg-gray-50 transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] shadow-sm border border-gray-200"
                     >
                       <svg className="w-5 h-5" viewBox="0 0 24 24">
                         <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/>
@@ -410,25 +409,25 @@ export default function LoginPage() {
                         <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
                         <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
                       </svg>
-                      <span className="text-sm font-semibold text-foreground/90 group-hover:text-foreground">Google</span>
+                      <span className="text-sm font-semibold text-gray-700">Google</span>
                     </button>
 
                     {/* Apple Login */}
                     <button
                       onClick={handleAppleLogin}
-                      className="orbit-card rounded-xl px-4 py-3 flex items-center justify-center gap-2.5 hover:border-orbit-purple/30 transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] group"
+                      className="bg-black rounded-xl px-4 py-3.5 flex items-center justify-center gap-2.5 hover:bg-gray-900 transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] shadow-sm"
                     >
-                      <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+                      <svg className="w-5 h-5 text-white" viewBox="0 0 24 24" fill="currentColor">
                         <path d="M17.05 20.28c-.98.95-2.05.88-3.08.4-1.09-.5-2.08-.48-3.24 0-1.44.62-2.2.44-3.06-.4C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z"/>
                       </svg>
-                      <span className="text-sm font-semibold text-foreground/90 group-hover:text-foreground">Apple</span>
+                      <span className="text-sm font-semibold text-white">Apple</span>
                     </button>
                   </div>
 
                   {/* Divider */}
                   <div className="relative mb-6">
                     <div className="absolute inset-0 flex items-center">
-                      <div className="w-full border-t border-orbit-border/50" />
+                      <div className="w-full border-t border-white/10" />
                     </div>
                     <div className="relative flex justify-center text-xs uppercase">
                       <span className="bg-background px-3 text-muted-foreground/60 tracking-widest">Or Email</span>
@@ -436,12 +435,12 @@ export default function LoginPage() {
                   </div>
 
                   {/* ─── Avatar Selection ─── */}
-                  <div className="orbit-card rounded-2xl p-5 sm:p-6 mb-4">
+                  <div className="bg-white/[0.07] backdrop-blur-xl rounded-2xl p-5 sm:p-6 mb-4 border border-white/10">
                     {/* Avatar mode tabs */}
                     <div className="flex items-center justify-center gap-2 mb-5">
                       {[
-                        { mode: "color" as AvatarMode, label: "Color", icon: <span className="w-3.5 h-3.5 rounded-full bg-gradient-to-br from-orbit-cyan to-orbit-purple inline-block" /> },
-                        { mode: "emoji" as AvatarMode, label: "Avatar", icon: <span className="text-sm">👤</span> },
+                        { mode: "color" as AvatarMode, label: "Color", icon: <Palette className="w-3.5 h-3.5" /> },
+                        { mode: "avatar" as AvatarMode, label: "Avatar", icon: <User className="w-3.5 h-3.5" /> },
                         { mode: "photo" as AvatarMode, label: "Photo", icon: <ImagePlus className="w-3.5 h-3.5" /> },
                       ].map((tab) => (
                         <button
@@ -449,7 +448,7 @@ export default function LoginPage() {
                           onClick={() => setAvatarMode(tab.mode)}
                           className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold transition-all duration-200 ${
                             avatarMode === tab.mode
-                              ? "bg-white/10 text-foreground ring-1 ring-white/20"
+                              ? "bg-white/15 text-white ring-1 ring-white/20"
                               : "text-muted-foreground/60 hover:text-muted-foreground hover:bg-white/5"
                           }`}
                         >
@@ -473,7 +472,7 @@ export default function LoginPage() {
                             onClick={() => setAvatarColor(i)}
                             className={`w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-gradient-to-br ${color} transition-all duration-200 ${
                               avatarColor === i
-                                ? "scale-125 ring-2 ring-white/70 ring-offset-2 ring-offset-[#081C43]"
+                                ? "scale-125 ring-2 ring-white/70 ring-offset-2 ring-offset-background"
                                 : "opacity-50 hover:opacity-100 hover:scale-110"
                             }`}
                             aria-label={`Avatar color ${i + 1}`}
@@ -482,20 +481,23 @@ export default function LoginPage() {
                       </div>
                     )}
 
-                    {/* Emoji avatar selection */}
-                    {avatarMode === "emoji" && (
-                      <div className="grid grid-cols-6 sm:grid-cols-8 gap-2 max-h-32 overflow-y-auto scrollbar-hide">
-                        {AVATAR_EMOJIS.map((emoji, i) => (
+                    {/* 4 Creative Avatar Presets */}
+                    {avatarMode === "avatar" && (
+                      <div className="grid grid-cols-4 gap-3">
+                        {AVATAR_PRESETS.map((preset) => (
                           <button
-                            key={i}
-                            onClick={() => setSelectedEmoji(emoji)}
-                            className={`w-9 h-9 rounded-xl flex items-center justify-center text-lg transition-all duration-200 ${
-                              selectedEmoji === emoji
-                                ? "bg-orbit-purple/20 ring-2 ring-orbit-purple/50 scale-110"
+                            key={preset.id}
+                            onClick={() => setSelectedAvatarPreset(preset.id)}
+                            className={`flex flex-col items-center gap-2 p-3 rounded-xl transition-all duration-200 ${
+                              selectedAvatarPreset === preset.id
+                                ? "bg-white/15 ring-2 ring-white/30 scale-105"
                                 : "bg-white/5 hover:bg-white/10 hover:scale-105"
                             }`}
                           >
-                            {emoji}
+                            <div className={`w-12 h-12 rounded-full bg-gradient-to-br ${preset.gradient} flex items-center justify-center text-xl shadow-lg`}>
+                              {preset.emoji}
+                            </div>
+                            <span className="text-[10px] font-semibold text-foreground/80">{preset.label}</span>
                           </button>
                         ))}
                       </div>
@@ -506,7 +508,7 @@ export default function LoginPage() {
                       <div className="flex flex-col items-center gap-3">
                         {photoPreview ? (
                           <div className="relative group">
-                            <div className="w-20 h-20 rounded-full overflow-hidden ring-2 ring-orbit-cyan/30">
+                            <div className="w-20 h-20 rounded-full overflow-hidden ring-2 ring-white/30">
                               <img src={photoPreview} alt="Your photo" className="w-full h-full object-cover" />
                             </div>
                             <button
@@ -519,7 +521,7 @@ export default function LoginPage() {
                         ) : null}
                         <button
                           onClick={() => fileInputRef.current?.click()}
-                          className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-orbit-border/50 text-sm text-muted-foreground hover:text-foreground transition-all duration-200"
+                          className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-sm text-muted-foreground hover:text-foreground transition-all duration-200"
                         >
                           <Camera className="w-4 h-4" />
                           {photoPreview ? "Change Photo" : "Choose from Gallery"}
@@ -528,16 +530,17 @@ export default function LoginPage() {
                           ref={fileInputRef}
                           type="file"
                           accept="image/*"
+                          capture="environment"
                           onChange={handlePhotoUpload}
                           className="hidden"
                         />
-                        <p className="text-[10px] text-muted-foreground/40">Max 5MB · JPG, PNG, WebP</p>
+                        <p className="text-[10px] text-muted-foreground/40">Max 5MB - JPG, PNG, WebP</p>
                       </div>
                     )}
                   </div>
 
                   {/* ─── Profile Form ─── */}
-                  <div className="orbit-card rounded-2xl p-5 sm:p-6 space-y-4">
+                  <div className="bg-white/[0.07] backdrop-blur-xl rounded-2xl p-5 sm:p-6 space-y-4 border border-white/10">
                     {/* Full Name */}
                     <div className="space-y-2">
                       <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-2">
@@ -547,7 +550,7 @@ export default function LoginPage() {
                         value={name}
                         onChange={(e) => setName(e.target.value)}
                         placeholder="Enter your name"
-                        className="bg-white/5 border-orbit-border text-foreground placeholder:text-muted-foreground/40 focus:border-orbit-cyan h-11"
+                        className="bg-white/5 border-white/10 text-foreground placeholder:text-muted-foreground/40 focus:border-orbit-cyan h-11"
                       />
                     </div>
 
@@ -563,21 +566,20 @@ export default function LoginPage() {
                           onChange={(e) => setEmail(e.target.value)}
                           placeholder="you@example.com"
                           type="email"
-                          className="bg-white/5 border-orbit-border text-foreground placeholder:text-muted-foreground/40 focus:border-orbit-cyan h-11 pl-10"
+                          className="bg-white/5 border-white/10 text-foreground placeholder:text-muted-foreground/40 focus:border-orbit-cyan h-11 pl-10"
                         />
                       </div>
                     </div>
 
-                    {/* Phone (India — 10 digits) */}
+                    {/* Phone (India - 10 digits) */}
                     <div className="space-y-2">
                       <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-2">
                         <Phone className="w-3.5 h-3.5" /> Phone
                       </label>
                       <div className="relative">
                         <div className="absolute left-3 top-1/2 -translate-y-1/2 flex items-center gap-1.5 text-sm text-muted-foreground/60 font-medium">
-                          <span className="text-xs">🇮🇳</span>
-                          <span>+91</span>
-                          <span className="text-orbit-border">|</span>
+                          <span className="text-xs">+91</span>
+                          <span className="text-white/20">|</span>
                         </div>
                         <Input
                           value={phone}
@@ -586,10 +588,10 @@ export default function LoginPage() {
                           type="tel"
                           inputMode="numeric"
                           maxLength={10}
-                          className={`bg-white/5 text-foreground placeholder:text-muted-foreground/40 h-11 w-full pl-[5.5rem] ${
+                          className={`bg-white/5 text-foreground placeholder:text-muted-foreground/40 h-11 w-full pl-[4.5rem] ${
                             !isPhoneValid
                               ? "border-destructive focus:border-destructive"
-                              : "border-orbit-border focus:border-orbit-cyan"
+                              : "border-white/10 focus:border-orbit-cyan"
                           }`}
                         />
                       </div>
@@ -604,7 +606,7 @@ export default function LoginPage() {
                     </div>
                   </div>
 
-                  {/* Continue Button → OTP */}
+                  {/* Continue Button */}
                   <Button
                     onClick={handleProfileComplete}
                     disabled={!name.trim() || !email.trim() || !isPhoneValid}
@@ -612,8 +614,8 @@ export default function LoginPage() {
                       !name.trim() || !email.trim() || !isPhoneValid
                         ? "bg-white/5 text-muted-foreground/40 cursor-not-allowed"
                         : isAccentCyan
-                        ? "bg-gradient-to-r from-orbit-cyan to-orbit-purple text-white hover:opacity-90 orbit-glow"
-                        : "bg-gradient-to-r from-orbit-purple to-orbit-cyan text-white hover:opacity-90"
+                        ? "bg-gradient-to-r from-orbit-cyan to-orbit-purple text-white hover:opacity-90 shadow-lg shadow-orbit-cyan/20"
+                        : "bg-gradient-to-r from-orbit-purple to-orbit-cyan text-white hover:opacity-90 shadow-lg shadow-orbit-purple/20"
                     }`}
                   >
                     <Mail className="w-4 h-4 mr-2" />
@@ -664,7 +666,7 @@ export default function LoginPage() {
       </main>
 
       {/* Footer */}
-      <footer className="relative z-10 py-4 px-4">
+      <footer className="relative z-10 py-4 px-4 mt-auto">
         <div className="text-center text-xs text-muted-foreground/40">
           &copy; {new Date().getFullYear()} Orbit. All rights reserved.
         </div>

@@ -1,15 +1,7 @@
 /**
- * ═══════════════════════════════════════════════════════════════
- *  Orbit — Shared Type Definitions
- * ═══════════════════════════════════════════════════════════════
- * 
- *  🔵 CLIENT types: AppView, BookingStatus, PaymentStatus,
- *     PackageInfo, BookingInfo, UserProfile
- * 
- *  🟣 PARTNER types: (uses BookingInfo, BookingStatus)
- * 
- *  🟡 SHARED types: UserRole
- * ═══════════════════════════════════════════════════════════════
+ * Orbit - Shared Type Definitions
+ *
+ * Core types for Client and Partner frontends.
  */
 
 export type AppView = "landing" | "packages" | "booking" | "tracking" | "partner" | "partner-work" | "partner-earnings" | "profile";
@@ -56,6 +48,14 @@ export interface BookingInfo {
   editCountdown: number | null;
   partnerName: string | null;
   notes: string;
+  /** ISO date when booking was delivered (for redownload window) */
+  deliveredAt: string | null;
+  /** Whether client has downloaded the final edit */
+  downloaded: boolean;
+  /** Who cancelled the booking (if CANCELLED) */
+  cancelledBy: "CLIENT" | "PARTNER" | null;
+  /** Partner IDs that declined this booking (for reassignment) */
+  declinedByPartners: string[];
 }
 
 export interface UserProfile {
@@ -64,13 +64,17 @@ export interface UserProfile {
   phone: string;
   location: string;
   avatar: string | null;
-  avatarType: "color" | "emoji" | "photo";
+  avatarType: "color" | "avatar" | "photo";
   avatarEmoji: string | null;
   avatarPhotoUrl: string | null;
   brandLogo: string | null;
   brandFont: string | null;
   brandColor: string | null;
   editorRequirements: string;
+  /** Auth provider used for sign-in */
+  authProvider: "email" | "google" | "apple" | null;
+  /** Whether partner is online (accepting bookings) */
+  isOnline: boolean;
 }
 
 export interface ReviewInfo {

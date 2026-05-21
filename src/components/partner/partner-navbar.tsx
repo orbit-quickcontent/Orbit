@@ -5,7 +5,7 @@
  *
  * Personalized greeting header for partners (matching client style).
  * Shows avatar, "Hi, {Name}", PARTNER badge, earnings indicator,
- * and notification bell.
+ * online/offline toggle, and notification bell.
  *
  * Used by: partner-app.tsx
  * Category: Partner UI
@@ -19,7 +19,7 @@ import { useAppStore } from "@/lib/store";
 import { getInitials, getGreeting } from "@/lib/utils";
 
 export function PartnerNavbar() {
-  const { user, partnerActiveBooking, bookings, logout, setCurrentView } = useAppStore();
+  const { user, setUser, partnerActiveBooking, bookings, logout, setCurrentView } = useAppStore();
   const [menuOpen, setMenuOpen] = useState(false);
 
   const avatarGradient = user.avatar || "from-orbit-purple to-orbit-cyan";
@@ -33,7 +33,7 @@ export function PartnerNavbar() {
         </div>
       );
     }
-    if (user.avatarType === "emoji" && user.avatarEmoji) {
+    if (user.avatarType === "avatar" && user.avatarEmoji) {
       return (
         <div className={`${size} rounded-full bg-gradient-to-br from-orbit-purple/20 to-orbit-cyan/20 backdrop-blur-sm flex items-center justify-center ${textSize} shadow-lg`}>
           {user.avatarEmoji}
@@ -56,6 +56,10 @@ export function PartnerNavbar() {
   const hasActiveWork = !!partnerActiveBooking;
   const unreadNotifications = hasActiveWork ? 1 : 0;
 
+  const handleToggleOnline = () => {
+    setUser({ isOnline: !user.isOnline });
+  };
+
   return (
     <header className="sticky top-0 z-50">
       <div className="bg-gradient-to-b from-[#081C43] via-[#0A2860] to-transparent">
@@ -67,7 +71,7 @@ export function PartnerNavbar() {
                 <div className="transition-transform duration-200 group-hover:scale-105 group-active:scale-95">
                   {renderAvatar("w-11 h-11 sm:w-12 sm:h-12", "text-sm sm:text-base")}
                 </div>
-                <div className="absolute bottom-0 right-0 w-3 h-3 sm:w-3.5 sm:h-3.5 rounded-full bg-green-400 border-2 border-[#0A2860]" />
+                <div className={`absolute bottom-0 right-0 w-3 h-3 sm:w-3.5 sm:h-3.5 rounded-full border-2 border-[#0A2860] ${user.isOnline ? "bg-green-400" : "bg-gray-400"}`} />
               </button>
 
               <div>
@@ -85,14 +89,26 @@ export function PartnerNavbar() {
               </div>
             </div>
 
-            {/* Right: Search + Notification + Menu */}
+            {/* Right: Search + Online Toggle + Notification + Menu */}
             <div className="flex items-center gap-2 sm:gap-3">
-              <button className="w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-white/[0.06] backdrop-blur-xl flex items-center justify-center text-muted-foreground hover:text-orbit-purple hover:bg-white/10 transition-all duration-200">
+              <button className="w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-white/[0.08] backdrop-blur-xl flex items-center justify-center text-muted-foreground hover:text-orbit-purple hover:bg-white/10 transition-all duration-200">
                 <Search className="w-4 h-4 sm:w-5 sm:h-5" />
               </button>
 
+              {/* Online/Offline Toggle */}
               <button
-                className="relative w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-white/[0.06] backdrop-blur-xl flex items-center justify-center text-muted-foreground hover:text-orbit-purple hover:bg-white/10 transition-all duration-200"
+                onClick={handleToggleOnline}
+                className="flex items-center gap-1.5 h-10 sm:h-11 px-3 rounded-full bg-white/[0.08] backdrop-blur-xl hover:bg-white/10 transition-all duration-200"
+                title={user.isOnline ? "Go Offline" : "Go Online"}
+              >
+                <div className={`w-2.5 h-2.5 rounded-full transition-colors duration-200 ${user.isOnline ? "bg-green-400" : "bg-gray-400"}`} />
+                <span className={`text-[11px] sm:text-xs font-medium transition-colors duration-200 ${user.isOnline ? "text-green-400" : "text-gray-400"}`}>
+                  {user.isOnline ? "Online" : "Offline"}
+                </span>
+              </button>
+
+              <button
+                className="relative w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-white/[0.08] backdrop-blur-xl flex items-center justify-center text-muted-foreground hover:text-orbit-purple hover:bg-white/10 transition-all duration-200"
                 onClick={() => setMenuOpen(!menuOpen)}
               >
                 <Bell className="w-4 h-4 sm:w-5 sm:h-5" />
@@ -105,7 +121,7 @@ export function PartnerNavbar() {
 
               <button
                 onClick={() => setMenuOpen(!menuOpen)}
-                className="md:hidden w-10 h-10 rounded-full bg-white/[0.06] backdrop-blur-xl flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
+                className="md:hidden w-10 h-10 rounded-full bg-white/[0.08] backdrop-blur-xl flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
               >
                 <ChevronDown
                   className={`w-4 h-4 transition-transform duration-200 ${
@@ -148,7 +164,7 @@ export function PartnerNavbar() {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -8, scale: 0.95 }}
             transition={{ duration: 0.2 }}
-            className="absolute right-4 sm:right-6 top-20 sm:top-24 w-56 orbit-card-strong rounded-2xl overflow-hidden shadow-2xl z-[60]"
+            className="absolute right-4 sm:right-6 top-20 sm:top-24 w-56 bg-[#0d1f3d]/95 backdrop-blur-xl border border-orbit-border/40 rounded-2xl overflow-hidden shadow-2xl z-[60]"
           >
             <div className="p-2">
               {hasActiveWork && (

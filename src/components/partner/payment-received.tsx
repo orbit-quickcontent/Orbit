@@ -2,10 +2,10 @@
 
 /**
  * 🟣 PARTNER FRONTEND | PaymentReceived
- * 
+ *
  * Payment confirmation screen showing amount credited, booking details,
- * updated earnings summary, and complete & return action.
- * 
+ * updated earnings summary (from real booking data), and complete & return action.
+ *
  * Used by: partner-dashboard.tsx
  * Category: Partner UI
  */
@@ -14,7 +14,8 @@ import { motion } from "framer-motion";
 import { CreditCard, CheckCircle2, Wallet, TrendingUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { type BookingInfo } from "@/lib/types";
-import { DEFAULT_PARTNER_STATS, formatCurrency } from "@/lib/constants";
+import { formatCurrency } from "@/lib/constants";
+import { useAppStore } from "@/lib/store";
 
 interface PaymentReceivedProps {
   booking: BookingInfo;
@@ -22,7 +23,24 @@ interface PaymentReceivedProps {
 }
 
 export function PaymentReceived({ booking, onCompleteAndReturn }: PaymentReceivedProps) {
-  const partnerStats = DEFAULT_PARTNER_STATS;
+  const { bookings } = useAppStore();
+
+  // Calculate real earnings from delivered bookings
+  const deliveredBookings = bookings.filter((b) => b.status === "DELIVERED");
+  const totalEarned = deliveredBookings.reduce((sum, b) => sum + b.packagePrice, 0);
+
+  // Calculate monthly earnings from delivered bookings this month
+  const now = new Date();
+  const currentMonth = now.getMonth();
+  const currentYear = now.getFullYear();
+  const monthlyEarnings = deliveredBookings
+    .filter((b) => {
+      const d = new Date(b.bookingDate);
+      return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
+    })
+    .reduce((sum, b) => sum + b.packagePrice, 0);
+
+  const totalCompleted = deliveredBookings.length;
 
   return (
     <div className="orbit-card rounded-2xl p-4 sm:p-8 md:p-10 text-center orbit-glow">
@@ -83,7 +101,7 @@ export function PaymentReceived({ booking, onCompleteAndReturn }: PaymentReceive
                 <span className="text-sm font-medium">Total Earned</span>
               </div>
               <span className="text-lg font-black text-green-400">
-                {formatCurrency(partnerStats.totalEarnings + booking.packagePrice)}
+                {formatCurrency(totalEarned + booking.packagePrice)}
               </span>
             </div>
             <div className="h-px bg-orbit-border/30" />
@@ -93,7 +111,7 @@ export function PaymentReceived({ booking, onCompleteAndReturn }: PaymentReceive
                 <span className="text-sm font-medium">This Month</span>
               </div>
               <span className="text-lg font-black text-gradient-orbit">
-                {formatCurrency(partnerStats.monthlyEarnings + booking.packagePrice)}
+                {formatCurrency(monthlyEarnings + booking.packagePrice)}
               </span>
             </div>
             <div className="h-px bg-orbit-border/30" />
@@ -102,7 +120,7 @@ export function PaymentReceived({ booking, onCompleteAndReturn }: PaymentReceive
                 <CheckCircle2 className="w-3.5 h-3.5 text-orbit-cyan" />
                 <span className="text-sm font-medium">Total Completed</span>
               </div>
-              <span className="text-lg font-black text-foreground">{partnerStats.completed + 1}</span>
+              <span className="text-lg font-black text-foreground">{totalCompleted + 1}</span>
             </div>
           </div>
         </div>

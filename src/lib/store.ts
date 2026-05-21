@@ -1,14 +1,11 @@
 /**
- * 🟠 CORE | Zustand State Management
- * 
+ * Orbit - Zustand State Management
+ *
  * Central application state using Zustand with localStorage persistence.
  * Manages auth, navigation, user profile, packages, bookings, and partner state.
- * 
+ *
  * IMPORTANT: localStorage is read AFTER mount (via useHydrate hook) to avoid
  * server/client hydration mismatches.
- * 
- * Used by: page.tsx, client-app.tsx, partner-app.tsx, all components
- * Category: Core
  */
 
 import { create } from "zustand";
@@ -59,6 +56,8 @@ const defaultUser: UserProfile = {
   brandFont: null,
   brandColor: null,
   editorRequirements: "",
+  authProvider: null,
+  isOnline: true,
 };
 
 interface AppState {
@@ -100,6 +99,9 @@ interface AppState {
   updateSyncPercentage: (id: string, percentage: number) => void;
   updateEditCountdown: (id: string, minutes: number) => void;
   completeBooking: (id: string) => void;
+  cancelBooking: (id: string, cancelledBy: "CLIENT" | "PARTNER") => void;
+  markBookingDownloaded: (id: string) => void;
+  markBookingDelivered: (id: string) => void;
 
   // Partner
   partnerActiveBooking: BookingInfo | null;
@@ -126,13 +128,27 @@ export const useAppStore = create<AppState>((set, get) => ({
   _hydrate: () => {
     const stored = loadFromStorage();
     if (stored) {
+      const storedUser = (stored.user as UserProfile) ?? defaultUser;
+      // Migrate old bookings that don't have new fields
+      const storedBookings = ((stored.bookings as BookingInfo[]) ?? []).map((b) => ({
+        ...b,
+        deliveredAt: b.deliveredAt ?? null,
+        downloaded: b.downloaded ?? false,
+        cancelledBy: b.cancelledBy ?? null,
+        declinedByPartners: b.declinedByPartners ?? [],
+      }));
       set({
         _hydrated: true,
         isAuthenticated: (stored.isAuthenticated as boolean) ?? false,
         userRole: (stored.userRole as UserRole) ?? "USER",
-        user: (stored.user as UserProfile) ?? defaultUser,
+        user: {
+          ...defaultUser,
+          ...storedUser,
+          authProvider: storedUser.authProvider ?? null,
+          isOnline: storedUser.isOnline ?? true,
+        },
         currentView: (stored.currentView as AppView) ?? "landing",
-        bookings: (stored.bookings as BookingInfo[]) ?? [],
+        bookings: storedBookings,
         reviews: (stored.reviews as ReviewInfo[]) ?? [],
         appPhase: stored.isAuthenticated ? "app" : "splash",
       });
@@ -141,7 +157,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     }
   },
 
-  // App phase — always starts at "splash" on server, corrected after hydration
+  // App phase
   appPhase: "splash",
   setAppPhase: (phase) => set({ appPhase: phase }),
 
@@ -313,6 +329,44 @@ export const useAppStore = create<AppState>((set, get) => ({
       saveToStorage({ ...get(), ...newState });
       return newState;
     }),
+  cancelBooking: (id, cancelledBy) =>
+    set((state) => {
+      const updatedBookings = state.bookings.map((b) =>
+        b.id === id
+          ? { ...b, status: "CANCELLED" as BookingStatus, cancelledBy, paymentStatus: "REFUNDED" as PaymentStatus }
+          : b
+      );
+      const updatedCurrentBooking =
+        state.currentBooking?.id === id
+          ? { ...state.currentBooking, status: "CANCELLED" as BookingStatus, cancelledBy, paymentStatus: "REFUNDED" as PaymentStatus }
+          : state.currentBooking;
+      const newState = {
+        bookings: updatedBookings,
+        currentBooking: cancelledBy === "CLIENT" ? null : updatedCurrentBooking,
+      };
+      saveToStorage({ ...get(), ...newState });
+      return newState;
+    }),
+  markBookingDownloaded: (id) =>
+    set((state) => ({
+      bookings: state.bookings.map((b) =>
+        b.id === id ? { ...b, downloaded: true } : b
+      ),
+      currentBooking:
+        state.currentBooking?.id === id
+          ? { ...state.currentBooking, downloaded: true }
+          : state.currentBooking,
+    })),
+  markBookingDelivered: (id) =>
+    set((state) => ({
+      bookings: state.bookings.map((b) =>
+        b.id === id ? { ...b, deliveredAt: new Date().toISOString() } : b
+      ),
+      currentBooking:
+        state.currentBooking?.id === id
+          ? { ...state.currentBooking, deliveredAt: new Date().toISOString() }
+          : state.currentBooking,
+    })),
 
   // Partner
   partnerActiveBooking: null,

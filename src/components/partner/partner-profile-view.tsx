@@ -2,14 +2,15 @@
 
 /**
  * 🟣 PARTNER FRONTEND | PartnerProfileView
- * 
- * Partner profile page with stats, edit functionality, and logout.
- * 
+ *
+ * Partner profile page with stats, full edit functionality (color/avatar/photo),
+ * online/offline toggle, and logout.
+ *
  * Used by: partner-app.tsx
  * Category: Partner UI
  */
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Mail,
@@ -25,14 +26,17 @@ import {
   ChevronRight,
   Shield,
   HelpCircle,
+  Upload,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { useAppStore } from "@/lib/store";
-import { AVATAR_COLORS } from "@/lib/constants";
+import { AVATAR_COLORS, AVATAR_PRESETS } from "@/lib/constants";
 import { getInitials } from "@/lib/utils";
+
+type EditAvatarMode = "color" | "avatar" | "photo";
 
 export function PartnerProfileView() {
   const { user, setUser, logout, bookings } = useAppStore();
@@ -45,6 +49,18 @@ export function PartnerProfileView() {
       ? AVATAR_COLORS.indexOf(user.avatar || "")
       : 0
   );
+  const [editAvatarMode, setEditAvatarMode] = useState<EditAvatarMode>(
+    user.avatarType === "photo" ? "photo" : user.avatarType === "avatar" ? "avatar" : "color"
+  );
+  const [editAvatarPreset, setEditAvatarPreset] = useState(
+    AVATAR_PRESETS.findIndex((p) => p.emoji === user.avatarEmoji) >= 0
+      ? AVATAR_PRESETS.findIndex((p) => p.emoji === user.avatarEmoji)
+      : 0
+  );
+  const [editPhotoPreview, setEditPhotoPreview] = useState<string | null>(
+    user.avatarPhotoUrl || null
+  );
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const avatarGradient = user.avatar || "from-orbit-purple to-orbit-cyan";
   const initials = getInitials(user.name);
@@ -57,7 +73,7 @@ export function PartnerProfileView() {
         </div>
       );
     }
-    if (user.avatarType === "emoji" && user.avatarEmoji) {
+    if (user.avatarType === "avatar" && user.avatarEmoji) {
       return (
         <div className={`${size} rounded-full bg-gradient-to-br from-orbit-purple/20 to-orbit-cyan/20 backdrop-blur-sm flex items-center justify-center ${textSize} shadow-xl`}>
           {user.avatarEmoji}
@@ -71,18 +87,60 @@ export function PartnerProfileView() {
     );
   };
 
+  const renderEditPreviewAvatar = () => {
+    if (editAvatarMode === "photo" && editPhotoPreview) {
+      return (
+        <div className="w-16 h-16 rounded-full overflow-hidden shadow-xl">
+          <img src={editPhotoPreview} alt="Preview" className="w-full h-full object-cover" />
+        </div>
+      );
+    }
+    if (editAvatarMode === "avatar") {
+      const preset = AVATAR_PRESETS[editAvatarPreset];
+      return (
+        <div className={`w-16 h-16 rounded-full bg-gradient-to-br ${preset.gradient} flex items-center justify-center text-2xl shadow-xl`}>
+          {preset.emoji}
+        </div>
+      );
+    }
+    return (
+      <div className={`w-16 h-16 rounded-full bg-gradient-to-br ${AVATAR_COLORS[editAvatar]} flex items-center justify-center text-xl font-black text-white shadow-xl`}>
+        {editName ? editName[0].toUpperCase() : "?"}
+      </div>
+    );
+  };
+
   const completedBookings = bookings.filter((b) => b.status === "DELIVERED").length;
   const activeBookings = bookings.filter((b) => !["DELIVERED", "CANCELLED"].includes(b.status)).length;
 
   const handleSave = useCallback(() => {
-    setUser({
+    const updates: Record<string, unknown> = {
       name: editName.trim(),
       email: editEmail.trim(),
       phone: editPhone.trim(),
-      avatar: AVATAR_COLORS[editAvatar],
-    });
+    };
+
+    if (editAvatarMode === "color") {
+      updates.avatarType = "color";
+      updates.avatar = AVATAR_COLORS[editAvatar];
+      updates.avatarEmoji = null;
+      updates.avatarPhotoUrl = null;
+    } else if (editAvatarMode === "avatar") {
+      const preset = AVATAR_PRESETS[editAvatarPreset];
+      updates.avatarType = "avatar";
+      updates.avatar = preset.gradient;
+      updates.avatarEmoji = preset.emoji;
+      updates.avatarPhotoUrl = null;
+    } else if (editAvatarMode === "photo") {
+      updates.avatarType = "photo";
+      updates.avatar = null;
+      updates.avatarEmoji = null;
+      updates.avatarPhotoUrl = editPhotoPreview;
+    }
+
+    setUser(updates as Partial<typeof user>);
     setIsEditing(false);
-  }, [editName, editEmail, editPhone, editAvatar, setUser]);
+  }, [editName, editEmail, editPhone, editAvatar, editAvatarMode, editAvatarPreset, editPhotoPreview, setUser]);
 
   const handleCancel = useCallback(() => {
     setEditName(user.name);
@@ -90,8 +148,27 @@ export function PartnerProfileView() {
     setEditPhone(user.phone);
     const idx = AVATAR_COLORS.indexOf(user.avatar || "");
     setEditAvatar(idx >= 0 ? idx : 0);
+    setEditAvatarMode(
+      user.avatarType === "photo" ? "photo" : user.avatarType === "avatar" ? "avatar" : "color"
+    );
+    setEditAvatarPreset(
+      AVATAR_PRESETS.findIndex((p) => p.emoji === user.avatarEmoji) >= 0
+        ? AVATAR_PRESETS.findIndex((p) => p.emoji === user.avatarEmoji)
+        : 0
+    );
+    setEditPhotoPreview(user.avatarPhotoUrl || null);
     setIsEditing(false);
-  }, [user.name, user.email, user.phone, user.avatar]);
+  }, [user.name, user.email, user.phone, user.avatar, user.avatarType, user.avatarEmoji, user.avatarPhotoUrl]);
+
+  const handlePhotoUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setEditPhotoPreview(reader.result as string);
+    };
+    reader.readAsDataURL(file);
+  }, []);
 
   const menuItems = [
     { icon: <Shield className="w-4 h-4" />, label: "Privacy Shield", desc: "Client data protection" },
@@ -106,7 +183,7 @@ export function PartnerProfileView() {
         <div className="flex flex-col sm:flex-row items-center gap-6">
           <div className="relative">
             {renderProfileAvatar("w-24 h-24 sm:w-28 sm:h-28", "text-3xl sm:text-4xl")}
-            <div className="absolute bottom-1 right-1 w-4 h-4 rounded-full bg-green-400 border-2 border-[#0A2860]" />
+            <div className={`absolute bottom-1 right-1 w-4 h-4 rounded-full border-2 border-[#0A2860] ${user.isOnline ? "bg-green-400" : "bg-gray-400"}`} />
           </div>
 
           <div className="flex-1 text-center sm:text-left">
@@ -119,6 +196,16 @@ export function PartnerProfileView() {
               <Badge variant="outline" className="border-orbit-purple/30 text-orbit-purple text-[10px]">
                 <Camera className="w-3 h-3 mr-1" /> Partner
               </Badge>
+              {/* Online/Offline Toggle */}
+              <button
+                onClick={() => setUser({ isOnline: !user.isOnline })}
+                className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/[0.08] border border-orbit-border/30 hover:bg-white/10 transition-all duration-200"
+              >
+                <div className={`w-2 h-2 rounded-full transition-colors duration-200 ${user.isOnline ? "bg-green-400" : "bg-gray-400"}`} />
+                <span className={`text-[10px] font-medium transition-colors duration-200 ${user.isOnline ? "text-green-400" : "text-gray-400"}`}>
+                  {user.isOnline ? "Online" : "Offline"}
+                </span>
+              </button>
             </div>
           </div>
 
@@ -165,22 +252,103 @@ export function PartnerProfileView() {
           >
             <div className="orbit-card rounded-2xl p-6 space-y-4 mb-4">
               <h3 className="text-sm font-bold text-foreground uppercase tracking-wider">Edit Profile</h3>
-              <div className="flex items-center justify-center gap-4 mb-2">
-                <div className={`w-16 h-16 rounded-full bg-gradient-to-br ${AVATAR_COLORS[editAvatar]} flex items-center justify-center text-xl font-black text-white`}>
-                  {editName ? editName[0].toUpperCase() : "?"}
-                </div>
+
+              {/* Avatar Preview */}
+              <div className="flex items-center justify-center mb-2">
+                {renderEditPreviewAvatar()}
               </div>
-              <div className="flex items-center justify-center gap-3 mb-2">
-                {AVATAR_COLORS.map((color, i) => (
+
+              {/* Avatar Mode Tabs */}
+              <div className="flex items-center justify-center gap-1 p-1 bg-white/[0.04] rounded-xl">
+                {(["color", "avatar", "photo"] as const).map((mode) => (
                   <button
-                    key={i}
-                    onClick={() => setEditAvatar(i)}
-                    className={`w-7 h-7 rounded-full bg-gradient-to-br ${color} transition-all duration-200 ${
-                      editAvatar === i ? "scale-125 ring-2 ring-white/50 ring-offset-2 ring-offset-[#0A2860]" : "opacity-50 hover:opacity-100 hover:scale-110"
+                    key={mode}
+                    onClick={() => setEditAvatarMode(mode)}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 ${
+                      editAvatarMode === mode
+                        ? "bg-white/[0.1] text-foreground"
+                        : "text-muted-foreground/60 hover:text-muted-foreground"
                     }`}
-                  />
+                  >
+                    {mode === "color" ? "Color" : mode === "avatar" ? "Avatar" : "Photo"}
+                  </button>
                 ))}
               </div>
+
+              {/* Color Picker */}
+              {editAvatarMode === "color" && (
+                <div className="flex items-center justify-center gap-3">
+                  {AVATAR_COLORS.map((color, i) => (
+                    <button
+                      key={i}
+                      onClick={() => setEditAvatar(i)}
+                      className={`w-7 h-7 rounded-full bg-gradient-to-br ${color} transition-all duration-200 ${
+                        editAvatar === i ? "scale-125 ring-2 ring-white/50 ring-offset-2 ring-offset-[#0A2860]" : "opacity-50 hover:opacity-100 hover:scale-110"
+                      }`}
+                    />
+                  ))}
+                </div>
+              )}
+
+              {/* Avatar Presets */}
+              {editAvatarMode === "avatar" && (
+                <div className="grid grid-cols-4 gap-2">
+                  {AVATAR_PRESETS.map((preset, i) => (
+                    <button
+                      key={preset.id}
+                      onClick={() => setEditAvatarPreset(i)}
+                      className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-all duration-200 ${
+                        editAvatarPreset === i
+                          ? "bg-white/[0.1] ring-1 ring-orbit-purple/40"
+                          : "bg-white/[0.03] hover:bg-white/[0.06]"
+                      }`}
+                    >
+                      <div className={`w-10 h-10 rounded-full bg-gradient-to-br ${preset.gradient} flex items-center justify-center text-lg`}>
+                        {preset.emoji}
+                      </div>
+                      <span className="text-[9px] text-muted-foreground">{preset.label}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {/* Photo Upload */}
+              {editAvatarMode === "photo" && (
+                <div className="flex flex-col items-center gap-3">
+                  {editPhotoPreview ? (
+                    <div className="relative group">
+                      <div className="w-20 h-20 rounded-full overflow-hidden border-2 border-orbit-purple/30">
+                        <img src={editPhotoPreview} alt="Preview" className="w-full h-full object-cover" />
+                      </div>
+                      <button
+                        onClick={() => setEditPhotoPreview(null)}
+                        className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-red-500 text-white flex items-center justify-center text-[10px] hover:bg-red-600 transition-colors"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </div>
+                  ) : null}
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={handlePhotoUpload}
+                    className="hidden"
+                  />
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="border-orbit-border/50 text-muted-foreground hover:text-foreground hover:border-orbit-purple/30"
+                  >
+                    <Upload className="w-3.5 h-3.5 mr-1.5" />
+                    {editPhotoPreview ? "Change Photo" : "Upload Photo"}
+                  </Button>
+                  <p className="text-[10px] text-muted-foreground/50">Choose a photo from your gallery</p>
+                </div>
+              )}
+
+              {/* Form Fields */}
               <div className="space-y-3">
                 <div className="space-y-1.5">
                   <label className="text-xs text-muted-foreground flex items-center gap-1.5"><Edit3 className="w-3 h-3" /> Name</label>

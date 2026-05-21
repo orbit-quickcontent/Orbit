@@ -42,7 +42,7 @@ export function BottomNav() {
         </div>
       );
     }
-    if (user.avatarType === "emoji" && user.avatarEmoji) {
+    if (user.avatarType === "avatar" && user.avatarEmoji) {
       return (
         <div className={`${size} rounded-full bg-gradient-to-br from-orbit-purple/20 to-orbit-cyan/20 flex items-center justify-center ${textSize}`}>
           {user.avatarEmoji}

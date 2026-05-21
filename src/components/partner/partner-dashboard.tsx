@@ -37,7 +37,7 @@ import { PaymentReceived } from "@/components/partner/payment-received";
 type PartnerPhase = "available" | "navigating" | "shooting" | "syncing" | "privacy" | "payment";
 
 export function PartnerDashboard() {
-  const { partnerActiveBooking, setPartnerActiveBooking, bookings } = useAppStore();
+  const { partnerActiveBooking, setPartnerActiveBooking, bookings, cancelBooking } = useAppStore();
   const [partnerPhase, setPartnerPhase] = useState<PartnerPhase>("available");
   const [shotUploads, setShotUploads] = useState<Map<string, string>>(new Map());
   const [uploadingShotId, setUploadingShotId] = useState<string | null>(null);
@@ -149,6 +149,22 @@ export function PartnerDashboard() {
             <p className="text-muted-foreground text-xs sm:text-sm">
               {partnerActiveBooking.packageName} · {partnerActiveBooking.location}
             </p>
+            {/* Cancel Booking Button */}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                if (confirm("Are you sure you want to cancel this booking? It will be reassigned to another partner.")) {
+                  cancelBooking(partnerActiveBooking.id, "PARTNER");
+                  setPartnerPhase("available");
+                  setPartnerActiveBooking(null);
+                  toast.success("Booking cancelled. It will be reassigned to another partner.");
+                }
+              }}
+              className="mt-3 border-red-500/20 text-red-400 hover:bg-red-500/10 hover:border-red-500/30 text-xs"
+            >
+              Cancel Booking
+            </Button>
           </motion.div>
 
           <input ref={fileInputRef} type="file" accept="video/*" className="hidden" onChange={handleFileSelected} />

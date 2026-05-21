@@ -85,6 +85,7 @@ export function BookingFlow() {
         id: bookingId, packageId: selectedPackage.id, packageName: selectedPackage.name, packagePrice: selectedPackage.price,
         status: "PAID", paymentStatus: "PROCESSING", bookingDate: bookingDate!.toISOString(), timeSlot: bookingTimeSlot,
         location: bookingLocation, syncPercentage: 0, editCountdown: 90, partnerName: null, notes: bookingNotes,
+        deliveredAt: null, downloaded: false, cancelledBy: null, declinedByPartners: [],
       };
 
       setCurrentBooking(newBooking);
@@ -99,6 +100,7 @@ export function BookingFlow() {
         id: bookingId, packageId: selectedPackage.id, packageName: selectedPackage.name, packagePrice: selectedPackage.price,
         status: "PAID", paymentStatus: "SUCCESS", bookingDate: bookingDate!.toISOString(), timeSlot: bookingTimeSlot,
         location: bookingLocation, syncPercentage: 0, editCountdown: 90, partnerName: null, notes: bookingNotes,
+        deliveredAt: null, downloaded: false, cancelledBy: null, declinedByPartners: [],
       };
       setCurrentBooking(newBooking);
       addBooking(newBooking);
