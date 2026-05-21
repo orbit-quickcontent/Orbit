@@ -195,10 +195,10 @@ export default function LoginPage() {
         />
         <div className="absolute inset-0 bg-gradient-to-b from-background/90 via-background/80 to-background" />
 
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 hidden sm:block">
           <div className="w-[600px] h-[600px] border border-orbit-cyan/5 rounded-full animate-orbit" />
         </div>
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 hidden sm:block">
           <div
             className="w-[400px] h-[400px] border border-orbit-purple/8 rounded-full animate-orbit"
             style={{ animationDirection: "reverse", animationDuration: "15s" }}
@@ -398,7 +398,7 @@ export default function LoginPage() {
                   </div>
 
                   {/* ─── Social Login Buttons ─── */}
-                  <div className="grid grid-cols-2 gap-3 mb-6">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6">
                     {/* Google Login */}
                     <button
                       onClick={handleGoogleLogin}
@@ -466,12 +466,12 @@ export default function LoginPage() {
 
                     {/* Color selection */}
                     {avatarMode === "color" && (
-                      <div className="flex items-center justify-center gap-3">
+                      <div className="flex items-center justify-center gap-2 sm:gap-3 flex-wrap">
                         {AVATAR_COLORS.map((color, i) => (
                           <button
                             key={i}
                             onClick={() => setAvatarColor(i)}
-                            className={`w-9 h-9 rounded-full bg-gradient-to-br ${color} transition-all duration-200 ${
+                            className={`w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-gradient-to-br ${color} transition-all duration-200 ${
                               avatarColor === i
                                 ? "scale-125 ring-2 ring-white/70 ring-offset-2 ring-offset-[#081C43]"
                                 : "opacity-50 hover:opacity-100 hover:scale-110"
@@ -484,7 +484,7 @@ export default function LoginPage() {
 
                     {/* Emoji avatar selection */}
                     {avatarMode === "emoji" && (
-                      <div className="grid grid-cols-8 gap-2 max-h-32 overflow-y-auto scrollbar-hide">
+                      <div className="grid grid-cols-6 sm:grid-cols-8 gap-2 max-h-32 overflow-y-auto scrollbar-hide">
                         {AVATAR_EMOJIS.map((emoji, i) => (
                           <button
                             key={i}
@@ -586,7 +586,7 @@ export default function LoginPage() {
                           type="tel"
                           inputMode="numeric"
                           maxLength={10}
-                          className={`bg-white/5 text-foreground placeholder:text-muted-foreground/40 h-11 pl-[5.5rem] ${
+                          className={`bg-white/5 text-foreground placeholder:text-muted-foreground/40 h-11 w-full pl-[5.5rem] ${
                             !isPhoneValid
                               ? "border-destructive focus:border-destructive"
                               : "border-orbit-border focus:border-orbit-cyan"
@@ -626,15 +626,15 @@ export default function LoginPage() {
                   </p>
 
                   {/* Footer links */}
-                  <div className="flex items-center justify-center gap-4 mt-6">
+                  <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 mt-6">
                     <button className="text-xs text-muted-foreground/40 hover:text-muted-foreground/70 transition-colors">
                       Privacy Policy
                     </button>
-                    <span className="text-muted-foreground/20">|</span>
+                    <span className="text-muted-foreground/20 hidden sm:inline">|</span>
                     <button className="text-xs text-muted-foreground/40 hover:text-muted-foreground/70 transition-colors">
                       Terms of Service
                     </button>
-                    <span className="text-muted-foreground/20">|</span>
+                    <span className="text-muted-foreground/20 hidden sm:inline">|</span>
                     <button className="text-xs text-muted-foreground/40 hover:text-muted-foreground/70 transition-colors">
                       Support
                     </button>

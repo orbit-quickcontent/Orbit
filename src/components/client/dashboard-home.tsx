@@ -260,14 +260,14 @@ export function DashboardHome() {
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.1 + i * 0.1 }}
-              className="shrink-0 w-[260px] sm:w-[280px]"
+              className="shrink-0 w-[260px] sm:w-[280px] h-full"
             >
               <button
                 onClick={() => {
                   setSelectedPackage(pkg);
                   setCurrentView("booking");
                 }}
-                className="w-full text-left group"
+                className="w-full text-left group h-full"
               >
                 <div
                   className={`orbit-card rounded-2xl p-4 sm:p-5 transition-all duration-300 hover:scale-[1.02] hover:border-orbit-cyan/30 h-full flex flex-col ${

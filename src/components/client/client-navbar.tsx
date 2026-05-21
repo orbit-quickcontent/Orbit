@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * 🔵 CLIENT FRONTEND | ClientNavbar
+ * CLIENT FRONTEND | ClientNavbar
  * 
  * Personalized greeting header inspired by modern app dashboards.
  * Shows user avatar, greeting ("Hi, {Name}"), subtitle, and notification bell.
@@ -121,9 +121,9 @@ export function ClientNavbar() {
 
   const unreadCount = notifications.filter((n) => !n.read).length;
 
-  // Close search/notif on outside click
+  // Close search/notif on outside click (mousedown + touchstart for mobile)
   useEffect(() => {
-    function handleClick(e: MouseEvent) {
+    function handleClick(e: MouseEvent | TouchEvent) {
       if (searchRef.current && !searchRef.current.contains(e.target as Node)) {
         setSearchOpen(false);
       }
@@ -132,7 +132,11 @@ export function ClientNavbar() {
       }
     }
     document.addEventListener("mousedown", handleClick);
-    return () => document.removeEventListener("mousedown", handleClick);
+    document.addEventListener("touchstart", handleClick);
+    return () => {
+      document.removeEventListener("mousedown", handleClick);
+      document.removeEventListener("touchstart", handleClick);
+    };
   }, []);
 
   // Close search on Escape
@@ -206,11 +210,11 @@ export function ClientNavbar() {
                 <AnimatePresence>
                   {searchOpen && (
                     <motion.div
-                      initial={{ width: 40, opacity: 0 }}
-                      animate={{ width: 220, opacity: 1 }}
-                      exit={{ width: 40, opacity: 0 }}
-                      transition={{ duration: 0.25, ease: "easeInOut" }}
-                      className="absolute right-0 top-0 z-10 flex items-center"
+                      initial={{ opacity: 0, x: 8 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: 8 }}
+                      transition={{ duration: 0.2, ease: "easeInOut" }}
+                      className="absolute right-0 top-0 z-10 flex items-center w-[calc(100vw-2rem)] sm:w-[220px]"
                     >
                       <div className="w-full flex items-center gap-2 bg-white/[0.08] backdrop-blur-xl rounded-full px-3 h-10 sm:h-11 border border-white/10">
                         <Search className="w-4 h-4 text-muted-foreground shrink-0" />
@@ -242,7 +246,7 @@ export function ClientNavbar() {
                       animate={{ opacity: 1, y: 0, scale: 1 }}
                       exit={{ opacity: 0, y: -4, scale: 0.95 }}
                       transition={{ duration: 0.15 }}
-                      className="absolute right-0 top-12 sm:top-13 w-56 orbit-card-strong rounded-2xl overflow-hidden shadow-2xl z-[70]"
+                      className="absolute right-0 top-12 sm:top-13 w-[calc(100vw-2rem)] sm:w-56 orbit-card-strong rounded-2xl overflow-hidden shadow-2xl z-[70]"
                     >
                       <div className="p-2">
                         <p className="px-3 py-1.5 text-[10px] font-semibold text-muted-foreground/60 uppercase tracking-wider">
@@ -305,7 +309,7 @@ export function ClientNavbar() {
                       animate={{ opacity: 1, y: 0, scale: 1 }}
                       exit={{ opacity: 0, y: -8, scale: 0.95 }}
                       transition={{ duration: 0.2 }}
-                      className="absolute right-0 top-12 sm:top-13 w-72 sm:w-80 orbit-card-strong rounded-2xl overflow-hidden shadow-2xl z-[70]"
+                      className="absolute right-0 top-12 sm:top-13 w-[calc(100vw-2rem)] sm:w-80 max-w-[320px] orbit-card-strong rounded-2xl overflow-hidden shadow-2xl z-[70]"
                     >
                       <div className="p-3 border-b border-white/5">
                         <div className="flex items-center justify-between">
@@ -404,7 +408,7 @@ export function ClientNavbar() {
           </div>
 
           {/* Subtitle / Status line */}
-          <div className="pb-3 sm:pb-4 min-h-[3rem] flex items-center gap-2">
+          <div className="pb-4 sm:pb-5 min-h-[2.5rem] flex items-center gap-2">
             {hasActiveBooking ? (
               <div className="flex items-center gap-2">
                 <div className="w-2 h-2 rounded-full bg-orbit-cyan animate-pulse" />
@@ -419,7 +423,7 @@ export function ClientNavbar() {
                 </p>
               </div>
             ) : (
-              <p className="text-xs sm:text-sm text-muted-foreground/70 whitespace-nowrap truncate">
+              <p className="text-xs sm:text-sm text-muted-foreground/70">
                 Ready to create something cinematic?
               </p>
             )}
@@ -435,7 +439,7 @@ export function ClientNavbar() {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -8, scale: 0.95 }}
             transition={{ duration: 0.2 }}
-            className="absolute right-4 sm:right-6 top-20 sm:top-24 w-56 orbit-card-strong rounded-2xl overflow-hidden shadow-2xl z-[60]"
+            className="absolute right-4 sm:right-6 top-[4.5rem] sm:top-[5.5rem] w-56 orbit-card-strong rounded-2xl overflow-hidden shadow-2xl z-[60]"
           >
             <div className="p-2">
               {/* Notifications */}

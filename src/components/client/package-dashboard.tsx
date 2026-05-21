@@ -40,7 +40,7 @@ export function PackageDashboard() {
 
         <div className="grid md:grid-cols-2 gap-4 sm:gap-6 lg:gap-8 max-w-4xl mx-auto">
           {packages.map((pkg, idx) => (
-            <motion.div key={pkg.id} initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: idx * 0.15 }}>
+            <motion.div key={pkg.id} initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: idx * 0.15 }} className="h-full">
               <Card
                 className={`relative overflow-hidden orbit-card transition-all duration-300 hover:scale-[1.02] cursor-pointer group h-full flex flex-col ${
                   pkg.popular ? "border-orbit-cyan/30 hover:border-orbit-cyan/60 orbit-glow" : "border-orbit-border hover:border-orbit-cyan/20"
