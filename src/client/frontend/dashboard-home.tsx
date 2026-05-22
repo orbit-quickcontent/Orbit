@@ -41,6 +41,7 @@ export function DashboardHome() {
     packages,
     setCurrentView,
     setSelectedPackage,
+    setHighlightedPackageId,
   } = useAppStore();
 
   const completedBookings = bookings.filter(
@@ -93,10 +94,13 @@ export function DashboardHome() {
               iconColor: "text-amber-400",
               onClick: () => {
                 // Brand DNA is a Professional/UGC exclusive feature
-                // Auto-select the UGC package so the booking flow shows Brand DNA section
+                // Highlight the UGC package on the packages page
                 const ugcPkg = packages.find((p) => p.tier === "PROFESSIONAL" || p.id === "pkg-professional");
-                if (ugcPkg) setSelectedPackage(ugcPkg);
-                setCurrentView("booking");
+                if (ugcPkg) {
+                  setSelectedPackage(ugcPkg);
+                  setHighlightedPackageId(ugcPkg.id);
+                }
+                setCurrentView("packages");
               },
             },
           ].map((action, i) => (
@@ -271,7 +275,7 @@ export function DashboardHome() {
               <button
                 onClick={() => {
                   setSelectedPackage(pkg);
-                  setCurrentView("booking");
+                  setCurrentView("packages");
                 }}
                 className="w-full text-left group h-full"
               >

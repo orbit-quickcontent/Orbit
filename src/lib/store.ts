@@ -90,6 +90,10 @@ interface AppState {
   selectedPackage: PackageInfo | null;
   setSelectedPackage: (pkg: PackageInfo | null) => void;
 
+  // Package highlight (used when Brand DNA redirects to packages page)
+  highlightedPackageId: string | null;
+  setHighlightedPackageId: (id: string | null) => void;
+
   // Booking
   currentBooking: BookingInfo | null;
   setCurrentBooking: (booking: BookingInfo | null) => void;
@@ -267,6 +271,10 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
   selectedPackage: null,
   setSelectedPackage: (pkg) => set({ selectedPackage: pkg }),
+
+  // Package highlight
+  highlightedPackageId: null,
+  setHighlightedPackageId: (id) => set({ highlightedPackageId: id }),
 
   // Booking
   currentBooking: null,
