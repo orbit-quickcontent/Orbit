@@ -591,43 +591,63 @@ export function ProfileView() {
         ))}
       </div>
 
-      {/* Recent Bookings — Collapsible */}
+      {/* Recent Bookings — Stats + Collapsible */}
       {bookings.length > 0 && (
         <div className="mb-4">
-          <button
+          <div
+            className="orbit-card rounded-2xl p-5 cursor-pointer hover:border-orbit-cyan/20 transition-all duration-300"
             onClick={() => setBookingsOpen(!bookingsOpen)}
-            className="w-full text-left group"
           >
-            <div className="orbit-card rounded-2xl p-5 hover:border-orbit-cyan/20 transition-all duration-300">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-orbit-cyan/15 to-orbit-purple/15 flex items-center justify-center">
-                    <Film className="w-5 h-5 text-orbit-cyan" />
-                  </div>
-                  <div>
-                    <h3 className="text-sm font-bold text-foreground">
-                      Recent Bookings
-                    </h3>
-                    <p className="text-[11px] text-muted-foreground/70">
-                      {bookings.length} booking{bookings.length !== 1 ? "s" : ""} · {activeBookings} active
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Badge variant="outline" className="border-orbit-cyan/20 text-orbit-cyan text-[10px]">
-                    {bookings.length}
-                  </Badge>
-                  <div className="w-7 h-7 rounded-lg bg-white/5 flex items-center justify-center text-muted-foreground group-hover:text-orbit-cyan transition-colors">
-                    {bookingsOpen ? (
-                      <ChevronUp className="w-4 h-4" />
-                    ) : (
-                      <ChevronDown className="w-4 h-4" />
-                    )}
-                  </div>
-                </div>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-sm font-bold text-foreground flex items-center gap-2">
+                <Film className="w-4 h-4 text-orbit-cyan" />
+                Recent Bookings
+              </h3>
+              <div className="flex items-center gap-1.5 text-muted-foreground hover:text-orbit-cyan transition-colors">
+                {bookingsOpen ? "Hide" : "View"}
+                {bookingsOpen ? (
+                  <ChevronUp className="w-4 h-4" />
+                ) : (
+                  <ChevronDown className="w-4 h-4" />
+                )}
               </div>
             </div>
-          </button>
+
+            <div className="grid grid-cols-3 gap-3">
+              {[
+                {
+                  icon: <Film className="w-4 h-4 text-orbit-cyan" />,
+                  value: bookings.length,
+                  label: "Total",
+                },
+                {
+                  icon: <Clock className="w-4 h-4 text-yellow-400" />,
+                  value: activeBookings,
+                  label: "Active",
+                },
+                {
+                  icon: <Star className="w-4 h-4 text-orbit-purple" />,
+                  value: completedBookings,
+                  label: "Done",
+                },
+              ].map((stat, i) => (
+                <div
+                  key={i}
+                  className="text-center p-3 rounded-xl bg-white/[0.03] hover:bg-white/[0.05] transition-colors"
+                >
+                  <div className="flex items-center justify-center mb-1.5">
+                    {stat.icon}
+                  </div>
+                  <div className="text-xl sm:text-2xl font-black text-foreground">
+                    {stat.value}
+                  </div>
+                  <div className="text-[10px] sm:text-xs text-muted-foreground uppercase tracking-wider">
+                    {stat.label}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
 
           <AnimatePresence>
             {bookingsOpen && (
@@ -680,7 +700,7 @@ export function ProfileView() {
                               <Button
                                 variant="outline"
                                 size="sm"
-                                onClick={() => handleCancelBooking(b.id)}
+                                onClick={(e) => { e.stopPropagation(); handleCancelBooking(b.id); }}
                                 className="h-6 px-2 text-[10px] border-red-500/20 text-red-400 hover:bg-red-500/10 hover:border-red-500/30"
                               >
                                 Cancel
