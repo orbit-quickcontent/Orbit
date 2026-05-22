@@ -91,7 +91,13 @@ export function DashboardHome() {
               desc: "Customize style",
               gradient: "from-amber-500/15 to-orange-500/15",
               iconColor: "text-amber-400",
-              onClick: () => setCurrentView("booking"),
+              onClick: () => {
+                // Brand DNA is a Professional/UGC exclusive feature
+                // Auto-select the UGC package so the booking flow shows Brand DNA section
+                const ugcPkg = packages.find((p) => p.tier === "PROFESSIONAL" || p.id === "pkg-professional");
+                if (ugcPkg) setSelectedPackage(ugcPkg);
+                setCurrentView("booking");
+              },
             },
           ].map((action, i) => (
             <button
