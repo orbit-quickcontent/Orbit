@@ -33,12 +33,19 @@ export function BottomNav() {
   const avatarInitial = getInitials(user.name);
   const avatarGradient = user.avatar || "from-orbit-cyan to-orbit-purple";
 
-  // Render avatar based on type (color gradient, emoji, or photo)
+  // Render avatar based on type (color gradient, image, or photo)
   const renderNavAvatar = (size: string, textSize: string) => {
     if (user.avatarType === "photo" && user.avatarPhotoUrl) {
       return (
         <div className={`${size} rounded-full overflow-hidden`}>
           <img src={user.avatarPhotoUrl} alt="Profile" className="w-full h-full object-cover" />
+        </div>
+      );
+    }
+    if (user.avatarType === "avatar" && user.avatarImage) {
+      return (
+        <div className={`${size} rounded-full overflow-hidden`}>
+          <img src={user.avatarImage} alt="Profile" className="w-full h-full object-cover" />
         </div>
       );
     }

@@ -94,6 +94,17 @@ export function ProfileView() {
         </div>
       );
     }
+    if (user.avatarType === "avatar" && user.avatarImage) {
+      return (
+        <div className={`${size} rounded-full overflow-hidden shadow-xl ring-2 ring-white/10`}>
+          <img
+            src={user.avatarImage}
+            alt="Profile"
+            className="w-full h-full object-cover"
+          />
+        </div>
+      );
+    }
     if (user.avatarType === "avatar" && user.avatarEmoji) {
       return (
         <div
@@ -129,10 +140,8 @@ export function ProfileView() {
       const preset = AVATAR_PRESETS.find((p) => p.id === editAvatarPreset);
       if (preset) {
         return (
-          <div
-            className={`w-16 h-16 rounded-full bg-gradient-to-br ${preset.gradient} flex items-center justify-center text-2xl shadow-xl`}
-          >
-            {preset.emoji}
+          <div className="w-16 h-16 rounded-full overflow-hidden shadow-xl ring-1 ring-white/10">
+            <img src={preset.image} alt={preset.label} className="w-full h-full object-cover" />
           </div>
         );
       }
@@ -176,17 +185,20 @@ export function ProfileView() {
       updates.avatarEmoji = null;
       updates.avatarPhotoUrl = editPhotoPreview;
       updates.avatar = null;
+      updates.avatarImage = null;
     } else if (editAvatarMode === "avatar") {
       const preset = AVATAR_PRESETS.find((p) => p.id === editAvatarPreset);
       updates.avatarType = "avatar";
       updates.avatarEmoji = preset?.emoji ?? null;
       updates.avatarPhotoUrl = null;
       updates.avatar = preset?.gradient ?? null;
+      updates.avatarImage = preset?.image ?? null;
     } else {
       updates.avatarType = "color";
       updates.avatarEmoji = null;
       updates.avatarPhotoUrl = null;
       updates.avatar = AVATAR_COLORS[editAvatar];
+      updates.avatarImage = null;
     }
 
     setUser(updates);
@@ -445,9 +457,9 @@ export function ProfileView() {
                       }`}
                     >
                       <div
-                        className={`w-10 h-10 rounded-full bg-gradient-to-br ${preset.gradient} flex items-center justify-center text-lg`}
+                        className="w-10 h-10 rounded-full overflow-hidden ring-1 ring-white/10"
                       >
-                        {preset.emoji}
+                        <img src={preset.image} alt={preset.label} className="w-full h-full object-cover" />
                       </div>
                       <span className="text-[9px] text-muted-foreground">
                         {preset.label}

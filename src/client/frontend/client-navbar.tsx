@@ -42,12 +42,19 @@ export function ClientNavbar() {
   const avatarGradient = user.avatar || "from-orbit-cyan to-orbit-purple";
   const initials = getInitials(user.name);
 
-  // Render avatar based on type (color gradient, emoji, or photo)
+  // Render avatar based on type (color gradient, image, or photo)
   const renderAvatar = (size: string, textSize: string) => {
     if (user.avatarType === "photo" && user.avatarPhotoUrl) {
       return (
         <div className={`${size} rounded-full overflow-hidden shadow-lg`}>
           <img src={user.avatarPhotoUrl} alt="Profile" className="w-full h-full object-cover" />
+        </div>
+      );
+    }
+    if (user.avatarType === "avatar" && user.avatarImage) {
+      return (
+        <div className={`${size} rounded-full overflow-hidden shadow-lg ring-1 ring-white/10`}>
+          <img src={user.avatarImage} alt="Profile" className="w-full h-full object-cover" />
         </div>
       );
     }
@@ -408,11 +415,11 @@ export function ClientNavbar() {
           </div>
 
           {/* Subtitle / Status line */}
-          <div className="pb-4 sm:pb-5 min-h-[2.5rem] flex items-center gap-2">
+          <div className="pb-3 sm:pb-4 flex items-center gap-2">
             {hasActiveBooking ? (
-              <div className="flex items-center gap-2">
-                <div className="w-2 h-2 rounded-full bg-orbit-cyan animate-pulse" />
-                <p className="text-xs sm:text-sm text-muted-foreground">
+              <div className="flex items-center gap-2 min-w-0">
+                <div className="w-2 h-2 rounded-full bg-orbit-cyan animate-pulse shrink-0" />
+                <p className="text-xs sm:text-sm text-muted-foreground truncate">
                   Your edit is{" "}
                   <span
                     className="text-orbit-cyan font-semibold cursor-pointer hover:underline"
@@ -423,7 +430,7 @@ export function ClientNavbar() {
                 </p>
               </div>
             ) : (
-              <p className="text-xs sm:text-sm text-muted-foreground/70">
+              <p className="text-xs sm:text-sm text-muted-foreground/60 truncate">
                 Ready to create something cinematic?
               </p>
             )}

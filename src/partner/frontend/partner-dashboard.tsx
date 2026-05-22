@@ -37,7 +37,7 @@ import { PaymentReceived } from "./payment-received";
 type PartnerPhase = "available" | "navigating" | "shooting" | "syncing" | "privacy" | "payment";
 
 export function PartnerDashboard() {
-  const { partnerActiveBooking, setPartnerActiveBooking, bookings, cancelBooking } = useAppStore();
+  const { partnerActiveBooking, setPartnerActiveBooking, bookings, cancelBooking, updateBookingStatus, markBookingDelivered, markBookingDownloaded } = useAppStore();
   const [partnerPhase, setPartnerPhase] = useState<PartnerPhase>("available");
   const [shotUploads, setShotUploads] = useState<Map<string, string>>(new Map());
   const [uploadingShotId, setUploadingShotId] = useState<string | null>(null);
@@ -69,6 +69,12 @@ export function PartnerDashboard() {
       setShotUploads((prev) => {
         const next = new Map(prev);
         next.set(uploadingShotId, fileName);
+        return next;
+      });
+      // Auto-check the shot checkbox when file is uploaded
+      setCompletedShots((prev) => {
+        const next = new Set(prev);
+        next.add(uploadingShotId);
         return next;
       });
       toast.success(`Uploaded for ${SHOT_LIST.find((s) => s.id === uploadingShotId)?.name}`, { description: fileName });
@@ -112,11 +118,17 @@ export function PartnerDashboard() {
   };
 
   const handleCompleteAndReturn = () => {
+    // Update the booking in the store to DELIVERED status
+    if (partnerActiveBooking) {
+      updateBookingStatus(partnerActiveBooking.id, "DELIVERED");
+      markBookingDelivered(partnerActiveBooking.id);
+      markBookingDownloaded(partnerActiveBooking.id);
+    }
     setPartnerPhase("available");
     setPartnerActiveBooking(null);
     setCompletedShots(new Set());
     setSyncProgress(0);
-    toast.success("Project completed!");
+    toast.success("Project completed! Payment credited to your wallet.");
   };
 
   // ─── Active Workflow (when partner has accepted a booking) ──────────────
@@ -149,22 +161,24 @@ export function PartnerDashboard() {
             <p className="text-muted-foreground text-xs sm:text-sm">
               {partnerActiveBooking.packageName} · {partnerActiveBooking.location}
             </p>
-            {/* Cancel Booking Button */}
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                if (confirm("Are you sure you want to cancel this booking? It will be reassigned to another partner.")) {
-                  cancelBooking(partnerActiveBooking.id, "PARTNER");
-                  setPartnerPhase("available");
-                  setPartnerActiveBooking(null);
-                  toast.success("Booking cancelled. It will be reassigned to another partner.");
-                }
-              }}
-              className="mt-3 border-red-500/20 text-red-400 hover:bg-red-500/10 hover:border-red-500/30 text-xs"
-            >
-              Cancel Booking
-            </Button>
+            {/* Cancel Booking Button - Only show before arriving at location */}
+            {(partnerPhase === "navigating") && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  if (confirm("Are you sure you want to cancel this booking? It will be reassigned to another partner.")) {
+                    cancelBooking(partnerActiveBooking.id, "PARTNER");
+                    setPartnerPhase("available");
+                    setPartnerActiveBooking(null);
+                    toast.success("Booking cancelled. It will be reassigned to another partner.");
+                  }
+                }}
+                className="mt-3 border-red-500/20 text-red-400 hover:bg-red-500/10 hover:border-red-500/30 text-xs"
+              >
+                Cancel Booking
+              </Button>
+            )}
           </motion.div>
 
           <input ref={fileInputRef} type="file" accept="video/*" className="hidden" onChange={handleFileSelected} />

@@ -451,8 +451,8 @@ export function TrackingDashboard() {
             )}
           </h2>
           <p className="text-muted-foreground text-xs sm:text-sm">Booking ID: {currentBooking.id}</p>
-          {/* Cancel Booking Button */}
-          {!isComplete && !isDownloaded && (
+          {/* Cancel Booking Button - Only show before partner arrives */}
+          {!isComplete && !isDownloaded && activeStep < 3 && (
             <Button
               variant="outline"
               size="sm"

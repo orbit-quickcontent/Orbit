@@ -67,6 +67,7 @@ export interface UserProfile {
   avatarType: "color" | "avatar" | "photo";
   avatarEmoji: string | null;
   avatarPhotoUrl: string | null;
+  avatarImage: string | null;
   brandLogo: string | null;
   brandFont: string | null;
   brandColor: string | null;

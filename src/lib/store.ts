@@ -52,6 +52,7 @@ const defaultUser: UserProfile = {
   avatarType: "color",
   avatarEmoji: null,
   avatarPhotoUrl: null,
+  avatarImage: null,
   brandLogo: null,
   brandFont: null,
   brandColor: null,

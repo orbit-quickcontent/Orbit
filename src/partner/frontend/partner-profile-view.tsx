@@ -73,6 +73,13 @@ export function PartnerProfileView() {
         </div>
       );
     }
+    if (user.avatarType === "avatar" && user.avatarImage) {
+      return (
+        <div className={`${size} rounded-full overflow-hidden shadow-xl ring-2 ring-white/10`}>
+          <img src={user.avatarImage} alt="Profile" className="w-full h-full object-cover" />
+        </div>
+      );
+    }
     if (user.avatarType === "avatar" && user.avatarEmoji) {
       return (
         <div className={`${size} rounded-full bg-gradient-to-br from-orbit-purple/20 to-orbit-cyan/20 backdrop-blur-sm flex items-center justify-center ${textSize} shadow-xl`}>
@@ -98,8 +105,8 @@ export function PartnerProfileView() {
     if (editAvatarMode === "avatar") {
       const preset = AVATAR_PRESETS[editAvatarPreset];
       return (
-        <div className={`w-16 h-16 rounded-full bg-gradient-to-br ${preset.gradient} flex items-center justify-center text-2xl shadow-xl`}>
-          {preset.emoji}
+        <div className="w-16 h-16 rounded-full overflow-hidden shadow-xl ring-1 ring-white/10">
+          <img src={preset.image} alt={preset.label} className="w-full h-full object-cover" />
         </div>
       );
     }
@@ -125,17 +132,20 @@ export function PartnerProfileView() {
       updates.avatar = AVATAR_COLORS[editAvatar];
       updates.avatarEmoji = null;
       updates.avatarPhotoUrl = null;
+      updates.avatarImage = null;
     } else if (editAvatarMode === "avatar") {
       const preset = AVATAR_PRESETS[editAvatarPreset];
       updates.avatarType = "avatar";
       updates.avatar = preset.gradient;
       updates.avatarEmoji = preset.emoji;
       updates.avatarPhotoUrl = null;
+      updates.avatarImage = preset.image;
     } else if (editAvatarMode === "photo") {
       updates.avatarType = "photo";
       updates.avatar = null;
       updates.avatarEmoji = null;
       updates.avatarPhotoUrl = editPhotoPreview;
+      updates.avatarImage = null;
     }
 
     setUser(updates as Partial<typeof user>);
@@ -303,8 +313,8 @@ export function PartnerProfileView() {
                           : "bg-white/[0.03] hover:bg-white/[0.06]"
                       }`}
                     >
-                      <div className={`w-10 h-10 rounded-full bg-gradient-to-br ${preset.gradient} flex items-center justify-center text-lg`}>
-                        {preset.emoji}
+                      <div className="w-10 h-10 rounded-full overflow-hidden ring-1 ring-white/10">
+                        <img src={preset.image} alt={preset.label} className="w-full h-full object-cover" />
                       </div>
                       <span className="text-[9px] text-muted-foreground">{preset.label}</span>
                     </button>

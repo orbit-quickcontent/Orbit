@@ -36,6 +36,7 @@ import { useAppStore } from "@/lib/store";
 import { AVATAR_COLORS, AVATAR_PRESETS } from "@/lib/constants";
 import { getInitials } from "@/lib/utils";
 import { type UserRole } from "@/lib/types";
+import { toast } from "sonner";
 import OTPVerification from "./otp-verification";
 
 // Pre-computed particle positions (avoids hydration mismatch)
@@ -106,14 +107,19 @@ export default function LoginPage() {
       ? AVATAR_PRESETS.find(p => p.id === selectedAvatarPreset)?.gradient ?? AVATAR_COLORS[0]
       : photoPreview;
 
+    const selectedPreset = avatarMode === "avatar" && selectedAvatarPreset
+      ? AVATAR_PRESETS.find(p => p.id === selectedAvatarPreset)
+      : null;
+
     setUser({
       name: name.trim(),
       email: email.trim(),
       phone: phone.trim() ? `+91${phone.trim()}` : "",
       avatar: avatarValue ?? AVATAR_COLORS[0],
       avatarType: avatarMode,
-      avatarEmoji: avatarMode === "avatar" ? (AVATAR_PRESETS.find(p => p.id === selectedAvatarPreset)?.emoji ?? null) : null,
+      avatarEmoji: selectedPreset?.emoji ?? null,
       avatarPhotoUrl: avatarMode === "photo" ? photoPreview : null,
+      avatarImage: selectedPreset?.image ?? null,
     });
     setStep("otp");
   }, [name, email, phone, avatarColor, avatarMode, selectedAvatarPreset, photoPreview, setUser]);
@@ -129,18 +135,24 @@ export default function LoginPage() {
 
   // Google OAuth
   const handleGoogleLogin = useCallback(() => {
-    // In production with real OAuth credentials, this redirects to Google OAuth
-    // For now, we simulate the OAuth flow by auto-filling and marking the provider
-    setName("");
-    setEmail("");
+    // Demo: Simulates Google OAuth sign-in
+    // In production, this would redirect to Google OAuth consent screen
+    // and receive the user's name/email from the OAuth callback
+    setName("Google User");
+    setEmail("user@gmail.com");
     setUser({ authProvider: "google" });
-    // Show a prompt for user to enter their name since OAuth would provide it
+    toast.success("Signed in with Google!", { description: "Demo mode — profile auto-filled" });
   }, [setUser]);
 
   // Apple OAuth
   const handleAppleLogin = useCallback(() => {
-    // In production with real OAuth credentials, this redirects to Apple OAuth
+    // Demo: Simulates Apple OAuth sign-in
+    // In production, this would use Apple Sign-In JS SDK
+    // and receive the user's name/email from the OAuth callback
+    setName("Apple User");
+    setEmail("user@icloud.com");
     setUser({ authProvider: "apple" });
+    toast.success("Signed in with Apple!", { description: "Demo mode — profile auto-filled" });
   }, [setUser]);
 
   // Render the current avatar preview based on mode
@@ -164,8 +176,8 @@ export default function LoginPage() {
         return (
           <div className="relative">
             <div className={`absolute inset-0 w-24 h-24 rounded-full bg-gradient-to-br ${preset.gradient} opacity-30 blur-xl scale-125`} />
-            <div className={`relative ${size} rounded-full bg-gradient-to-br ${preset.gradient} flex items-center justify-center shadow-lg ring-2 ring-white/30`}>
-              <span className="text-4xl">{preset.emoji}</span>
+            <div className={`relative ${size} rounded-full overflow-hidden shadow-lg ring-2 ring-white/30`}>
+              <img src={preset.image} alt={preset.label} className="w-full h-full object-cover" />
             </div>
           </div>
         );
@@ -494,8 +506,8 @@ export default function LoginPage() {
                                 : "bg-white/5 hover:bg-white/10 hover:scale-105"
                             }`}
                           >
-                            <div className={`w-12 h-12 rounded-full bg-gradient-to-br ${preset.gradient} flex items-center justify-center text-xl shadow-lg`}>
-                              {preset.emoji}
+                            <div className={`w-12 h-12 rounded-full overflow-hidden shadow-lg ring-1 ring-white/10`}>
+                              <img src={preset.image} alt={preset.label} className="w-full h-full object-cover" />
                             </div>
                             <span className="text-[10px] font-semibold text-foreground/80">{preset.label}</span>
                           </button>
