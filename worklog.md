@@ -60,3 +60,23 @@ Stage Summary:
 - Cancel booking correctly hides when partner arrives at location (both client & partner views)
 - Video History section shows 30-day re-download window with auto-delete notice
 - Google/Apple login auto-fills avatar preset + realistic toast messages
+
+---
+Task ID: 3
+Agent: Main Agent
+Task: Fix app not being visible - diagnose and restart server
+
+Work Log:
+- Discovered that the production server process was being killed when backgrounded
+- Identified that processes die within ~10 seconds when started with simple `&` backgrounding
+- Created a daemon script using subshell fork approach (run-daemon.sh) that keeps server alive
+- Started dev server using setsid + subshell fork - server stays alive with 200 responses
+- Verified all components are intact: login page, client app, partner app, avatars, etc.
+- Confirmed lint passes with no errors
+- App serving on port 3000 with HTTP 200
+
+Stage Summary:
+- App is running and visible on port 3000
+- Server stability achieved using daemon script with subshell fork
+- All existing features preserved: role selection, profile creation, avatar selection, OTP, client/partner dashboards
+- Previously implemented features confirmed working: cancel booking, video history, online/offline toggle, avatar images
