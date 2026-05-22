@@ -60,7 +60,6 @@ export default function LoginPage() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
-  const [avatarColor, setAvatarColor] = useState(0);
   const [avatarMode, setAvatarMode] = useState<AvatarMode>("avatar");
   const [selectedAvatarPreset, setSelectedAvatarPreset] = useState<string | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
@@ -119,7 +118,7 @@ export default function LoginPage() {
       avatarImage: selectedPreset?.image ?? null,
     });
     setStep("otp");
-  }, [name, email, phone, avatarColor, avatarMode, selectedAvatarPreset, photoPreview, setUser]);
+  }, [name, email, phone, avatarMode, selectedAvatarPreset, photoPreview, setUser]);
 
   // Step 3→done
   const handleOtpVerified = useCallback(() => {

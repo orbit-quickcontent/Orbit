@@ -23,16 +23,12 @@ import {
   Check,
   X,
   Film,
-  Clock,
-  Star,
   Settings,
   ChevronRight,
   ChevronDown,
-  ChevronUp,
   Shield,
   HelpCircle,
   Download,
-  AlertTriangle,
   ImageIcon,
   UserCircle,
   Palette,
@@ -177,7 +173,6 @@ export function ProfileView() {
   );
   const completedBookings = completedBookingsList.length;
   const activeBookings = activeBookingsList.length;
-  const deliveredBookings = completedBookingsList;
 
   // Get filtered bookings based on active tab
   const filteredBookings =
