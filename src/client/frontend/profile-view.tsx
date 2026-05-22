@@ -52,12 +52,13 @@ import { getInitials } from "@/lib/utils";
 import { toast } from "sonner";
 
 type EditAvatarMode = "color" | "avatar" | "photo";
+type ActivitySection = "bookings" | "videos" | "reviews" | null;
 
 export function ProfileView() {
   const { user, setUser, logout, bookings, reviews, cancelBooking } =
     useAppStore();
   const [isEditing, setIsEditing] = useState(false);
-  const [bookingsOpen, setBookingsOpen] = useState(false);
+  const [expandedSection, setExpandedSection] = useState<ActivitySection>(null);
   const [editName, setEditName] = useState(user.name);
   const [editEmail, setEditEmail] = useState(user.email);
   const [editPhone, setEditPhone] = useState(user.phone);
@@ -591,80 +592,180 @@ export function ProfileView() {
         ))}
       </div>
 
-      {/* Recent Bookings — Stats + Collapsible */}
-      {bookings.length > 0 && (
+      {/* Activity Hub — Compact Cards + Expandable Details */}
+      {(bookings.length > 0 || reviews.length > 0) && (
         <div className="mb-4">
-          <div
-            className="orbit-card rounded-2xl p-5 cursor-pointer hover:border-orbit-cyan/20 transition-all duration-300"
-            onClick={() => setBookingsOpen(!bookingsOpen)}
-          >
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-sm font-bold text-foreground flex items-center gap-2">
-                <Film className="w-4 h-4 text-orbit-cyan" />
-                Recent Bookings
-              </h3>
-              <div className="flex items-center gap-1.5 text-muted-foreground hover:text-orbit-cyan transition-colors">
-                {bookingsOpen ? "Hide" : "View"}
-                {bookingsOpen ? (
-                  <ChevronUp className="w-4 h-4" />
-                ) : (
-                  <ChevronDown className="w-4 h-4" />
-                )}
-              </div>
-            </div>
-
-            <div className="grid grid-cols-3 gap-3">
-              {[
-                {
-                  icon: <Film className="w-4 h-4 text-orbit-cyan" />,
-                  value: bookings.length,
-                  label: "Total",
-                },
-                {
-                  icon: <Clock className="w-4 h-4 text-yellow-400" />,
-                  value: activeBookings,
-                  label: "Active",
-                },
-                {
-                  icon: <Star className="w-4 h-4 text-orbit-purple" />,
-                  value: completedBookings,
-                  label: "Done",
-                },
-              ].map((stat, i) => (
-                <div
-                  key={i}
-                  className="text-center p-3 rounded-xl bg-white/[0.03] hover:bg-white/[0.05] transition-colors"
+          {/* 3 Compact Metric Cards */}
+          <div className="grid grid-cols-3 gap-3">
+            {[
+              {
+                key: "bookings" as ActivitySection,
+                icon: <Film className="w-4 h-4 text-orbit-cyan" />,
+                value: bookings.length,
+                label: "Recent Bookings",
+                borderActive: "border-orbit-cyan/40",
+                bgActive: "bg-orbit-cyan/10",
+              },
+              {
+                key: "videos" as ActivitySection,
+                icon: <Download className="w-4 h-4 text-orbit-purple" />,
+                value: deliveredBookings.length,
+                label: "Video History",
+                borderActive: "border-orbit-purple/40",
+                bgActive: "bg-orbit-purple/10",
+              },
+              {
+                key: "reviews" as ActivitySection,
+                icon: <Star className="w-4 h-4 text-amber-400" />,
+                value: reviews.length,
+                label: "My Reviews",
+                borderActive: "border-amber-400/40",
+                bgActive: "bg-amber-400/10",
+              },
+            ].map((card) => {
+              const isActive = expandedSection === card.key;
+              return (
+                <button
+                  key={card.key}
+                  onClick={() =>
+                    setExpandedSection(isActive ? null : card.key)
+                  }
+                  className={`orbit-card rounded-2xl p-3 sm:p-4 text-center transition-all duration-300 hover:scale-[1.03] active:scale-[0.97] ${
+                    isActive
+                      ? `${card.borderActive} ${card.bgActive}`
+                      : "hover:border-white/10"
+                  }`}
                 >
                   <div className="flex items-center justify-center mb-1.5">
-                    {stat.icon}
+                    {card.icon}
                   </div>
                   <div className="text-xl sm:text-2xl font-black text-foreground">
-                    {stat.value}
+                    {card.value}
                   </div>
-                  <div className="text-[10px] sm:text-xs text-muted-foreground uppercase tracking-wider">
-                    {stat.label}
+                  <div className="text-[10px] sm:text-[11px] text-muted-foreground uppercase tracking-wider">
+                    {card.label}
                   </div>
-                </div>
-              ))}
-            </div>
+                  <div className="mt-1.5 flex items-center justify-center">
+                    <ChevronDown
+                      className={`w-3 h-3 text-muted-foreground/50 transition-transform duration-300 ${
+                        isActive ? "rotate-180" : ""
+                      }`}
+                    />
+                  </div>
+                </button>
+              );
+            })}
           </div>
 
-          <AnimatePresence>
-            {bookingsOpen && (
+          {/* Expandable Detail Panels */}
+          <AnimatePresence mode="wait">
+            {expandedSection === "bookings" && (
               <motion.div
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: "auto" }}
-                exit={{ opacity: 0, height: 0 }}
+                key="bookings"
+                initial={{ opacity: 0, height: 0, marginTop: 0 }}
+                animate={{ opacity: 1, height: "auto", marginTop: 12 }}
+                exit={{ opacity: 0, height: 0, marginTop: 0 }}
                 transition={{ duration: 0.3 }}
                 className="overflow-hidden"
               >
-                <div className="space-y-2 mt-2 max-h-64 overflow-y-auto" style={{ scrollbarWidth: "thin", scrollbarColor: "rgba(0,191,255,0.15) transparent" }}>
-                  {bookings
-                    .slice()
-                    .reverse()
-                    .map((b) => {
-                      const isActive = !["DELIVERED", "CANCELLED"].includes(b.status);
-                      const canCancel = isActive && ["PAID", "PARTNER_DISPATCHED", "EN_ROUTE"].includes(b.status);
+                <div className="orbit-card rounded-2xl p-4 border-orbit-cyan/20">
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="text-sm font-bold text-foreground flex items-center gap-2">
+                      <Film className="w-4 h-4 text-orbit-cyan" />
+                      Recent Bookings
+                    </h3>
+                    <button
+                      onClick={() => setExpandedSection(null)}
+                      className="text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      <ChevronUp className="w-4 h-4" />
+                    </button>
+                  </div>
+                  <div className="space-y-2 max-h-64 overflow-y-auto" style={{ scrollbarWidth: "thin", scrollbarColor: "rgba(0,191,255,0.15) transparent" }}>
+                    {bookings
+                      .slice()
+                      .reverse()
+                      .map((b) => {
+                        const isActive = !["DELIVERED", "CANCELLED"].includes(b.status);
+                        const canCancel = isActive && ["PAID", "PARTNER_DISPATCHED", "EN_ROUTE"].includes(b.status);
+                        return (
+                          <div
+                            key={b.id}
+                            className="flex items-center justify-between bg-white/[0.03] rounded-lg px-3 py-2.5"
+                          >
+                            <div className="flex-1 min-w-0">
+                              <div className="text-sm font-medium text-foreground truncate">
+                                {b.packageName}
+                              </div>
+                              <div className="text-xs text-muted-foreground/60">
+                                {new Date(b.bookingDate).toLocaleDateString("en-US", {
+                                  month: "short",
+                                  day: "numeric",
+                                  year: "numeric",
+                                })}{" "}
+                                · {b.timeSlot}
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2 shrink-0">
+                              <Badge
+                                variant="outline"
+                                className={`text-[10px] ${
+                                  b.status === "DELIVERED"
+                                    ? "border-green-400/30 text-green-400"
+                                    : b.status === "CANCELLED"
+                                    ? "border-red-400/30 text-red-400"
+                                    : "border-orbit-cyan/30 text-orbit-cyan"
+                                }`}
+                              >
+                                {b.status}
+                              </Badge>
+                              {canCancel && (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={(e) => { e.stopPropagation(); handleCancelBooking(b.id); }}
+                                  className="h-6 px-2 text-[10px] border-red-500/20 text-red-400 hover:bg-red-500/10 hover:border-red-500/30"
+                                >
+                                  Cancel
+                                </Button>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                  </div>
+                </div>
+              </motion.div>
+            )}
+
+            {expandedSection === "videos" && deliveredBookings.length > 0 && (
+              <motion.div
+                key="videos"
+                initial={{ opacity: 0, height: 0, marginTop: 0 }}
+                animate={{ opacity: 1, height: "auto", marginTop: 12 }}
+                exit={{ opacity: 0, height: 0, marginTop: 0 }}
+                transition={{ duration: 0.3 }}
+                className="overflow-hidden"
+              >
+                <div className="orbit-card rounded-2xl p-4 border-orbit-purple/20">
+                  <div className="flex items-center justify-between mb-1">
+                    <h3 className="text-sm font-bold text-foreground flex items-center gap-2">
+                      <Download className="w-4 h-4 text-orbit-purple" />
+                      Video History
+                    </h3>
+                    <button
+                      onClick={() => setExpandedSection(null)}
+                      className="text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      <ChevronUp className="w-4 h-4" />
+                    </button>
+                  </div>
+                  <p className="text-[10px] text-muted-foreground/50 mb-3">Auto-deletes after 30 days</p>
+                  <div className="space-y-2 max-h-64 overflow-y-auto">
+                    {deliveredBookings.map((b) => {
+                      const withinWindow = isWithinRedownloadWindow(b.deliveredAt);
+                      const daysLeft = getRedownloadDaysRemaining(b.deliveredAt);
+
                       return (
                         <div
                           key={b.id}
@@ -675,193 +776,145 @@ export function ProfileView() {
                               {b.packageName}
                             </div>
                             <div className="text-xs text-muted-foreground/60">
-                              {new Date(b.bookingDate).toLocaleDateString("en-US", {
-                                month: "short",
-                                day: "numeric",
-                                year: "numeric",
-                              })}{" "}
-                              · {b.timeSlot}
+                              Delivered
+                              {b.deliveredAt &&
+                                ` ${new Date(b.deliveredAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}`}
                             </div>
                           </div>
                           <div className="flex items-center gap-2 shrink-0">
-                            <Badge
-                              variant="outline"
-                              className={`text-[10px] ${
-                                b.status === "DELIVERED"
-                                  ? "border-green-400/30 text-green-400"
-                                  : b.status === "CANCELLED"
-                                  ? "border-red-400/30 text-red-400"
-                                  : "border-orbit-cyan/30 text-orbit-cyan"
-                              }`}
-                            >
-                              {b.status}
-                            </Badge>
-                            {canCancel && (
-                              <Button
+                            {b.downloaded && (
+                              <Badge
                                 variant="outline"
-                                size="sm"
-                                onClick={(e) => { e.stopPropagation(); handleCancelBooking(b.id); }}
-                                className="h-6 px-2 text-[10px] border-red-500/20 text-red-400 hover:bg-red-500/10 hover:border-red-500/30"
+                                className="text-[10px] border-green-400/30 text-green-400"
                               >
-                                Cancel
-                              </Button>
+                                Downloaded
+                              </Badge>
+                            )}
+                            {withinWindow ? (
+                              !b.downloaded ? (
+                                <>
+                                  <span className="text-[10px] text-muted-foreground">
+                                    {daysLeft} days left
+                                  </span>
+                                  <Button
+                                    size="sm"
+                                    className="h-6 px-2 text-[10px] bg-gradient-to-r from-orbit-cyan to-orbit-purple text-white hover:opacity-90"
+                                  >
+                                    <Download className="w-3 h-3 mr-1" /> Download
+                                  </Button>
+                                </>
+                              ) : (
+                                <span className="text-[10px] text-green-400/60">
+                                  {daysLeft} days left
+                                </span>
+                              )
+                            ) : (
+                              <div className="flex items-center gap-1.5">
+                                <AlertTriangle className="w-3 h-3 text-muted-foreground/30" />
+                                <Badge
+                                  variant="outline"
+                                  className="text-[10px] border-muted-foreground/20 text-muted-foreground/50"
+                                >
+                                  Auto-deleted
+                                </Badge>
+                              </div>
                             )}
                           </div>
                         </div>
                       );
                     })}
+                  </div>
+                </div>
+              </motion.div>
+            )}
+
+            {expandedSection === "reviews" && reviews.length > 0 && (
+              <motion.div
+                key="reviews"
+                initial={{ opacity: 0, height: 0, marginTop: 0 }}
+                animate={{ opacity: 1, height: "auto", marginTop: 12 }}
+                exit={{ opacity: 0, height: 0, marginTop: 0 }}
+                transition={{ duration: 0.3 }}
+                className="overflow-hidden"
+              >
+                <div className="orbit-card rounded-2xl p-4 border-amber-400/20">
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="text-sm font-bold text-foreground flex items-center gap-2">
+                      <Star className="w-4 h-4 text-amber-400" />
+                      My Reviews
+                    </h3>
+                    <button
+                      onClick={() => setExpandedSection(null)}
+                      className="text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      <ChevronUp className="w-4 h-4" />
+                    </button>
+                  </div>
+                  <div className="space-y-3 max-h-64 overflow-y-auto">
+                    {reviews
+                      .slice(-5)
+                      .reverse()
+                      .map((r) => {
+                        const booking = bookings.find((b) => b.id === r.bookingId);
+                        return (
+                          <div key={r.bookingId} className="bg-white/[0.03] rounded-xl p-3.5">
+                            <div className="flex items-center justify-between mb-2">
+                              <span className="text-xs font-medium text-foreground">
+                                {booking?.packageName || "Session"}
+                              </span>
+                              <span className="text-[10px] text-muted-foreground">
+                                #{r.bookingId.slice(-6)}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-4 mb-2">
+                              <div className="flex items-center gap-1.5">
+                                <span className="text-[10px] text-muted-foreground">
+                                  Partner
+                                </span>
+                                <div className="flex gap-0.5">
+                                  {[1, 2, 3, 4, 5].map((s) => (
+                                    <Star
+                                      key={s}
+                                      className={`w-3 h-3 ${
+                                        s <= r.partnerRating
+                                          ? "text-amber-400 fill-amber-400"
+                                          : "text-muted-foreground/20"
+                                      }`}
+                                    />
+                                  ))}
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-1.5">
+                                <span className="text-[10px] text-muted-foreground">
+                                  Editor
+                                </span>
+                                <div className="flex gap-0.5">
+                                  {[1, 2, 3, 4, 5].map((s) => (
+                                    <Star
+                                      key={s}
+                                      className={`w-3 h-3 ${
+                                        s <= r.editorRating
+                                          ? "text-amber-400 fill-amber-400"
+                                          : "text-muted-foreground/20"
+                                      }`}
+                                    />
+                                  ))}
+                                </div>
+                              </div>
+                            </div>
+                            {r.feedback && (
+                              <p className="text-[11px] text-muted-foreground/80 italic">
+                                &ldquo;{r.feedback}&rdquo;
+                              </p>
+                            )}
+                          </div>
+                        );
+                      })}
+                  </div>
                 </div>
               </motion.div>
             )}
           </AnimatePresence>
-        </div>
-      )}
-
-      {/* Video History — Re-download within 30 days */}
-      {deliveredBookings.length > 0 && (
-        <div className="orbit-card rounded-2xl p-5 mb-4">
-          <div className="flex items-center justify-between mb-1">
-            <h3 className="text-sm font-bold text-foreground uppercase tracking-wider flex items-center gap-2">
-              <Download className="w-4 h-4 text-orbit-cyan" />
-              Video History
-            </h3>
-            <span className="text-[9px] text-muted-foreground/40 font-medium">Auto-deletes after 30 days</span>
-          </div>
-          <p className="text-[10px] text-muted-foreground/50 mb-4">Re-download your edited videos within 30 days of delivery</p>
-          <div className="space-y-3 max-h-64 overflow-y-auto">
-            {deliveredBookings.map((b) => {
-              const withinWindow = isWithinRedownloadWindow(b.deliveredAt);
-              const daysLeft = getRedownloadDaysRemaining(b.deliveredAt);
-
-              return (
-                <div
-                  key={b.id}
-                  className="flex items-center justify-between bg-white/[0.03] rounded-lg px-3 py-2.5"
-                >
-                  <div className="flex-1 min-w-0">
-                    <div className="text-sm font-medium text-foreground truncate">
-                      {b.packageName}
-                    </div>
-                    <div className="text-xs text-muted-foreground/60">
-                      Delivered
-                      {b.deliveredAt &&
-                        ` ${new Date(b.deliveredAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}`}
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2 shrink-0">
-                    {b.downloaded && (
-                      <Badge
-                        variant="outline"
-                        className="text-[10px] border-green-400/30 text-green-400"
-                      >
-                        Downloaded
-                      </Badge>
-                    )}
-                    {withinWindow ? (
-                      !b.downloaded ? (
-                        <>
-                          <span className="text-[10px] text-muted-foreground">
-                            {daysLeft} days left
-                          </span>
-                          <Button
-                            size="sm"
-                            className="h-6 px-2 text-[10px] bg-gradient-to-r from-orbit-cyan to-orbit-purple text-white hover:opacity-90"
-                          >
-                            <Download className="w-3 h-3 mr-1" /> Download
-                          </Button>
-                        </>
-                      ) : (
-                        <span className="text-[10px] text-green-400/60">
-                          {daysLeft} days left
-                        </span>
-                      )
-                    ) : (
-                      <div className="flex items-center gap-1.5">
-                        <AlertTriangle className="w-3 h-3 text-muted-foreground/30" />
-                        <Badge
-                          variant="outline"
-                          className="text-[10px] border-muted-foreground/20 text-muted-foreground/50"
-                        >
-                          Auto-deleted
-                        </Badge>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      {/* My Reviews */}
-      {reviews.length > 0 && (
-        <div className="orbit-card rounded-2xl p-5 mb-4">
-          <h3 className="text-sm font-bold text-foreground uppercase tracking-wider mb-4 flex items-center gap-2">
-            <Star className="w-4 h-4 text-amber-400" />
-            My Reviews
-          </h3>
-          <div className="space-y-3 max-h-64 overflow-y-auto">
-            {reviews
-              .slice(-5)
-              .reverse()
-              .map((r) => {
-                const booking = bookings.find((b) => b.id === r.bookingId);
-                return (
-                  <div key={r.bookingId} className="bg-white/[0.03] rounded-xl p-3.5">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-xs font-medium text-foreground">
-                        {booking?.packageName || "Session"}
-                      </span>
-                      <span className="text-[10px] text-muted-foreground">
-                        #{r.bookingId.slice(-6)}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-4 mb-2">
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-[10px] text-muted-foreground">
-                          Partner
-                        </span>
-                        <div className="flex gap-0.5">
-                          {[1, 2, 3, 4, 5].map((s) => (
-                            <Star
-                              key={s}
-                              className={`w-3 h-3 ${
-                                s <= r.partnerRating
-                                  ? "text-amber-400 fill-amber-400"
-                                  : "text-muted-foreground/20"
-                              }`}
-                            />
-                          ))}
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-[10px] text-muted-foreground">
-                          Editor
-                        </span>
-                        <div className="flex gap-0.5">
-                          {[1, 2, 3, 4, 5].map((s) => (
-                            <Star
-                              key={s}
-                              className={`w-3 h-3 ${
-                                s <= r.editorRating
-                                  ? "text-amber-400 fill-amber-400"
-                                  : "text-muted-foreground/20"
-                              }`}
-                            />
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-                    {r.feedback && (
-                      <p className="text-[11px] text-muted-foreground/80 italic">
-                        &ldquo;{r.feedback}&rdquo;
-                      </p>
-                    )}
-                  </div>
-                );
-              })}
-          </div>
         </div>
       )}
 
