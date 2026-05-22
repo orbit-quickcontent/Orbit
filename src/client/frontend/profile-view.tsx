@@ -27,6 +27,8 @@ import {
   Star,
   Settings,
   ChevronRight,
+  ChevronDown,
+  ChevronUp,
   Shield,
   HelpCircle,
   Download,
@@ -55,6 +57,7 @@ export function ProfileView() {
   const { user, setUser, logout, bookings, reviews, cancelBooking } =
     useAppStore();
   const [isEditing, setIsEditing] = useState(false);
+  const [bookingsOpen, setBookingsOpen] = useState(false);
   const [editName, setEditName] = useState(user.name);
   const [editEmail, setEditEmail] = useState(user.email);
   const [editPhone, setEditPhone] = useState(user.phone);
@@ -588,63 +591,109 @@ export function ProfileView() {
         ))}
       </div>
 
-      {/* Recent Bookings */}
+      {/* Recent Bookings — Collapsible */}
       {bookings.length > 0 && (
-        <div className="orbit-card rounded-2xl p-5 mb-4">
-          <h3 className="text-sm font-bold text-foreground uppercase tracking-wider mb-4">
-            Recent Bookings
-          </h3>
-          <div className="space-y-3 max-h-48 overflow-y-auto">
-            {bookings
-              .slice(-3)
-              .reverse()
-              .map((b) => {
-                const isActive = !["DELIVERED", "CANCELLED"].includes(
-                  b.status
-                );
-                // Can only cancel before partner arrives (before SHOOTING status)
-                const canCancel = isActive && ["PAID", "PARTNER_DISPATCHED", "EN_ROUTE"].includes(b.status);
-                return (
-                  <div
-                    key={b.id}
-                    className="flex items-center justify-between bg-white/[0.03] rounded-lg px-3 py-2.5"
-                  >
-                    <div className="flex-1 min-w-0">
-                      <div className="text-sm font-medium text-foreground truncate">
-                        {b.packageName}
-                      </div>
-                      <div className="text-xs text-muted-foreground/60">
-                        {b.bookingDate}
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2 shrink-0">
-                      <Badge
-                        variant="outline"
-                        className={`text-[10px] ${
-                          b.status === "DELIVERED"
-                            ? "border-green-400/30 text-green-400"
-                            : b.status === "CANCELLED"
-                            ? "border-red-400/30 text-red-400"
-                            : "border-orbit-cyan/30 text-orbit-cyan"
-                        }`}
-                      >
-                        {b.status}
-                      </Badge>
-                      {canCancel && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleCancelBooking(b.id)}
-                          className="h-6 px-2 text-[10px] border-red-500/20 text-red-400 hover:bg-red-500/10 hover:border-red-500/30"
-                        >
-                          Cancel
-                        </Button>
-                      )}
-                    </div>
+        <div className="mb-4">
+          <button
+            onClick={() => setBookingsOpen(!bookingsOpen)}
+            className="w-full text-left group"
+          >
+            <div className="orbit-card rounded-2xl p-5 hover:border-orbit-cyan/20 transition-all duration-300">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-orbit-cyan/15 to-orbit-purple/15 flex items-center justify-center">
+                    <Film className="w-5 h-5 text-orbit-cyan" />
                   </div>
-                );
-              })}
-          </div>
+                  <div>
+                    <h3 className="text-sm font-bold text-foreground">
+                      Recent Bookings
+                    </h3>
+                    <p className="text-[11px] text-muted-foreground/70">
+                      {bookings.length} booking{bookings.length !== 1 ? "s" : ""} · {activeBookings} active
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Badge variant="outline" className="border-orbit-cyan/20 text-orbit-cyan text-[10px]">
+                    {bookings.length}
+                  </Badge>
+                  <div className="w-7 h-7 rounded-lg bg-white/5 flex items-center justify-center text-muted-foreground group-hover:text-orbit-cyan transition-colors">
+                    {bookingsOpen ? (
+                      <ChevronUp className="w-4 h-4" />
+                    ) : (
+                      <ChevronDown className="w-4 h-4" />
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </button>
+
+          <AnimatePresence>
+            {bookingsOpen && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                exit={{ opacity: 0, height: 0 }}
+                transition={{ duration: 0.3 }}
+                className="overflow-hidden"
+              >
+                <div className="space-y-2 mt-2 max-h-64 overflow-y-auto" style={{ scrollbarWidth: "thin", scrollbarColor: "rgba(0,191,255,0.15) transparent" }}>
+                  {bookings
+                    .slice()
+                    .reverse()
+                    .map((b) => {
+                      const isActive = !["DELIVERED", "CANCELLED"].includes(b.status);
+                      const canCancel = isActive && ["PAID", "PARTNER_DISPATCHED", "EN_ROUTE"].includes(b.status);
+                      return (
+                        <div
+                          key={b.id}
+                          className="flex items-center justify-between bg-white/[0.03] rounded-lg px-3 py-2.5"
+                        >
+                          <div className="flex-1 min-w-0">
+                            <div className="text-sm font-medium text-foreground truncate">
+                              {b.packageName}
+                            </div>
+                            <div className="text-xs text-muted-foreground/60">
+                              {new Date(b.bookingDate).toLocaleDateString("en-US", {
+                                month: "short",
+                                day: "numeric",
+                                year: "numeric",
+                              })}{" "}
+                              · {b.timeSlot}
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2 shrink-0">
+                            <Badge
+                              variant="outline"
+                              className={`text-[10px] ${
+                                b.status === "DELIVERED"
+                                  ? "border-green-400/30 text-green-400"
+                                  : b.status === "CANCELLED"
+                                  ? "border-red-400/30 text-red-400"
+                                  : "border-orbit-cyan/30 text-orbit-cyan"
+                              }`}
+                            >
+                              {b.status}
+                            </Badge>
+                            {canCancel && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleCancelBooking(b.id)}
+                                className="h-6 px-2 text-[10px] border-red-500/20 text-red-400 hover:bg-red-500/10 hover:border-red-500/30"
+                              >
+                                Cancel
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       )}
 

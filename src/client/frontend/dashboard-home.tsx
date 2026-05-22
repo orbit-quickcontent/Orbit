@@ -11,7 +11,8 @@
  * Category: Client UI
  */
 
-import { motion } from "framer-motion";
+import { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   Zap,
   CalendarCheck,
@@ -23,6 +24,8 @@ import {
   Star,
   Sparkles,
   ChevronRight,
+  ChevronDown,
+  ChevronUp,
   TrendingUp,
   Video,
   Play,
@@ -43,6 +46,8 @@ export function DashboardHome() {
     setSelectedPackage,
     setHighlightedPackageId,
   } = useAppStore();
+
+  const [historyOpen, setHistoryOpen] = useState(false);
 
   const completedBookings = bookings.filter(
     (b) => b.status === "DELIVERED"
@@ -395,66 +400,107 @@ export function DashboardHome() {
         </div>
       </motion.div>
 
-      {/* ─── Recent Activity ────────────────────────────────────── */}
+      {/* ─── Recently Booked Services (Collapsible) ──────────── */}
       {bookings.length > 0 && (
         <motion.div variants={staggerItem}>
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-sm font-bold text-foreground flex items-center gap-2">
-              <Clock className="w-4 h-4 text-muted-foreground" />
-              Recent Activity
-            </h3>
-          </div>
-          <div className="space-y-2">
-            {bookings
-              .slice(-3)
-              .reverse()
-              .map((b) => (
-                <div
-                  key={b.id}
-                  className="orbit-card rounded-xl p-3 sm:p-4 flex items-center gap-3"
-                >
-                  <div
-                    className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${
-                      b.status === "DELIVERED"
-                        ? "bg-green-500/10 text-green-400"
-                        : b.status === "CANCELLED"
-                        ? "bg-red-500/10 text-red-400"
-                        : "bg-orbit-cyan/10 text-orbit-cyan"
-                    }`}
-                  >
-                    {b.status === "DELIVERED" ? (
-                      <CheckCircle2 className="w-4 h-4" />
+          <button
+            onClick={() => setHistoryOpen(!historyOpen)}
+            className="w-full text-left group"
+          >
+            <div className="orbit-card rounded-2xl p-4 sm:p-5 hover:border-orbit-cyan/20 transition-all duration-300">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-orbit-cyan/15 to-orbit-purple/15 flex items-center justify-center">
+                    <Clock className="w-5 h-5 text-orbit-cyan" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold text-foreground">
+                      Recently Booked Services
+                    </h3>
+                    <p className="text-[11px] text-muted-foreground/70">
+                      {bookings.length} booking{bookings.length !== 1 ? "s" : ""} · {completedBookings} completed
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Badge variant="outline" className="border-orbit-cyan/20 text-orbit-cyan text-[10px]">
+                    {bookings.length}
+                  </Badge>
+                  <div className="w-7 h-7 rounded-lg bg-white/5 flex items-center justify-center text-muted-foreground group-hover:text-orbit-cyan transition-colors">
+                    {historyOpen ? (
+                      <ChevronUp className="w-4 h-4" />
                     ) : (
-                      <Film className="w-4 h-4" />
+                      <ChevronDown className="w-4 h-4" />
                     )}
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="text-sm font-medium text-foreground truncate">
-                      {b.packageName}
-                    </div>
-                    <div className="text-[11px] text-muted-foreground/70">
-                      {new Date(b.bookingDate).toLocaleDateString("en-US", {
-                        month: "short",
-                        day: "numeric",
-                      })}{" "}
-                      · {b.timeSlot}
-                    </div>
-                  </div>
-                  <Badge
-                    variant="outline"
-                    className={`text-[9px] shrink-0 ${
-                      b.status === "DELIVERED"
-                        ? "border-green-400/30 text-green-400"
-                        : b.status === "CANCELLED"
-                        ? "border-red-400/30 text-red-400"
-                        : "border-orbit-cyan/30 text-orbit-cyan"
-                    }`}
-                  >
-                    {b.status}
-                  </Badge>
                 </div>
-              ))}
-          </div>
+              </div>
+            </div>
+          </button>
+
+          <AnimatePresence>
+            {historyOpen && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                exit={{ opacity: 0, height: 0 }}
+                transition={{ duration: 0.3 }}
+                className="overflow-hidden"
+              >
+                <div className="space-y-2 mt-2 max-h-80 overflow-y-auto" style={{ scrollbarWidth: "thin", scrollbarColor: "rgba(0,191,255,0.15) transparent" }}>
+                  {bookings
+                    .slice()
+                    .reverse()
+                    .map((b) => (
+                      <div
+                        key={b.id}
+                        className="orbit-card rounded-xl p-3 sm:p-4 flex items-center gap-3"
+                      >
+                        <div
+                          className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${
+                            b.status === "DELIVERED"
+                              ? "bg-green-500/10 text-green-400"
+                              : b.status === "CANCELLED"
+                              ? "bg-red-500/10 text-red-400"
+                              : "bg-orbit-cyan/10 text-orbit-cyan"
+                          }`}
+                        >
+                          {b.status === "DELIVERED" ? (
+                            <CheckCircle2 className="w-4 h-4" />
+                          ) : (
+                            <Film className="w-4 h-4" />
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="text-sm font-medium text-foreground truncate">
+                            {b.packageName}
+                          </div>
+                          <div className="text-[11px] text-muted-foreground/70">
+                            {new Date(b.bookingDate).toLocaleDateString("en-US", {
+                              month: "short",
+                              day: "numeric",
+                            })}{" "}
+                            · {b.timeSlot}
+                          </div>
+                        </div>
+                        <Badge
+                          variant="outline"
+                          className={`text-[9px] shrink-0 ${
+                            b.status === "DELIVERED"
+                              ? "border-green-400/30 text-green-400"
+                              : b.status === "CANCELLED"
+                              ? "border-red-400/30 text-red-400"
+                              : "border-orbit-cyan/30 text-orbit-cyan"
+                          }`}
+                        >
+                          {b.status}
+                        </Badge>
+                      </div>
+                    ))}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </motion.div>
       )}
 
