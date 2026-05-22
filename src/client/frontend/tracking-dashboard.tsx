@@ -15,11 +15,14 @@
  *  5. All timers/polling stop. Navigating away and back shows
  *     "No Active Booking" with Browse Packages CTA.
  *
+ * IMPORTANT: State is derived from currentBooking in the store so
+ * navigating away and back does NOT restart the tracking process.
+ *
  * Used by: client-app.tsx
  * Category: Client UI
  */
 
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Camera,
@@ -233,15 +236,44 @@ function ReviewSection({ bookingId, onReviewDone }: { bookingId: string; onRevie
 
 // ─── Main Tracking Dashboard ─────────────────────────────────────────────────────
 export function TrackingDashboard() {
-  const { currentBooking, setCurrentView, completeBooking, updateBookingStatus, updateSyncPercentage, updateEditCountdown, cancelBooking, markBookingDelivered, markBookingDownloaded } = useAppStore();
-  const [activeStep, setActiveStep] = useState(0);
+  const {
+    currentBooking,
+    setCurrentView,
+    completeBooking,
+    updateBookingStatus,
+    updateSyncPercentage,
+    updateEditCountdown,
+    cancelBooking,
+    markBookingDelivered,
+    markBookingDownloaded,
+  } = useAppStore();
+
+  // ─── DERIVE state from currentBooking (persists across navigation) ──────
+  const isComplete = useMemo(
+    () => currentBooking?.status === "DELIVERED",
+    [currentBooking?.status]
+  );
+
+  const isDownloaded = useMemo(
+    () => !!(currentBooking?.downloaded && currentBooking?.status === "DELIVERED"),
+    [currentBooking?.downloaded, currentBooking?.status]
+  );
+
+  // activeStep is derived from booking status — never resets on navigation
+  const activeStep = useMemo(() => {
+    if (!currentBooking) return 0;
+    const idx = STATUS_PIPELINE.findIndex((s) => s.status === currentBooking.status);
+    return idx >= 0 ? idx : 0;
+  }, [currentBooking]);
+
+  // ─── Local-only animated values (cosmetic, not persisted) ───────────
   const [syncProgress, setSyncProgress] = useState(0);
   const [countdown, setCountdown] = useState(90);
-  const [isComplete, setIsComplete] = useState(false);
-  const [isDownloaded, setIsDownloaded] = useState(false);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const pollRef = useRef<NodeJS.Timeout | null>(null);
   const pollCountRef = useRef(0);
+  // Track if auto-advance has been started for this booking to avoid restarting
+  const autoAdvanceStartedRef = useRef<string | null>(null);
 
   // ─── Stop all timers ──────────────────────────────────────
   const stopAllTimers = useCallback(() => {
@@ -263,22 +295,21 @@ export function TrackingDashboard() {
     }
   }, [currentBooking, completeBooking, setCurrentView]);
 
+  // ─── Main effect: setup polling & auto-advance ──────────────
   useEffect(() => {
     if (!currentBooking) return;
 
-    // If booking is already DELIVERED, go straight to delivery state
+    // If already DELIVERED, no timers needed — just show final state
     if (currentBooking.status === "DELIVERED") {
-      setActiveStep(STATUS_PIPELINE.length - 1);
+      stopAllTimers();
       setSyncProgress(100);
       setCountdown(0);
-      setIsComplete(true);
-      stopAllTimers();
       return;
     }
 
-    // Determine initial step from booking status
-    const initialStep = STATUS_PIPELINE.findIndex((s) => s.status === currentBooking.status);
-    if (initialStep >= 0) setActiveStep(initialStep);
+    // If auto-advance already started for this booking, don't restart
+    if (autoAdvanceStartedRef.current === currentBooking.id) return;
+    autoAdvanceStartedRef.current = currentBooking.id;
 
     // Backend polling (max 12 attempts, then stop)
     const pollBackend = async () => {
@@ -292,8 +323,6 @@ export function TrackingDashboard() {
         if (res.ok) {
           const data = await res.json();
           if (data.tracking) {
-            const si = STATUS_PIPELINE.findIndex((s) => s.status === data.tracking.status);
-            if (si >= 0) setActiveStep(si);
             if (data.tracking.syncPercentage !== undefined) {
               setSyncProgress(data.tracking.syncPercentage);
               updateSyncPercentage(currentBooking.id, data.tracking.syncPercentage);
@@ -304,7 +333,6 @@ export function TrackingDashboard() {
             }
             updateBookingStatus(currentBooking.id, data.tracking.status);
             if (data.tracking.status === "DELIVERED") {
-              setIsComplete(true);
               stopAllTimers();
             }
           }
@@ -316,23 +344,55 @@ export function TrackingDashboard() {
 
     // Auto-advance simulation — STOPS at DELIVERED (last step)
     intervalRef.current = setInterval(() => {
-      setActiveStep((prev) => {
-        const lastStep = STATUS_PIPELINE.length - 1;
-        if (prev >= lastStep) {
-          setIsComplete(true);
-          stopAllTimers();
-          return prev;
-        }
-        return prev + 1;
-      });
+      // Use the store's currentBooking status to decide next step
+      const store = useAppStore.getState();
+      const booking = store.currentBooking;
+      if (!booking || booking.status === "DELIVERED") {
+        stopAllTimers();
+        return;
+      }
+
+      const currentIdx = STATUS_PIPELINE.findIndex((s) => s.status === booking.status);
+      const nextIdx = currentIdx + 1;
+      if (nextIdx >= STATUS_PIPELINE.length) {
+        stopAllTimers();
+        return;
+      }
+      const nextStatus = STATUS_PIPELINE[nextIdx].status;
+      updateBookingStatus(booking.id, nextStatus);
+
+      if (nextStatus === "DELIVERED") {
+        stopAllTimers();
+      }
     }, 8000);
 
     return () => {
       stopAllTimers();
     };
-  }, [currentBooking, updateBookingStatus, updateSyncPercentage, updateEditCountdown, stopAllTimers]);
+  }, [currentBooking?.id]); // Only re-run when booking ID changes, not on every status change
 
-  // When isComplete changes, ensure timers are stopped
+  // ─── Sync progress animation — ONLY during SYNCING phase ──────
+  useEffect(() => {
+    // Only animate sync progress during the SYNCING step (index 4)
+    if (activeStep !== 4) {
+      // If we've moved past syncing, set to 100%
+      if (activeStep > 4) {
+        setSyncProgress(100);
+      }
+      return;
+    }
+
+    // During SYNCING phase: animate from current to ~95%
+    const iv = setInterval(() => {
+      setSyncProgress((p) => {
+        if (p >= 95) { clearInterval(iv); return 95; }
+        return p + 1;
+      });
+    }, 100);
+    return () => clearInterval(iv);
+  }, [activeStep]);
+
+  // ─── When isComplete changes, finalize sync ──────────────────
   useEffect(() => {
     if (isComplete) {
       stopAllTimers();
@@ -341,26 +401,10 @@ export function TrackingDashboard() {
     }
   }, [isComplete, stopAllTimers]);
 
-  // Sync progress animation — only when NOT complete
+  // ─── Countdown timer — only during EDITING phase ─────────────
   useEffect(() => {
     if (isComplete) return;
-    if (activeStep >= STATUS_PIPELINE.length - 1) return;
-    if (activeStep >= 4) {
-      const target = activeStep >= 5 ? 75 : 25;
-      const iv = setInterval(() => {
-        setSyncProgress((p) => {
-          if (p >= target) { clearInterval(iv); return target; }
-          return p + 1;
-        });
-      }, 100);
-      return () => clearInterval(iv);
-    }
-  }, [activeStep, isComplete]);
-
-  // Countdown timer — only when NOT complete and in editing phase
-  useEffect(() => {
-    if (isComplete) return;
-    if (activeStep < 5) return;
+    if (activeStep !== 5) return; // Only during EDITING (index 5)
     const iv = setInterval(() => {
       setCountdown((c) => {
         if (c <= 1) { clearInterval(iv); return 0; }
@@ -372,7 +416,6 @@ export function TrackingDashboard() {
 
   // ─── Download handler ─────────────────────────────────────
   const handleDownload = useCallback(() => {
-    setIsDownloaded(true);
     if (currentBooking) {
       markBookingDelivered(currentBooking.id);
       markBookingDownloaded(currentBooking.id);
@@ -407,6 +450,9 @@ export function TrackingDashboard() {
   }
 
   const currentStatus = STATUS_PIPELINE[activeStep];
+
+  // Determine if we're in the syncing phase (for stats card)
+  const isSyncingPhase = activeStep === 4;
 
   return (
     <section className="pt-4 sm:pt-6 pb-12 sm:pb-20 px-0 sm:px-4">
@@ -451,7 +497,7 @@ export function TrackingDashboard() {
             )}
           </h2>
           <p className="text-muted-foreground text-xs sm:text-sm">Booking ID: {currentBooking.id}</p>
-          {/* Cancel Booking Button - Only show before partner arrives */}
+          {/* Cancel Booking Button - Only show before partner arrives (activeStep < 3 = SHOOTING) */}
           {!isComplete && !isDownloaded && activeStep < 3 && (
             <Button
               variant="outline"
@@ -486,21 +532,21 @@ export function TrackingDashboard() {
             <div className="flex flex-col md:flex-row gap-3 md:gap-0 justify-between">
               {STATUS_PIPELINE.map((step, idx) => {
                 const isActive = idx === activeStep;
-                const isCompleted = idx < activeStep || isComplete;
+                const isStepCompleted = idx < activeStep || isComplete;
                 return (
                   <div key={step.status} className="flex md:flex-col items-start md:items-center gap-3 md:gap-2 relative">
                     <div className={`relative z-10 w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center shrink-0 transition-all duration-500 ${
                       isActive && !isComplete
                         ? "bg-gradient-to-r from-orbit-cyan to-orbit-purple text-white orbit-glow"
-                        : isCompleted
+                        : isStepCompleted
                         ? "bg-orbit-cyan/20 text-orbit-cyan"
                         : "bg-white/5 text-muted-foreground border border-orbit-border"
                     }`}>
-                      {(isCompleted && !isActive) || isComplete ? <CheckCircle2 className="w-4 h-4 sm:w-5 sm:h-5" /> : step.icon}
+                      {(isStepCompleted && !isActive) || isComplete ? <CheckCircle2 className="w-4 h-4 sm:w-5 sm:h-5" /> : step.icon}
                       {isActive && !isComplete && <div className="absolute inset-0 rounded-full border-2 border-orbit-cyan animate-pulse-ring" />}
                     </div>
                     <div className="md:text-center">
-                      <div className={`text-[10px] sm:text-xs font-semibold ${isActive ? "text-orbit-cyan" : isCompleted ? "text-orbit-cyan/70" : "text-muted-foreground"}`}>
+                      <div className={`text-[10px] sm:text-xs font-semibold ${isActive ? "text-orbit-cyan" : isStepCompleted ? "text-orbit-cyan/70" : "text-muted-foreground"}`}>
                         {step.label}
                       </div>
                       {isActive && !isComplete && (
@@ -520,17 +566,37 @@ export function TrackingDashboard() {
         {!isDownloaded && (
           <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5 sm:gap-3">
             {[
-              { icon: <Upload className="w-3.5 h-3.5 text-orbit-cyan" />, label: "Sync", value: `${isComplete ? 100 : syncProgress}%`, progress: isComplete ? 100 : syncProgress },
-              { icon: <Timer className="w-3.5 h-3.5 text-orbit-cyan" />, label: "ETA", value: `${isComplete ? "0" : countdown}`, suffix: " min" },
-              { icon: <Film className="w-3.5 h-3.5 text-orbit-cyan" />, label: "Package", value: currentBooking.packageName },
-              { icon: <CircleDot className="w-3.5 h-3.5 text-orbit-cyan" />, label: "Status", badge: true, value: isComplete ? "Delivered" : "In Progress" },
-            ].map((stat, i) => (
+              // Only show Sync progress during SYNCING phase
+              {
+                icon: <Upload className="w-3.5 h-3.5 text-orbit-cyan" />,
+                label: "Sync",
+                value: isComplete ? "100%" : isSyncingPhase ? `${syncProgress}%` : activeStep > 4 ? "100%" : "—",
+                progress: isComplete ? 100 : isSyncingPhase ? syncProgress : activeStep > 4 ? 100 : undefined,
+                showProgress: isSyncingPhase || isComplete || activeStep > 4,
+              },
+              {
+                icon: <Timer className="w-3.5 h-3.5 text-orbit-cyan" />,
+                label: "ETA",
+                value: `${isComplete ? "0" : activeStep >= 5 ? countdown : "—"}`,
+                suffix: activeStep >= 5 && !isComplete ? " min" : "",
+              },
+              {
+                icon: <Film className="w-3.5 h-3.5 text-orbit-cyan" />,
+                label: "Package",
+                value: currentBooking.packageName,
+              },
+              {
+                icon: <CircleDot className="w-3.5 h-3.5 text-orbit-cyan" />,
+                label: "Status",
+                badge: true,
+                value: isComplete ? "Delivered" : "In Progress",
+              },
+            ].map((stat) => (
               <motion.div
                 key={stat.label}
                 className="orbit-card rounded-xl p-3 sm:p-4"
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.08 }}
               >
                 <div className="flex items-center gap-2 mb-2">
                   {stat.icon}
@@ -546,7 +612,7 @@ export function TrackingDashboard() {
                       {stat.value}
                       <span className="text-[10px] sm:text-sm text-muted-foreground">{stat.suffix || ""}</span>
                     </div>
-                    {stat.progress !== undefined && <Progress value={stat.progress} className="mt-2 h-1 bg-white/5" />}
+                    {stat.showProgress && stat.progress !== undefined && <Progress value={stat.progress} className="mt-2 h-1 bg-white/5" />}
                   </>
                 )}
               </motion.div>
@@ -554,7 +620,7 @@ export function TrackingDashboard() {
           </div>
         )}
 
-        {/* En Route Card */}
+        {/* En Route Card — only during EN_ROUTE phase */}
         <AnimatePresence>
           {activeStep === 2 && !isComplete && (
             <motion.div

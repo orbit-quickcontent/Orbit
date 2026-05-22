@@ -80,3 +80,32 @@ Stage Summary:
 - Server stability achieved using daemon script with subshell fork
 - All existing features preserved: role selection, profile creation, avatar selection, OTP, client/partner dashboards
 - Previously implemented features confirmed working: cancel booking, video history, online/offline toggle, avatar images
+
+---
+Task ID: 4
+Agent: Main Agent
+Task: Fix tracking restart on navigation + fix sync loading showing outside SYNCING phase
+
+Work Log:
+- Analyzed screenshot showing sync at 100% while delivery is complete (sync should not show after delivery)
+- Identified root cause #1: activeStep, isComplete, isDownloaded were all local useState — reset to defaults on unmount/remount when navigating away
+- Identified root cause #2: sync progress effect ran when activeStep >= 4 (SYNCING or later), causing it to animate during EDITING and even after DELIVERED
+- Rewrote TrackingDashboard to derive state from currentBooking in Zustand store:
+  - activeStep: derived via useMemo from currentBooking.status → STATUS_PIPELINE index
+  - isComplete: derived from currentBooking.status === "DELIVERED"
+  - isDownloaded: derived from currentBooking.downloaded && status === "DELIVERED"
+- Fixed auto-advance: now uses useAppStore.getState() to read current status instead of local state, and writes status updates to store via updateBookingStatus()
+- Added autoAdvanceStartedRef to prevent restarting auto-advance when navigating back to same booking
+- Fixed sync progress animation: now ONLY animates during activeStep === 4 (SYNCING phase)
+  - Before SYNCING: shows "—" for sync value
+  - During SYNCING: animates from 0% to 95%
+  - After SYNCING (EDITING/DELIVERED): shows 100%
+- Fixed stats card: sync progress bar only shown during/after SYNCING, not before
+- Fixed countdown timer: only runs during EDITING phase (activeStep === 5), not before
+- Rebuilt production bundle successfully, server running on port 3000
+
+Stage Summary:
+- Tracking no longer restarts when navigating away and back — state is derived from persistent store
+- Sync loading only shows during SYNCING phase (not before or after delivery)
+- Auto-advance won't restart for the same booking when navigating back
+- All stats (sync %, ETA, status) correctly reflect the current booking phase
