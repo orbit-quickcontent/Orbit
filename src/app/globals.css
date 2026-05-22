@@ -158,19 +158,19 @@
   background: #2A5490;
 }
 
-/* Orbit Card (replaces Glassmorphism) */
+/* Orbit Card — Higher opacity to prevent text overlap */
 .orbit-card {
-  background: rgba(10, 40, 96, 0.6);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(0, 191, 255, 0.12);
+  background: rgba(10, 40, 96, 0.88);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(0, 191, 255, 0.15);
 }
 
 .orbit-card-strong {
-  background: rgba(10, 40, 96, 0.85);
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
-  border: 1px solid rgba(0, 191, 255, 0.18);
+  background: rgba(10, 40, 96, 0.95);
+  backdrop-filter: blur(28px);
+  -webkit-backdrop-filter: blur(28px);
+  border: 1px solid rgba(0, 191, 255, 0.22);
 }
 
 /* Orbit Gradient glow */

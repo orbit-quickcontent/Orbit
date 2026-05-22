@@ -602,6 +602,8 @@ export function ProfileView() {
                 const isActive = !["DELIVERED", "CANCELLED"].includes(
                   b.status
                 );
+                // Can only cancel before partner arrives (before SHOOTING status)
+                const canCancel = isActive && ["PAID", "PARTNER_DISPATCHED", "EN_ROUTE"].includes(b.status);
                 return (
                   <div
                     key={b.id}
@@ -628,7 +630,7 @@ export function ProfileView() {
                       >
                         {b.status}
                       </Badge>
-                      {isActive && (
+                      {canCancel && (
                         <Button
                           variant="outline"
                           size="sm"
@@ -646,13 +648,17 @@ export function ProfileView() {
         </div>
       )}
 
-      {/* Download History */}
+      {/* Video History — Re-download within 30 days */}
       {deliveredBookings.length > 0 && (
         <div className="orbit-card rounded-2xl p-5 mb-4">
-          <h3 className="text-sm font-bold text-foreground uppercase tracking-wider mb-4 flex items-center gap-2">
-            <Download className="w-4 h-4 text-orbit-cyan" />
-            Download History
-          </h3>
+          <div className="flex items-center justify-between mb-1">
+            <h3 className="text-sm font-bold text-foreground uppercase tracking-wider flex items-center gap-2">
+              <Download className="w-4 h-4 text-orbit-cyan" />
+              Video History
+            </h3>
+            <span className="text-[9px] text-muted-foreground/40 font-medium">Auto-deletes after 30 days</span>
+          </div>
+          <p className="text-[10px] text-muted-foreground/50 mb-4">Re-download your edited videos within 30 days of delivery</p>
           <div className="space-y-3 max-h-64 overflow-y-auto">
             {deliveredBookings.map((b) => {
               const withinWindow = isWithinRedownloadWindow(b.deliveredAt);
@@ -701,12 +707,15 @@ export function ProfileView() {
                         </span>
                       )
                     ) : (
-                      <Badge
-                        variant="outline"
-                        className="text-[10px] border-muted-foreground/20 text-muted-foreground/50"
-                      >
-                        Expired
-                      </Badge>
+                      <div className="flex items-center gap-1.5">
+                        <AlertTriangle className="w-3 h-3 text-muted-foreground/30" />
+                        <Badge
+                          variant="outline"
+                          className="text-[10px] border-muted-foreground/20 text-muted-foreground/50"
+                        >
+                          Auto-deleted
+                        </Badge>
+                      </div>
                     )}
                   </div>
                 </div>

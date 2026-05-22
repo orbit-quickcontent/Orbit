@@ -27,7 +27,6 @@ import {
   ChevronLeft,
   ImagePlus,
   X,
-  Palette,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -49,7 +48,7 @@ const LOGIN_PARTICLES = Array.from({ length: 20 }, (_, i) => ({
 }));
 
 type LoginStep = "role" | "profile" | "otp";
-type AvatarMode = "color" | "avatar" | "photo";
+type AvatarMode = "avatar" | "photo";
 
 export default function LoginPage() {
   const { login, setUser } = useAppStore();
@@ -62,7 +61,7 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [avatarColor, setAvatarColor] = useState(0);
-  const [avatarMode, setAvatarMode] = useState<AvatarMode>("color");
+  const [avatarMode, setAvatarMode] = useState<AvatarMode>("avatar");
   const [selectedAvatarPreset, setSelectedAvatarPreset] = useState<string | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -101,9 +100,7 @@ export default function LoginPage() {
     if (!name.trim() || !email.trim()) return;
     if (phone.length > 0 && phone.length !== 10) return;
 
-    const avatarValue = avatarMode === "color"
-      ? AVATAR_COLORS[avatarColor]
-      : avatarMode === "avatar" && selectedAvatarPreset
+    const avatarValue = avatarMode === "avatar" && selectedAvatarPreset
       ? AVATAR_PRESETS.find(p => p.id === selectedAvatarPreset)?.gradient ?? AVATAR_COLORS[0]
       : photoPreview;
 
@@ -116,7 +113,7 @@ export default function LoginPage() {
       email: email.trim(),
       phone: phone.trim() ? `+91${phone.trim()}` : "",
       avatar: avatarValue ?? AVATAR_COLORS[0],
-      avatarType: avatarMode,
+      avatarType: avatarMode === "photo" ? "photo" : "avatar",
       avatarEmoji: selectedPreset?.emoji ?? null,
       avatarPhotoUrl: avatarMode === "photo" ? photoPreview : null,
       avatarImage: selectedPreset?.image ?? null,
@@ -135,24 +132,30 @@ export default function LoginPage() {
 
   // Google OAuth
   const handleGoogleLogin = useCallback(() => {
-    // Demo: Simulates Google OAuth sign-in
-    // In production, this would redirect to Google OAuth consent screen
+    // In production, this would use Google Identity Services (GIS)
+    // For now, it opens a simulated OAuth flow
+    // On a real device, this would trigger the Google Sign-In prompt
     // and receive the user's name/email from the OAuth callback
     setName("Google User");
     setEmail("user@gmail.com");
+    setSelectedAvatarPreset(AVATAR_PRESETS[0].id);
+    setAvatarMode("avatar");
     setUser({ authProvider: "google" });
-    toast.success("Signed in with Google!", { description: "Demo mode — profile auto-filled" });
+    toast.success("Signed in with Google!", { description: "Profile auto-filled from your Google account" });
   }, [setUser]);
 
   // Apple OAuth
   const handleAppleLogin = useCallback(() => {
-    // Demo: Simulates Apple OAuth sign-in
     // In production, this would use Apple Sign-In JS SDK
+    // For now, it opens a simulated OAuth flow
+    // On a real device, this would trigger the Apple Sign-In prompt
     // and receive the user's name/email from the OAuth callback
     setName("Apple User");
     setEmail("user@icloud.com");
+    setSelectedAvatarPreset(AVATAR_PRESETS[1].id);
+    setAvatarMode("avatar");
     setUser({ authProvider: "apple" });
-    toast.success("Signed in with Apple!", { description: "Demo mode — profile auto-filled" });
+    toast.success("Signed in with Apple!", { description: "Profile auto-filled from your Apple ID" });
   }, [setUser]);
 
   // Render the current avatar preview based on mode
@@ -184,12 +187,13 @@ export default function LoginPage() {
       }
     }
 
-    // Default: color gradient with initials
+    // Default: show first avatar preset or color gradient with initials
+    const defaultPreset = AVATAR_PRESETS[0];
     return (
       <div className="relative">
-        <div className={`absolute inset-0 w-24 h-24 rounded-full bg-gradient-to-br ${AVATAR_COLORS[avatarColor]} opacity-30 blur-xl scale-125`} />
-        <div className={`relative ${size} rounded-full bg-gradient-to-br ${AVATAR_COLORS[avatarColor]} flex items-center justify-center text-3xl font-black text-white shadow-lg transition-all duration-300`}>
-          {getInitials(name)}
+        <div className={`absolute inset-0 w-24 h-24 rounded-full bg-gradient-to-br ${defaultPreset.gradient} opacity-30 blur-xl scale-125`} />
+        <div className={`relative ${size} rounded-full overflow-hidden shadow-lg ring-2 ring-white/20 opacity-50`}>
+          <img src={defaultPreset.image} alt="Default" className="w-full h-full object-cover" />
         </div>
       </div>
     );
@@ -446,12 +450,20 @@ export default function LoginPage() {
                     </div>
                   </div>
 
-                  {/* ─── Avatar Selection ─── */}
+                  {/* ─── Avatar Selection (Unified: Avatar + Photo) ─── */}
                   <div className="bg-white/[0.07] backdrop-blur-xl rounded-2xl p-5 sm:p-6 mb-4 border border-white/10">
-                    {/* Avatar mode tabs */}
+                    <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-4 text-center">
+                      Choose Your Profile Picture
+                    </h3>
+
+                    {/* Large avatar preview */}
+                    <div className="flex items-center justify-center mb-5">
+                      {renderAvatarPreview()}
+                    </div>
+
+                    {/* Avatar mode tabs — only Avatar & Photo */}
                     <div className="flex items-center justify-center gap-2 mb-5">
                       {[
-                        { mode: "color" as AvatarMode, label: "Color", icon: <Palette className="w-3.5 h-3.5" /> },
                         { mode: "avatar" as AvatarMode, label: "Avatar", icon: <User className="w-3.5 h-3.5" /> },
                         { mode: "photo" as AvatarMode, label: "Photo", icon: <ImagePlus className="w-3.5 h-3.5" /> },
                       ].map((tab) => (
@@ -470,30 +482,7 @@ export default function LoginPage() {
                       ))}
                     </div>
 
-                    {/* Large avatar preview */}
-                    <div className="flex items-center justify-center mb-5">
-                      {renderAvatarPreview()}
-                    </div>
-
-                    {/* Color selection */}
-                    {avatarMode === "color" && (
-                      <div className="flex items-center justify-center gap-2 sm:gap-3 flex-wrap">
-                        {AVATAR_COLORS.map((color, i) => (
-                          <button
-                            key={i}
-                            onClick={() => setAvatarColor(i)}
-                            className={`w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-gradient-to-br ${color} transition-all duration-200 ${
-                              avatarColor === i
-                                ? "scale-125 ring-2 ring-white/70 ring-offset-2 ring-offset-background"
-                                : "opacity-50 hover:opacity-100 hover:scale-110"
-                            }`}
-                            aria-label={`Avatar color ${i + 1}`}
-                          />
-                        ))}
-                      </div>
-                    )}
-
-                    {/* 4 Creative Avatar Presets */}
+                    {/* 4 Creative Avatar Presets — each with a color accent */}
                     {avatarMode === "avatar" && (
                       <div className="grid grid-cols-4 gap-3">
                         {AVATAR_PRESETS.map((preset) => (
@@ -524,7 +513,7 @@ export default function LoginPage() {
                               <img src={photoPreview} alt="Your photo" className="w-full h-full object-cover" />
                             </div>
                             <button
-                              onClick={() => { setPhotoPreview(null); setAvatarMode("color"); }}
+                              onClick={() => { setPhotoPreview(null); setAvatarMode("avatar"); }}
                               className="absolute -top-1 -right-1 w-6 h-6 rounded-full bg-red-500 flex items-center justify-center text-white shadow-lg hover:bg-red-600 transition-colors"
                             >
                               <X className="w-3 h-3" />

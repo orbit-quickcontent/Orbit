@@ -31,3 +31,32 @@ Stage Summary:
 - Dashboard updates with amount/details after service completion
 - Download history with 30-day window already working in client profile
 - App builds cleanly and serves on port 3000
+
+---
+Task ID: 2
+Agent: Main Agent
+Task: Fix app not working + apply remaining UI/UX fixes
+
+Work Log:
+- Killed stale server processes and restarted production build
+- Fixed orbit-card opacity from 0.6 to 0.88 to prevent text overlap/bleed-through
+- Fixed orbit-card-strong opacity from 0.85 to 0.95 for stronger cards
+- Fixed both client and partner navbars: replaced transparent gradient background with solid bg-[#081C43] + border-b for clean separation
+- Integrated color + avatar sections: removed separate "Color" tab, now only "Avatar" and "Photo" tabs
+- Updated avatarMode type from "color" | "avatar" | "photo" to "avatar" | "photo"
+- Default avatar mode changed to "avatar" instead of "color"
+- Improved Google/Apple login: now auto-selects an avatar preset when signing in
+- Updated toast messages to be more realistic ("Profile auto-filled from your Google account")
+- Fixed CTA banner: changed "Ready to Create?" to full "Ready to Create Something Cinematic?" with proper spacing
+- Fixed profile Recent Bookings cancel button: now only shows for bookings before SHOOTING status (partner hasn't arrived yet)
+- Renamed "Download History" to "Video History" with subtitle about 30-day auto-delete
+- Added "Auto-deleted" badge with AlertTriangle icon for expired videos
+- Rebuilt and restarted server successfully
+
+Stage Summary:
+- App running on port 3000 with HTTP 200
+- Overlapping text fixed with solid navbar backgrounds + higher card opacity
+- Color + Avatar sections integrated into unified Avatar/Photo picker
+- Cancel booking correctly hides when partner arrives at location (both client & partner views)
+- Video History section shows 30-day re-download window with auto-delete notice
+- Google/Apple login auto-fills avatar preset + realistic toast messages

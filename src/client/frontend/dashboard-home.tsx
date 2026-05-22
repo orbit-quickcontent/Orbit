@@ -451,16 +451,16 @@ export function DashboardHome() {
       {/* ─── CTA Banner ─────────────────────────────────────────── */}
       {!currentBooking && (
         <motion.div variants={staggerItem}>
-          <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-orbit-cyan to-orbit-purple p-5 sm:p-6">
+          <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-orbit-cyan to-orbit-purple p-5 sm:p-6 mt-2">
             {/* Decorative circles */}
             <div className="absolute -top-8 -right-8 w-32 h-32 rounded-full bg-white/10" />
             <div className="absolute -bottom-6 -left-6 w-24 h-24 rounded-full bg-white/5" />
 
             <div className="relative">
-              <h3 className="text-lg sm:text-xl font-black text-white mb-1">
-                Ready to Create?
+              <h3 className="text-lg sm:text-xl font-black text-white mb-1.5">
+                Ready to Create Something Cinematic?
               </h3>
-              <p className="text-xs sm:text-sm text-white/70 mb-4">
+              <p className="text-xs sm:text-sm text-white/70 mb-4 leading-relaxed">
                 Get professional cinematic edits delivered in 60 minutes.
               </p>
               <Button

@@ -69,7 +69,7 @@ export function PartnerNavbar() {
 
   return (
     <header className="sticky top-0 z-50">
-      <div className="bg-gradient-to-b from-[#081C43] via-[#0A2860] to-transparent">
+      <div className="bg-[#081C43] border-b border-white/[0.06]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between py-4 sm:py-5">
             {/* Left: Avatar + Greeting */}
