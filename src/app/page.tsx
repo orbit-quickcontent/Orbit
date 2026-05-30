@@ -54,7 +54,7 @@ export default function OrbitApp() {
   // Before hydration, show a blank loading state to avoid flicker
   if (!_hydrated) {
     return (
-      <div className="fixed inset-0 z-[200] flex items-center justify-center bg-[#081C43]">
+      <div className="fixed inset-0 z-[200] flex items-center justify-center bg-[#000000]">
         <div className="flex flex-col items-center gap-4">
           <div className="w-16 h-16 rounded-full border-2 border-orbit-cyan/30 border-t-orbit-cyan animate-spin" />
           <p className="text-xs text-muted-foreground/40 tracking-widest uppercase">Orbit</p>

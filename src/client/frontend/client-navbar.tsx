@@ -182,7 +182,7 @@ export function ClientNavbar() {
   return (
     <header className="sticky top-0 z-50">
       {/* Solid background to prevent text overlap */}
-      <div className="bg-[#081C43] border-b border-white/[0.06]">
+      <div className="bg-[#000000] border-b border-white/[0.06]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between py-4 sm:py-5">
             {/* Left: Avatar + Greeting */}
@@ -196,7 +196,7 @@ export function ClientNavbar() {
                   {renderAvatar("w-11 h-11 sm:w-12 sm:h-12", "text-sm sm:text-base")}
                 </div>
                 {/* Online indicator */}
-                <div className="absolute bottom-0 right-0 w-3 h-3 sm:w-3.5 sm:h-3.5 rounded-full bg-green-400 border-2 border-[#0A2860]" />
+                <div className="absolute bottom-0 right-0 w-3 h-3 sm:w-3.5 sm:h-3.5 rounded-full bg-green-400 border-2 border-[#000000]" />
               </button>
 
               {/* Greeting Text */}
@@ -253,7 +253,7 @@ export function ClientNavbar() {
                       animate={{ opacity: 1, y: 0, scale: 1 }}
                       exit={{ opacity: 0, y: -4, scale: 0.95 }}
                       transition={{ duration: 0.15 }}
-                      className="absolute right-0 top-12 sm:top-13 w-[calc(100vw-2rem)] sm:w-56 bg-[#0d1f3d]/95 backdrop-blur-xl border border-white/10 rounded-2xl overflow-hidden shadow-2xl z-[70]"
+                      className="absolute right-0 top-12 sm:top-13 w-[calc(100vw-2rem)] sm:w-56 bg-[#0A0A0A]/95 backdrop-blur-xl border border-white/10 rounded-2xl overflow-hidden shadow-2xl z-[70]"
                     >
                       <div className="p-2">
                         <p className="px-3 py-1.5 text-[10px] font-semibold text-muted-foreground/60 uppercase tracking-wider">
@@ -316,7 +316,7 @@ export function ClientNavbar() {
                       animate={{ opacity: 1, y: 0, scale: 1 }}
                       exit={{ opacity: 0, y: -8, scale: 0.95 }}
                       transition={{ duration: 0.2 }}
-                      className="absolute right-0 top-12 sm:top-13 w-[calc(100vw-2rem)] sm:w-80 max-w-[320px] bg-[#0d1f3d]/95 backdrop-blur-xl border border-white/10 rounded-2xl overflow-hidden shadow-2xl z-[70]"
+                      className="absolute right-0 top-12 sm:top-13 w-[calc(100vw-2rem)] sm:w-80 max-w-[320px] bg-[#0A0A0A]/95 backdrop-blur-xl border border-white/10 rounded-2xl overflow-hidden shadow-2xl z-[70]"
                     >
                       <div className="p-3 border-b border-white/5">
                         <div className="flex items-center justify-between">
@@ -446,7 +446,7 @@ export function ClientNavbar() {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -8, scale: 0.95 }}
             transition={{ duration: 0.2 }}
-            className="absolute right-4 sm:right-6 top-[4.5rem] sm:top-[5.5rem] w-56 bg-[#0d1f3d]/95 backdrop-blur-xl border border-white/10 rounded-2xl overflow-hidden shadow-2xl z-[60]"
+            className="absolute right-4 sm:right-6 top-[4.5rem] sm:top-[5.5rem] w-56 bg-[#0A0A0A]/95 backdrop-blur-xl border border-white/10 rounded-2xl overflow-hidden shadow-2xl z-[60]"
           >
             <div className="p-2">
               {/* Notifications */}

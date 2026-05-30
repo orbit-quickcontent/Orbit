@@ -69,7 +69,7 @@ export function PartnerNavbar() {
 
   return (
     <header className="sticky top-0 z-50">
-      <div className="bg-[#081C43] border-b border-white/[0.06]">
+      <div className="bg-[#000000] border-b border-white/[0.06]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between py-4 sm:py-5">
             {/* Left: Avatar + Greeting */}
@@ -78,7 +78,7 @@ export function PartnerNavbar() {
                 <div className="transition-transform duration-200 group-hover:scale-105 group-active:scale-95">
                   {renderAvatar("w-11 h-11 sm:w-12 sm:h-12", "text-sm sm:text-base")}
                 </div>
-                <div className={`absolute bottom-0 right-0 w-3 h-3 sm:w-3.5 sm:h-3.5 rounded-full border-2 border-[#0A2860] ${user.isOnline ? "bg-green-400" : "bg-gray-400"}`} />
+                <div className={`absolute bottom-0 right-0 w-3 h-3 sm:w-3.5 sm:h-3.5 rounded-full border-2 border-[#000000] ${user.isOnline ? "bg-green-400" : "bg-gray-400"}`} />
               </button>
 
               <div>
@@ -171,7 +171,7 @@ export function PartnerNavbar() {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -8, scale: 0.95 }}
             transition={{ duration: 0.2 }}
-            className="absolute right-4 sm:right-6 top-20 sm:top-24 w-56 bg-[#0d1f3d]/95 backdrop-blur-xl border border-orbit-border/40 rounded-2xl overflow-hidden shadow-2xl z-[60]"
+            className="absolute right-4 sm:right-6 top-20 sm:top-24 w-56 bg-[#0A0A0A]/95 backdrop-blur-xl border border-orbit-border/40 rounded-2xl overflow-hidden shadow-2xl z-[60]"
           >
             <div className="p-2">
               {hasActiveWork && (

@@ -56,7 +56,7 @@ export function MapNavigation({ booking, onArrived }: MapNavigationProps) {
               <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
             </filter>
           </defs>
-          <rect width="600" height="320" fill="#081C43" />
+          <rect width="600" height="320" fill="#000000" />
           <rect width="600" height="320" fill="url(#grid)" />
           <rect width="600" height="320" fill="url(#gridLarge)" />
 

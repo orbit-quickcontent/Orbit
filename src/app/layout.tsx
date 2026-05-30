@@ -56,7 +56,7 @@ export const viewport: Viewport = {
   maximumScale: 1,
   userScalable: false,
   viewportFit: "cover",
-  themeColor: "#081C43",
+  themeColor: "#000000",
 };
 
 export default function RootLayout({
@@ -74,8 +74,8 @@ export default function RootLayout({
           position="top-right"
           toastOptions={{
             style: {
-              background: "#0A2860",
-              border: "1px solid #123566",
+              background: "#0A0A0A",
+              border: "1px solid #1A1A2E",
               color: "#FFFFFF",
             },
           }}

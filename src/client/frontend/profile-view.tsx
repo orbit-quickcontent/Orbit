@@ -290,7 +290,7 @@ export function ProfileView() {
               "text-3xl sm:text-4xl"
             )}
             {/* Online indicator */}
-            <div className="absolute bottom-1 right-1 w-4 h-4 rounded-full bg-green-400 border-2 border-[#0A2860]" />
+            <div className="absolute bottom-1 right-1 w-4 h-4 rounded-full bg-green-400 border-2 border-[#000000]" />
           </div>
 
           {/* Info */}
@@ -582,7 +582,7 @@ export function ProfileView() {
                       onClick={() => setEditAvatar(i)}
                       className={`w-7 h-7 rounded-full bg-gradient-to-br ${color} transition-all duration-200 ${
                         editAvatar === i
-                          ? "scale-125 ring-2 ring-white/50 ring-offset-2 ring-offset-[#0A2860]"
+                          ? "scale-125 ring-2 ring-white/50 ring-offset-2 ring-offset-[#000000]"
                           : "opacity-50 hover:opacity-100 hover:scale-110"
                       }`}
                     />

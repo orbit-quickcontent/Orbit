@@ -214,7 +214,7 @@ export function PackageDashboard() {
 
             {/* Detail Sheet */}
             <motion.div
-              className="relative w-full sm:max-w-lg max-h-[90vh] overflow-y-auto bg-[#0B1E3D] border-t sm:border border-orbit-border sm:rounded-2xl rounded-t-2xl shadow-2xl"
+              className="relative w-full sm:max-w-lg max-h-[90vh] overflow-y-auto bg-[#0A0A0A] border-t sm:border border-orbit-border sm:rounded-2xl rounded-t-2xl shadow-2xl"
               initial={{ y: "100%" }}
               animate={{ y: 0 }}
               exit={{ y: "100%" }}
@@ -323,7 +323,7 @@ export function PackageDashboard() {
                       <p className="text-xs text-muted-foreground">Sample {selectedDetail.name} Edit</p>
                     </div>
                     {/* Decorative gradient overlay */}
-                    <div className="absolute bottom-0 inset-x-0 h-16 bg-gradient-to-t from-[#0B1E3D] to-transparent" />
+                    <div className="absolute bottom-0 inset-x-0 h-16 bg-gradient-to-t from-[#0A0A0A] to-transparent" />
                   </div>
                 </div>
 

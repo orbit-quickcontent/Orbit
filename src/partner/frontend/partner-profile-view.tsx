@@ -193,7 +193,7 @@ export function PartnerProfileView() {
         <div className="flex flex-col sm:flex-row items-center gap-6">
           <div className="relative">
             {renderProfileAvatar("w-24 h-24 sm:w-28 sm:h-28", "text-3xl sm:text-4xl")}
-            <div className={`absolute bottom-1 right-1 w-4 h-4 rounded-full border-2 border-[#0A2860] ${user.isOnline ? "bg-green-400" : "bg-gray-400"}`} />
+            <div className={`absolute bottom-1 right-1 w-4 h-4 rounded-full border-2 border-[#000000] ${user.isOnline ? "bg-green-400" : "bg-gray-400"}`} />
           </div>
 
           <div className="flex-1 text-center sm:text-left">
@@ -293,7 +293,7 @@ export function PartnerProfileView() {
                       key={i}
                       onClick={() => setEditAvatar(i)}
                       className={`w-7 h-7 rounded-full bg-gradient-to-br ${color} transition-all duration-200 ${
-                        editAvatar === i ? "scale-125 ring-2 ring-white/50 ring-offset-2 ring-offset-[#0A2860]" : "opacity-50 hover:opacity-100 hover:scale-110"
+                        editAvatar === i ? "scale-125 ring-2 ring-white/50 ring-offset-2 ring-offset-[#000000]" : "opacity-50 hover:opacity-100 hover:scale-110"
                       }`}
                     />
                   ))}

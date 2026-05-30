@@ -1,14 +1,9 @@
 /**
- * ⚪ APP ENTRY | Global Styles
- * 
- * Tailwind CSS v4 configuration with Orbit brand theme:
- * - Space Navy (#081C43) background + Orbit Gradient (#00BFFF → #A020F0)
- * - Custom utility classes: orbit-card, orbit-glow, text-gradient-orbit
- * - Custom animations: orbit-spin, float, pulse-ring, data-stream, shimmer
- * - Custom scrollbar styling
- * 
- * Used by: layout.tsx (global import)
- * Category: App Entry
+ * Orbit - Global Styles
+ *
+ * Black background + Orbit Gradient (#00BFFF → #A020F0)
+ * Glassmorphism cards with backdrop blur on black bg
+ * Custom animations and scrollbar styling
  */
 
 @import "tailwindcss";
@@ -54,83 +49,83 @@
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
-  /* Orbit Brand: Space Navy + Orbit Gradient */
-  --color-space-navy: #081C43;
-  --color-space-navy-light: #0A2860;
-  --color-space-navy-lighter: #0D3270;
+  /* Orbit Brand: Black bg + Orbit Gradient */
+  --color-space-navy: #000000;
+  --color-space-navy-light: #0A0A0A;
+  --color-space-navy-lighter: #111111;
   --color-orbit-cyan: #00BFFF;
   --color-orbit-purple: #A020F0;
-  --color-orbit-card: #0A2860;
-  --color-orbit-border: #123566;
-  --color-orbit-muted: #1A4480;
+  --color-orbit-card: #0A0A0A;
+  --color-orbit-border: #1A1A2E;
+  --color-orbit-muted: #1A1A2E;
 }
 
 :root {
   --radius: 0.75rem;
-  --background: #081C43;
+  --background: #000000;
   --foreground: #FFFFFF;
-  --card: #0A2860;
+  --card: #0A0A0A;
   --card-foreground: #FFFFFF;
-  --popover: #0A2860;
+  --popover: #0A0A0A;
   --popover-foreground: #FFFFFF;
   --primary: #00BFFF;
-  --primary-foreground: #081C43;
-  --secondary: #0D3270;
+  --primary-foreground: #000000;
+  --secondary: #111111;
   --secondary-foreground: #FFFFFF;
-  --muted: #0D3270;
+  --muted: #111111;
   --muted-foreground: #7EB8E0;
   --accent: #A020F0;
   --accent-foreground: #FFFFFF;
   --destructive: #FF4444;
-  --border: #123566;
-  --input: #0D3270;
+  --border: #1A1A2E;
+  --input: #111111;
   --ring: #00BFFF;
   --chart-1: #00BFFF;
   --chart-2: #A020F0;
   --chart-3: #00E5FF;
   --chart-4: #C77DFF;
   --chart-5: #7EB8E0;
-  --sidebar: #061435;
+  --sidebar: #050505;
   --sidebar-foreground: #FFFFFF;
   --sidebar-primary: #00BFFF;
-  --sidebar-primary-foreground: #081C43;
-  --sidebar-accent: #0D3270;
+  --sidebar-primary-foreground: #000000;
+  --sidebar-accent: #111111;
   --sidebar-accent-foreground: #FFFFFF;
-  --sidebar-border: #123566;
+  --sidebar-border: #1A1A2E;
   --sidebar-ring: #00BFFF;
 }
 
 .dark {
-  --background: #081C43;
+  --background: #000000;
   --foreground: #FFFFFF;
-  --card: #0A2860;
+  --card: #0A0A0A;
   --card-foreground: #FFFFFF;
-  --popover: #0A2860;
+  --popover: #0A0A0A;
   --popover-foreground: #FFFFFF;
   --primary: #00BFFF;
-  --primary-foreground: #081C43;
-  --secondary: #0D3270;
+  --primary-foreground: #000000;
+  --secondary: #111111;
   --secondary-foreground: #FFFFFF;
-  --muted: #0D3270;
+  --muted: #111111;
   --muted-foreground: #7EB8E0;
   --accent: #A020F0;
   --accent-foreground: #FFFFFF;
   --destructive: #FF4444;
-  --border: #123566;
-  --input: #0D3270;
+  --border: #1A1A2E;
+  --input: #111111;
   --ring: #00BFFF;
   --chart-1: #00BFFF;
   --chart-2: #A020F0;
   --chart-3: #00E5FF;
   --chart-4: #C77DFF;
   --chart-5: #7EB8E0;
-  --sidebar: #061435;
+  --sidebar: #050505;
   --sidebar-foreground: #FFFFFF;
   --sidebar-primary: #00BFFF;
-  --sidebar-primary-foreground: #081C43;
-  --sidebar-accent: #0D3270;
+  --sidebar-primary-foreground: #000000;
+  --sidebar-accent: #111111;
   --sidebar-accent-foreground: #FFFFFF;
-  --sidebar-border: #123566;
+  --sidebar-border: #1A1A2E;
   --sidebar-ring: #00BFFF;
 }
 
@@ -148,29 +143,29 @@
   width: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: #061435;
+  background: #050505;
 }
 ::-webkit-scrollbar-thumb {
-  background: #1A4480;
+  background: #1A1A2E;
   border-radius: 3px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #2A5490;
+  background: #2A2A3E;
 }
 
-/* Orbit Card — Higher opacity to prevent text overlap */
+/* Orbit Card — Glassmorphism on black bg */
 .orbit-card {
-  background: rgba(10, 40, 96, 0.88);
+  background: rgba(10, 10, 10, 0.85);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(0, 191, 255, 0.15);
+  border: 1px solid rgba(0, 191, 255, 0.12);
 }
 
 .orbit-card-strong {
-  background: rgba(10, 40, 96, 0.95);
+  background: rgba(10, 10, 10, 0.95);
   backdrop-filter: blur(28px);
   -webkit-backdrop-filter: blur(28px);
-  border: 1px solid rgba(0, 191, 255, 0.22);
+  border: 1px solid rgba(0, 191, 255, 0.2);
 }
 
 /* Orbit Gradient glow */
@@ -188,16 +183,6 @@
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
-}
-
-/* Animated gradient border */
-@keyframes orbit-border-glow {
-  0%, 100% { border-color: rgba(0, 191, 255, 0.2); }
-  50% { border-color: rgba(160, 32, 240, 0.4); }
-}
-
-.animate-orbit-border {
-  animation: orbit-border-glow 3s ease-in-out infinite;
 }
 
 /* Pulse ring animation */
@@ -230,17 +215,6 @@
   animation: float 4s ease-in-out infinite;
 }
 
-/* Fluid Wave animation */
-@keyframes fluid-wave {
-  0% { transform: translateX(-100%) scaleX(1); }
-  50% { transform: translateX(0%) scaleX(1.1); }
-  100% { transform: translateX(100%) scaleX(1); }
-}
-
-.animate-fluid-wave {
-  animation: fluid-wave 8s ease-in-out infinite;
-}
-
 /* Gradient data stream animation */
 @keyframes data-stream {
   0% { background-position: 0% 50%; }
@@ -254,18 +228,6 @@
   animation: data-stream 3s ease-in-out infinite;
 }
 
-/* Shimmer effect with orbit gradient */
-@keyframes shimmer-orbit {
-  0% { background-position: -200% 0; }
-  100% { background-position: 200% 0; }
-}
-
-.animate-shimmer-orbit {
-  background: linear-gradient(90deg, transparent 0%, rgba(0, 191, 255, 0.08) 50%, transparent 100%);
-  background-size: 200% 100%;
-  animation: shimmer-orbit 3s ease-in-out infinite;
-}
-
 /* Hide scrollbar for horizontal scroll areas */
 .scrollbar-hide {
   -ms-overflow-style: none;
@@ -275,35 +237,15 @@
   display: none;
 }
 
-/* Smooth page transitions */
-@keyframes slide-up-fade {
-  0% { opacity: 0; transform: translateY(12px); }
-  100% { opacity: 1; transform: translateY(0); }
-}
-
-.animate-slide-up-fade {
-  animation: slide-up-fade 0.4s ease-out forwards;
-}
-
 /* ─── Floating Navigation Pill ──────────────────────────────────────────────── */
 .orbit-nav-pill {
-  background: rgba(8, 28, 67, 0.75);
+  background: rgba(5, 5, 5, 0.75);
   backdrop-filter: blur(28px) saturate(1.4);
   -webkit-backdrop-filter: blur(28px) saturate(1.4);
   border: 1px solid rgba(0, 191, 255, 0.12);
   border-radius: 28px;
   box-shadow:
-    0 -4px 24px rgba(0, 0, 0, 0.3),
-    0 8px 32px rgba(0, 191, 255, 0.08),
+    0 -4px 24px rgba(0, 0, 0, 0.4),
+    0 8px 32px rgba(0, 191, 255, 0.06),
     inset 0 1px 0 rgba(255, 255, 255, 0.04);
-}
-
-/* FAB pulse animation */
-@keyframes fab-pulse {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(0, 191, 255, 0.4); }
-  50% { box-shadow: 0 0 0 8px rgba(0, 191, 255, 0); }
-}
-
-.animate-fab-pulse {
-  animation: fab-pulse 2.5s ease-in-out infinite;
 }

@@ -535,7 +535,7 @@ export function DashboardHome() {
               </p>
               <Button
                 onClick={() => setCurrentView("packages")}
-                className="bg-white text-[#081C43] hover:bg-white/90 font-bold shadow-lg"
+                className="bg-white text-[#000000] hover:bg-white/90 font-bold shadow-lg"
               >
                 <Zap className="w-4 h-4 mr-2" />
                 Book a Session
