@@ -57,11 +57,9 @@ export function PartnerNavbar() {
   const firstName = user.name ? user.name.split(" ")[0] : "there";
 
   // Only count truly active bookings for notifications
-  const activeBookings = bookings.filter(
-    (b) => !["DELIVERED", "CANCELLED"].includes(b.status)
-  ).length;
+  // Suppress notifications when partner is offline - they shouldn't see new work alerts
   const hasActiveWork = !!partnerActiveBooking;
-  const unreadNotifications = hasActiveWork ? 1 : 0;
+  const unreadNotifications = user.isOnline && hasActiveWork ? 1 : 0;
 
   const handleToggleOnline = () => {
     setUser({ isOnline: !user.isOnline });
@@ -144,18 +142,25 @@ export function PartnerNavbar() {
             {hasActiveWork ? (
               <div className="flex items-center gap-2">
                 <div className="w-2 h-2 rounded-full bg-orbit-purple animate-pulse" />
-                <p className="text-xs sm:text-sm text-muted-foreground">
+                <p className="text-[10px] sm:text-xs text-muted-foreground">
                   You have an{" "}
                   <span className="text-orbit-purple font-semibold">
                     active shoot
                   </span>
                 </p>
               </div>
-            ) : (
+            ) : user.isOnline ? (
               <div className="flex items-center gap-2">
                 <Wallet className="w-3.5 h-3.5 text-green-400" />
-                <p className="text-xs sm:text-sm text-muted-foreground/70">
+                <p className="text-[10px] sm:text-xs text-muted-foreground/70">
                   Ready for your next gig
+                </p>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 rounded-full bg-gray-400" />
+                <p className="text-[10px] sm:text-xs text-muted-foreground/70">
+                  You&apos;re offline — won&apos;t receive new bookings
                 </p>
               </div>
             )}

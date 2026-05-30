@@ -19,6 +19,7 @@ import {
   Calendar as CalendarIcon,
   MapPin,
   Briefcase,
+  Play,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -37,7 +38,7 @@ import { PaymentReceived } from "./payment-received";
 type PartnerPhase = "available" | "navigating" | "shooting" | "syncing" | "privacy" | "payment";
 
 export function PartnerDashboard() {
-  const { partnerActiveBooking, setPartnerActiveBooking, cancelBooking, updateBookingStatus, markBookingDelivered, markBookingDownloaded } = useAppStore();
+  const { partnerActiveBooking, setPartnerActiveBooking, cancelBooking, updateBookingStatus, markBookingDelivered, markBookingDownloaded, addBooking, user } = useAppStore();
   const [partnerPhase, setPartnerPhase] = useState<PartnerPhase>("available");
   const [shotUploads, setShotUploads] = useState<Map<string, string>>(new Map());
   const [uploadingShotId, setUploadingShotId] = useState<string | null>(null);
@@ -58,6 +59,8 @@ export function PartnerDashboard() {
   const syncFiles = ["clip_001_4k.mov", "clip_002_4k.mov", "clip_003_4k.mov", "clip_004_4k.mov", "clip_005_4k.mov"];
 
   const handleAcceptBooking = (booking: BookingInfo) => {
+    // Add the booking to the store's bookings array so earnings/history can track it
+    addBooking(booking);
     setPartnerActiveBooking(booking);
     setPartnerPhase("navigating");
     setCompletedShots(new Set());
@@ -223,27 +226,101 @@ export function PartnerDashboard() {
   }
 
   // ─── Home: Available Work ────────────────────────────────────────────────
+  // If partner is offline, show prompt to go online
+  if (!user.isOnline) {
+    return (
+      <motion.div
+        variants={staggerContainer}
+        initial="hidden"
+        animate="show"
+        className="space-y-4 sm:space-y-5"
+      >
+        <motion.div variants={staggerItem}>
+          <div className="orbit-card rounded-2xl p-6 sm:p-8 text-center">
+            <div className="w-14 h-14 mx-auto mb-4 rounded-full bg-gray-500/10 flex items-center justify-center">
+              <Briefcase className="w-7 h-7 text-gray-400/50" />
+            </div>
+            <h3 className="text-base font-bold mb-2 text-foreground">You&apos;re Offline</h3>
+            <p className="text-xs text-muted-foreground/60 mb-4">
+              Go online to receive new booking requests from clients.
+            </p>
+            <p className="text-[10px] text-muted-foreground/40">
+              Tap the <span className="text-gray-400">Online/Offline</span> toggle in the header to go online.
+            </p>
+          </div>
+        </motion.div>
+      </motion.div>
+    );
+  }
+
+  // ─── If partner has an active booking restored from storage (page refresh) ──
+  if (partnerActiveBooking && partnerPhase === "available") {
+    return (
+      <motion.div
+        variants={staggerContainer}
+        initial="hidden"
+        animate="show"
+        className="space-y-4"
+      >
+        <motion.div variants={staggerItem}>
+          <div className="orbit-card rounded-xl p-4 border border-orbit-purple/30">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-10 h-10 rounded-lg bg-orbit-purple/15 flex items-center justify-center">
+                <Briefcase className="w-5 h-5 text-orbit-purple" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <h3 className="text-sm font-bold text-foreground truncate">Active Booking Found</h3>
+                <p className="text-[10px] text-muted-foreground/60 truncate">
+                  {partnerActiveBooking.packageName} · {partnerActiveBooking.location}
+                </p>
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <Button
+                onClick={() => setPartnerPhase("navigating")}
+                className="flex-1 bg-gradient-to-r from-orbit-cyan to-orbit-purple text-white hover:opacity-90 font-bold h-9 text-xs"
+              >
+                <Play className="w-3.5 h-3.5 mr-1" /> Resume
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  cancelBooking(partnerActiveBooking.id, "PARTNER");
+                  setPartnerActiveBooking(null);
+                  toast.success("Booking cancelled.");
+                }}
+                className="border-red-500/20 text-red-400 hover:bg-red-500/10 text-xs h-9"
+              >
+                Cancel
+              </Button>
+            </div>
+          </div>
+        </motion.div>
+      </motion.div>
+    );
+  }
+
   return (
     <motion.div
       variants={staggerContainer}
       initial="hidden"
       animate="show"
-      className="space-y-4 sm:space-y-5"
+      className="space-y-3 sm:space-y-4"
     >
       {/* Section Header */}
       <motion.div variants={staggerItem}>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-orbit-cyan/15 flex items-center justify-center">
-              <Briefcase className="w-4.5 h-4.5 text-orbit-cyan" />
+            <div className="w-8 h-8 rounded-lg bg-orbit-cyan/15 flex items-center justify-center">
+              <Briefcase className="w-4 h-4 text-orbit-cyan" />
             </div>
             <div>
-              <h3 className="text-base font-bold text-foreground">Available Work</h3>
-              <p className="text-[11px] text-muted-foreground/60">New bookings waiting for you</p>
+              <h3 className="text-sm font-bold text-foreground">Available Work</h3>
+              <p className="text-[10px] text-muted-foreground/60">New bookings waiting for you</p>
             </div>
           </div>
           {MOCK_AVAILABLE_BOOKINGS.length > 0 && (
-            <Badge className="bg-orbit-cyan/15 text-orbit-cyan border-0 text-[11px] font-bold px-2.5 py-1">
+            <Badge className="bg-orbit-cyan/15 text-orbit-cyan border-0 text-[10px] font-bold px-2 py-0.5">
               {MOCK_AVAILABLE_BOOKINGS.length} new
             </Badge>
           )}
@@ -253,39 +330,39 @@ export function PartnerDashboard() {
       {/* Work Cards */}
       {MOCK_AVAILABLE_BOOKINGS.length === 0 ? (
         <motion.div variants={staggerItem}>
-          <div className="orbit-card rounded-2xl p-8 sm:p-12 text-center">
-            <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-white/[0.03] flex items-center justify-center">
-              <Briefcase className="w-8 h-8 text-muted-foreground/30" />
+          <div className="orbit-card rounded-xl p-6 sm:p-8 text-center">
+            <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-white/[0.03] flex items-center justify-center">
+              <Briefcase className="w-6 h-6 text-muted-foreground/30" />
             </div>
-            <h3 className="text-lg font-bold mb-2">No Available Work</h3>
-            <p className="text-sm text-muted-foreground">
+            <h3 className="text-sm font-bold mb-1">No Available Work</h3>
+            <p className="text-xs text-muted-foreground">
               New bookings will appear here when clients book sessions.
             </p>
           </div>
         </motion.div>
       ) : (
-        <div className="space-y-3">
+        <div className="space-y-2.5">
           {MOCK_AVAILABLE_BOOKINGS.map((booking, idx) => (
             <motion.div
               key={booking.id}
               variants={staggerItem}
-              className="orbit-card rounded-2xl overflow-hidden border border-orbit-border/50 hover:border-orbit-cyan/25 transition-all group"
+              className="orbit-card rounded-xl overflow-hidden border border-orbit-border/50 hover:border-orbit-cyan/25 transition-all group"
             >
               {/* Card top accent line */}
               <div className="h-[2px] bg-gradient-to-r from-orbit-cyan via-orbit-purple to-orbit-cyan opacity-50 group-hover:opacity-100 transition-opacity" />
 
-              <div className="p-4 sm:p-5">
+              <div className="p-3 sm:p-4">
                 {/* Row 1: ID + Price */}
-                <div className="flex items-start justify-between gap-3 mb-3">
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-orbit-cyan/15 to-orbit-purple/15 flex items-center justify-center shrink-0">
-                      <Briefcase className="w-5 h-5 text-orbit-cyan" />
+                <div className="flex items-start justify-between gap-2 mb-2">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-orbit-cyan/15 to-orbit-purple/15 flex items-center justify-center shrink-0">
+                      <Briefcase className="w-4 h-4 text-orbit-cyan" />
                     </div>
-                    <div>
-                      <h4 className="text-sm font-bold text-foreground">{booking.id}</h4>
+                    <div className="min-w-0">
+                      <h4 className="text-xs font-bold text-foreground truncate">{booking.id}</h4>
                       <Badge
                         variant="outline"
-                        className={`text-[9px] mt-0.5 ${
+                        className={`text-[8px] mt-0.5 ${
                           booking.packagePrice >= 4999
                             ? "border-orbit-cyan/30 text-orbit-cyan"
                             : "border-orbit-purple/30 text-orbit-purple"
@@ -296,32 +373,32 @@ export function PartnerDashboard() {
                     </div>
                   </div>
                   <div className="text-right shrink-0">
-                    <div className="text-base font-black text-gradient-orbit">
+                    <div className="text-sm font-black text-gradient-orbit">
                       {formatCurrency(booking.packagePrice)}
                     </div>
-                    <div className="text-[9px] text-muted-foreground/50">per shoot</div>
+                    <div className="text-[8px] text-muted-foreground/50">per shoot</div>
                   </div>
                 </div>
 
                 {/* Row 2: Details */}
-                <div className="flex flex-wrap gap-x-4 gap-y-1.5 text-xs text-muted-foreground mb-3">
-                  <div className="flex items-center gap-1.5">
-                    <CalendarIcon className="w-3 h-3 text-orbit-cyan/70" />
-                    {new Date(booking.bookingDate).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                <div className="flex flex-wrap gap-x-3 gap-y-1 text-[10px] sm:text-xs text-muted-foreground mb-2">
+                  <div className="flex items-center gap-1">
+                    <CalendarIcon className="w-2.5 h-2.5 text-orbit-cyan/70" />
+                    <span className="truncate">{new Date(booking.bookingDate).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</span>
                   </div>
-                  <div className="flex items-center gap-1.5">
-                    <Clock className="w-3 h-3 text-orbit-cyan/70" />
-                    {booking.timeSlot}
+                  <div className="flex items-center gap-1">
+                    <Clock className="w-2.5 h-2.5 text-orbit-cyan/70" />
+                    <span className="truncate">{booking.timeSlot}</span>
                   </div>
-                  <div className="flex items-center gap-1.5">
-                    <MapPin className="w-3 h-3 text-orbit-cyan/70" />
-                    {booking.location}
+                  <div className="flex items-center gap-1">
+                    <MapPin className="w-2.5 h-2.5 text-orbit-cyan/70" />
+                    <span className="truncate">{booking.location}</span>
                   </div>
                 </div>
 
                 {/* Row 3: Notes */}
                 {booking.notes && (
-                  <p className="text-[11px] text-muted-foreground/40 italic mb-3 line-clamp-1">
+                  <p className="text-[10px] text-muted-foreground/40 italic mb-2 line-clamp-1">
                     &ldquo;{booking.notes}&rdquo;
                   </p>
                 )}
@@ -329,10 +406,10 @@ export function PartnerDashboard() {
                 {/* Row 4: Accept Button */}
                 <Button
                   onClick={() => handleAcceptBooking(booking)}
-                  className="w-full bg-gradient-to-r from-orbit-cyan to-orbit-purple text-white hover:opacity-90 font-bold orbit-glow h-10"
+                  className="w-full bg-gradient-to-r from-orbit-cyan to-orbit-purple text-white hover:opacity-90 font-bold orbit-glow h-9 text-xs"
                 >
                   Accept Booking
-                  <ArrowRight className="w-4 h-4 ml-1.5 group-hover:translate-x-1 transition-transform" />
+                  <ArrowRight className="w-3.5 h-3.5 ml-1 group-hover:translate-x-1 transition-transform" />
                 </Button>
               </div>
             </motion.div>

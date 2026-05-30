@@ -33,6 +33,7 @@ function saveToStorage(state: Record<string, unknown>) {
       currentView: state.currentView,
       bookings: state.bookings,
       reviews: state.reviews,
+      partnerActiveBooking: state.partnerActiveBooking,
     };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(toSave));
   } catch { /* ignore */ }
@@ -155,6 +156,7 @@ export const useAppStore = create<AppState>((set, get) => ({
         currentView: (stored.currentView as AppView) ?? "landing",
         bookings: storedBookings,
         reviews: (stored.reviews as ReviewInfo[]) ?? [],
+        partnerActiveBooking: (stored.partnerActiveBooking as BookingInfo | null) ?? null,
         appPhase: stored.isAuthenticated ? "app" : "splash",
       });
     } else {
@@ -403,7 +405,11 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   // Partner
   partnerActiveBooking: null,
-  setPartnerActiveBooking: (booking) => set({ partnerActiveBooking: booking }),
+  setPartnerActiveBooking: (booking) => {
+    const newState = { partnerActiveBooking: booking };
+    set(newState);
+    saveToStorage({ ...get(), ...newState });
+  },
 
   // Booking form
   bookingDate: undefined,

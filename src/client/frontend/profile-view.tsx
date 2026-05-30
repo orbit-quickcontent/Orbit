@@ -280,45 +280,45 @@ export function ProfileView() {
 
   return (
     <div className="pb-4">
-      {/* Profile Header */}
-      <div className="orbit-card rounded-xl p-4 sm:p-6 mb-3">
-        <div className="flex flex-col sm:flex-row items-center gap-6">
+      {/* Profile Header - Compact */}
+      <div className="orbit-card rounded-xl p-3 sm:p-4 mb-2">
+        <div className="flex items-center gap-3">
           {/* Avatar */}
-          <div className="relative">
+          <div className="relative shrink-0">
             {renderProfileAvatar(
-              "w-20 h-20 sm:w-24 sm:h-24",
-              "text-2xl sm:text-3xl"
+              "w-14 h-14 sm:w-16 sm:h-16",
+              "text-lg sm:text-xl"
             )}
             {/* Online indicator */}
-            <div className="absolute bottom-1 right-1 w-4 h-4 rounded-full bg-green-400 border-2 border-[#000000]" />
+            <div className="absolute bottom-0 right-0 w-3 h-3 rounded-full bg-green-400 border-2 border-[#000000]" />
           </div>
 
           {/* Info */}
-          <div className="flex-1 text-center sm:text-left">
-            <h2 className="text-2xl font-black text-foreground">
+          <div className="flex-1 min-w-0">
+            <h2 className="text-lg font-black text-foreground truncate">
               {user.name || "Orbit User"}
             </h2>
-            <p className="text-sm text-muted-foreground mt-1">
+            <p className="text-[11px] text-muted-foreground truncate">
               {user.email || "No email set"}
             </p>
             {user.phone && (
-              <p className="text-sm text-muted-foreground/70 mt-0.5">
+              <p className="text-[10px] text-muted-foreground/70 truncate">
                 {user.phone}
               </p>
             )}
-            <div className="flex items-center justify-center sm:justify-start gap-2 mt-3">
+            <div className="flex items-center gap-1.5 mt-1.5">
               <Badge
                 variant="outline"
-                className="border-orbit-cyan/30 text-orbit-cyan text-[10px]"
+                className="border-orbit-cyan/30 text-orbit-cyan text-[8px] px-1.5 py-0"
               >
-                <Film className="w-3 h-3 mr-1" /> Client
+                <Film className="w-2.5 h-2.5 mr-0.5" /> Client
               </Badge>
               {user.location && (
                 <Badge
                   variant="outline"
-                  className="border-orbit-border text-muted-foreground text-[10px]"
+                  className="border-orbit-border text-muted-foreground text-[8px] px-1.5 py-0"
                 >
-                  <MapPin className="w-3 h-3 mr-1" /> {user.location}
+                  <MapPin className="w-2.5 h-2.5 mr-0.5" /> {user.location}
                 </Badge>
               )}
             </div>
@@ -329,40 +329,38 @@ export function ProfileView() {
             variant="outline"
             size="sm"
             onClick={() => setIsEditing(!isEditing)}
-            className="border-orbit-border text-muted-foreground hover:text-foreground hover:border-orbit-cyan/30"
+            className="border-orbit-border text-muted-foreground hover:text-foreground hover:border-orbit-cyan/30 h-8 text-[10px] shrink-0"
           >
             {isEditing ? (
-              <X className="w-4 h-4 mr-1" />
+              <X className="w-3 h-3 mr-0.5" />
             ) : (
-              <Edit3 className="w-4 h-4 mr-1" />
+              <Edit3 className="w-3 h-3 mr-0.5" />
             )}
-            {isEditing ? "Cancel" : "Edit"}
+            {isEditing ? "Close" : "Edit"}
           </Button>
         </div>
       </div>
 
       {/* Total Video — Compact Card + Tab-Filtered Details */}
       {bookings.length > 0 && (
-        <div className="mb-4">
+        <div className="mb-2">
           {/* Compact TOTAL Card */}
           <button
             onClick={() => setActiveTab(activeTab ? null : "total")}
-            className="w-full orbit-card rounded-2xl p-4 sm:p-5 text-center transition-all duration-300 hover:scale-[1.01] active:scale-[0.99] hover:border-orbit-cyan/20"
+            className="w-full orbit-card rounded-xl p-2.5 sm:p-3 text-center transition-all duration-300 active:scale-[0.99] hover:border-orbit-cyan/20"
           >
-            <div className="flex items-center justify-center mb-2">
-              <div className="w-10 h-10 rounded-xl bg-orbit-cyan/10 flex items-center justify-center">
-                <Film className="w-5 h-5 text-orbit-cyan" />
+            <div className="flex items-center justify-center gap-2">
+              <div className="w-7 h-7 rounded-md bg-orbit-cyan/10 flex items-center justify-center">
+                <Film className="w-3.5 h-3.5 text-orbit-cyan" />
               </div>
-            </div>
-            <div className="text-3xl sm:text-4xl font-black text-foreground">
-              {bookings.length}
-            </div>
-            <div className="text-xs text-muted-foreground uppercase tracking-widest mt-0.5">
-              Total
-            </div>
-            <div className="mt-2 flex items-center justify-center">
+              <div className="text-xl sm:text-2xl font-black text-foreground">
+                {bookings.length}
+              </div>
+              <div className="text-[9px] text-muted-foreground uppercase tracking-widest">
+                Bookings
+              </div>
               <ChevronDown
-                className={`w-4 h-4 text-muted-foreground/50 transition-transform duration-300 ${
+                className={`w-3.5 h-3.5 text-muted-foreground/50 transition-transform duration-300 ${
                   activeTab ? "rotate-180" : ""
                 }`}
               />
@@ -379,23 +377,23 @@ export function ProfileView() {
                 transition={{ duration: 0.25 }}
                 className="overflow-hidden"
               >
-                <div className="flex items-center gap-1 mt-3 p-1 bg-white/[0.03] rounded-xl">
+                <div className="flex items-center gap-1 mt-1.5 p-0.5 bg-white/[0.03] rounded-lg">
                   {([
-                    { key: "total" as BookingTab, label: "Total", count: bookings.length },
+                    { key: "total" as BookingTab, label: "All", count: bookings.length },
                     { key: "active" as BookingTab, label: "Active", count: activeBookings },
                     { key: "done" as BookingTab, label: "Done", count: completedBookings },
                   ]).map((tab) => (
                     <button
                       key={tab.key}
                       onClick={() => setActiveTab(tab.key)}
-                      className={`flex-1 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all duration-200 ${
+                      className={`flex-1 py-1 rounded-md text-[9px] sm:text-[10px] font-bold uppercase tracking-wider transition-all duration-200 ${
                         activeTab === tab.key
                           ? "bg-orbit-cyan/15 text-orbit-cyan"
                           : "text-muted-foreground/60 hover:text-muted-foreground hover:bg-white/[0.03]"
                       }`}
                     >
                       {tab.label}
-                      <span className={`ml-1 text-[10px] ${
+                      <span className={`ml-0.5 text-[8px] ${
                         activeTab === tab.key
                           ? "text-orbit-cyan/60"
                           : "text-muted-foreground/40"
@@ -420,7 +418,7 @@ export function ProfileView() {
                 transition={{ duration: 0.3 }}
                 className="overflow-hidden"
               >
-                <div className="mt-3 space-y-2 max-h-72 overflow-y-auto" style={{ scrollbarWidth: "thin", scrollbarColor: "rgba(0,191,255,0.15) transparent" }}>
+                <div className="mt-1.5 space-y-1 max-h-52 overflow-y-auto" style={{ scrollbarWidth: "thin", scrollbarColor: "rgba(0,191,255,0.15) transparent" }}>
                   {filteredBookings
                     .slice()
                     .reverse()
@@ -435,11 +433,11 @@ export function ProfileView() {
                       return (
                         <div
                           key={b.id}
-                          className="flex items-center justify-between bg-white/[0.03] rounded-lg px-3 py-2.5"
+                          className="flex items-center justify-between bg-white/[0.03] rounded-lg px-2.5 py-2"
                         >
-                          <div className="flex items-center gap-3 flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-1 min-w-0">
                             <div
-                              className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
+                              className={`w-6 h-6 rounded-md flex items-center justify-center shrink-0 ${
                                 isDelivered
                                   ? "bg-green-500/10 text-green-400"
                                   : isCancelled
@@ -448,18 +446,18 @@ export function ProfileView() {
                               }`}
                             >
                               {isDelivered ? (
-                                <CheckCircle2 className="w-3.5 h-3.5" />
+                                <CheckCircle2 className="w-3 h-3" />
                               ) : isCancelled ? (
-                                <X className="w-3.5 h-3.5" />
+                                <X className="w-3 h-3" />
                               ) : (
-                                <Film className="w-3.5 h-3.5" />
+                                <Film className="w-3 h-3" />
                               )}
                             </div>
                             <div className="flex-1 min-w-0">
-                              <div className="text-sm font-medium text-foreground truncate">
+                              <div className="text-[10px] sm:text-[11px] font-medium text-foreground truncate">
                                 {b.packageName}
                               </div>
-                              <div className="text-xs text-muted-foreground/60">
+                              <div className="text-[9px] text-muted-foreground/60">
                                 {new Date(b.bookingDate).toLocaleDateString("en-US", {
                                   month: "short",
                                   day: "numeric",
@@ -469,26 +467,26 @@ export function ProfileView() {
                               </div>
                             </div>
                           </div>
-                          <div className="flex items-center gap-2 shrink-0">
+                          <div className="flex items-center gap-1 shrink-0">
                             {isDelivered && withinWindow && !b.downloaded && (
                               <Button
                                 size="sm"
-                                className="h-6 px-2 text-[10px] bg-gradient-to-r from-orbit-cyan to-orbit-purple text-white hover:opacity-90"
+                                className="h-5 px-1.5 text-[8px] bg-gradient-to-r from-orbit-cyan to-orbit-purple text-white hover:opacity-90"
                               >
-                                <Download className="w-3 h-3 mr-1" /> Download
+                                <Download className="w-2.5 h-2.5 mr-0.5" /> Save
                               </Button>
                             )}
                             {isDelivered && b.downloaded && (
-                              <span className="text-[10px] text-green-400/60">
-                                {daysLeft}d left
+                              <span className="text-[8px] text-green-400/60">
+                                {daysLeft}d
                               </span>
                             )}
                             {isDelivered && !withinWindow && (
-                              <span className="text-[10px] text-muted-foreground/40">Expired</span>
+                              <span className="text-[8px] text-muted-foreground/40">Expired</span>
                             )}
                             <Badge
                               variant="outline"
-                              className={`text-[10px] ${
+                              className={`text-[7px] sm:text-[8px] ${
                                 isDelivered
                                   ? "border-green-400/30 text-green-400"
                                   : isCancelled
@@ -503,7 +501,7 @@ export function ProfileView() {
                                 variant="outline"
                                 size="sm"
                                 onClick={(e) => { e.stopPropagation(); handleCancelBooking(b.id); }}
-                                className="h-6 px-2 text-[10px] border-red-500/20 text-red-400 hover:bg-red-500/10 hover:border-red-500/30"
+                                className="h-5 px-1.5 text-[8px] border-red-500/20 text-red-400 hover:bg-red-500/10 hover:border-red-500/30"
                               >
                                 Cancel
                               </Button>
@@ -713,20 +711,20 @@ export function ProfileView() {
       </AnimatePresence>
 
       {/* Menu Items */}
-      <div className="orbit-card rounded-2xl overflow-hidden mb-4">
+      <div className="orbit-card rounded-xl overflow-hidden mb-2">
         {menuItems.map((item, i) => (
           <div key={i}>
-            <button className="w-full flex items-center gap-3 px-5 py-4 hover:bg-white/[0.03] transition-colors text-left">
+            <button className="w-full flex items-center gap-2.5 px-3 py-2.5 hover:bg-white/[0.03] transition-colors text-left">
               <span className="text-orbit-cyan">{item.icon}</span>
-              <div className="flex-1">
-                <div className="text-sm font-medium text-foreground">
+              <div className="flex-1 min-w-0">
+                <div className="text-xs font-medium text-foreground">
                   {item.label}
                 </div>
-                <div className="text-xs text-muted-foreground/60">
+                <div className="text-[10px] text-muted-foreground/60">
                   {item.desc}
                 </div>
               </div>
-              <ChevronRight className="w-4 h-4 text-muted-foreground/30" />
+              <ChevronRight className="w-3.5 h-3.5 text-muted-foreground/30" />
             </button>
             {i < menuItems.length - 1 && (
               <Separator className="bg-orbit-border/30" />
@@ -739,9 +737,9 @@ export function ProfileView() {
       <Button
         onClick={logout}
         variant="outline"
-        className="w-full border-red-500/20 text-red-400 hover:bg-red-500/5 hover:border-red-500/30 py-5"
+        className="w-full border-red-500/20 text-red-400 hover:bg-red-500/5 hover:border-red-500/30 h-10 text-xs"
       >
-        <LogOut className="w-4 h-4 mr-2" />
+        <LogOut className="w-3.5 h-3.5 mr-1.5" />
         Log Out
       </Button>
     </div>
