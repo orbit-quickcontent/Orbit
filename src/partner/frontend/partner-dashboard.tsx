@@ -11,7 +11,7 @@
  * Category: Partner UI
  */
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Clock,
@@ -37,7 +37,7 @@ import { PaymentReceived } from "./payment-received";
 type PartnerPhase = "available" | "navigating" | "shooting" | "syncing" | "privacy" | "payment";
 
 export function PartnerDashboard() {
-  const { partnerActiveBooking, setPartnerActiveBooking, bookings, cancelBooking, updateBookingStatus, markBookingDelivered, markBookingDownloaded } = useAppStore();
+  const { partnerActiveBooking, setPartnerActiveBooking, cancelBooking, updateBookingStatus, markBookingDelivered, markBookingDownloaded } = useAppStore();
   const [partnerPhase, setPartnerPhase] = useState<PartnerPhase>("available");
   const [shotUploads, setShotUploads] = useState<Map<string, string>>(new Map());
   const [uploadingShotId, setUploadingShotId] = useState<string | null>(null);
@@ -47,6 +47,13 @@ export function PartnerDashboard() {
   const [syncSpeed, setSyncSpeed] = useState(0);
   const [currentFile, setCurrentFile] = useState("");
   const syncIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Cleanup sync interval on unmount to prevent memory leaks
+  useEffect(() => {
+    return () => {
+      if (syncIntervalRef.current) clearInterval(syncIntervalRef.current);
+    };
+  }, []);
 
   const syncFiles = ["clip_001_4k.mov", "clip_002_4k.mov", "clip_003_4k.mov", "clip_004_4k.mov", "clip_005_4k.mov"];
 

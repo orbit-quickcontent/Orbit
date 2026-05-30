@@ -159,6 +159,14 @@ export function ProfileView() {
   const handlePhotoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("File too large", { description: "Please select an image under 5MB" });
+      return;
+    }
+    if (!file.type.startsWith("image/")) {
+      toast.error("Invalid file type", { description: "Please select an image file" });
+      return;
+    }
     const reader = new FileReader();
     reader.onloadend = () => {
       const dataUrl = reader.result as string;
@@ -181,7 +189,7 @@ export function ProfileView() {
     completedBookingsList;
 
   const handleSave = useCallback(() => {
-    const updates: Record<string, unknown> = {
+    const updates: Partial<typeof user> = {
       name: editName.trim(),
       email: editEmail.trim(),
       phone: editPhone.trim(),

@@ -162,7 +162,7 @@ export function ClientNavbar() {
     { label: "Book a session", view: "packages" as const },
     { label: "Track my order", view: "tracking" as const },
     { label: "View packages", view: "packages" as const },
-    { label: "Brand DNA", view: "booking" as const },
+    { label: "My Profile", view: "profile" as const },
   ];
 
   const filteredSuggestions = searchQuery

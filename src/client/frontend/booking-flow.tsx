@@ -98,13 +98,13 @@ export function BookingFlow() {
       const bookingId = `OL-${Date.now().toString(36).toUpperCase()}`;
       const newBooking: BookingInfo = {
         id: bookingId, packageId: selectedPackage.id, packageName: selectedPackage.name, packagePrice: selectedPackage.price,
-        status: "PAID", paymentStatus: "SUCCESS", bookingDate: bookingDate!.toISOString(), timeSlot: bookingTimeSlot,
+        status: "PENDING", paymentStatus: "FAILED", bookingDate: bookingDate!.toISOString(), timeSlot: bookingTimeSlot,
         location: bookingLocation, syncPercentage: 0, editCountdown: 90, partnerName: null, notes: bookingNotes,
         deliveredAt: null, downloaded: false, cancelledBy: null, declinedByPartners: [],
       };
       setCurrentBooking(newBooking);
       addBooking(newBooking);
-      toast.success("Payment successful!", { description: `Booking ${bookingId} confirmed` });
+      toast.error("Payment failed!", { description: "Your booking was created but payment could not be processed. Please retry payment." });
       setCurrentView("tracking");
     }
   };
@@ -142,7 +142,7 @@ export function BookingFlow() {
                 {[
                   { label: "Full Name *", value: user.name, onChange: (v: string) => setUser({ name: v }), placeholder: "Enter your name", type: "text" },
                   { label: "Email *", value: user.email, onChange: (v: string) => setUser({ email: v }), placeholder: "you@example.com", type: "email" },
-                  { label: "Phone *", value: user.phone, onChange: (v: string) => setUser({ phone: v }), placeholder: "+1 (555) 000-0000", type: "tel" },
+                  { label: "Phone *", value: user.phone, onChange: (v: string) => setUser({ phone: v }), placeholder: "+91 98765 43210", type: "tel" },
                 ].map((field) => (
                   <div key={field.label}>
                     <label className="text-sm font-medium text-muted-foreground mb-1.5 block">{field.label}</label>
