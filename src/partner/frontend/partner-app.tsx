@@ -14,7 +14,6 @@
 import { lazy, Suspense } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useAppStore } from "@/lib/store";
-import { AnimatedBackground } from "@/shared/frontend";
 import { PartnerNavbar } from "./partner-navbar";
 import { PartnerDashboard } from "./partner-dashboard";
 import { PartnerBottomNav } from "./partner-bottom-nav";
@@ -120,7 +119,6 @@ export default function PartnerApp() {
 
   return (
     <div className="min-h-screen flex flex-col bg-background relative">
-      <AnimatedBackground />
       <PartnerNavbar />
       <main className="flex-1 pb-20 px-3 sm:px-6 lg:px-8">
         <div className="max-w-2xl mx-auto">

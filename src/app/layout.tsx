@@ -36,6 +36,7 @@ export const metadata: Metadata = {
     "On-Demand",
   ],
   authors: [{ name: "Orbit Team" }],
+  manifest: "/manifest.json",
   icons: {
     icon: "/orbit-logo.png",
     apple: "/orbit-logo.png",
@@ -66,6 +67,17 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className="dark" suppressHydrationWarning>
+      <head>
+        <link rel="apple-touch-icon" href="/orbit-logo.png" />
+        <link rel="apple-touch-icon" sizes="180x180" href="/orbit-logo.png" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+        <meta name="mobile-web-app-capable" content="yes" />
+        <meta name="application-name" content="Orbit" />
+        <meta name="apple-mobile-web-app-title" content="Orbit" />
+        <meta name="msapplication-TileColor" content="#000000" />
+        <meta name="msapplication-navbutton-color" content="#000000" />
+      </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased bg-background text-foreground`}
       >

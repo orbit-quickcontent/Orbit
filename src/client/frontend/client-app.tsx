@@ -14,7 +14,6 @@
 import { useEffect, lazy, Suspense } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useAppStore } from "@/lib/store";
-import { AnimatedBackground } from "@/shared/frontend";
 import { ClientNavbar } from "./client-navbar";
 import { DashboardHome } from "./dashboard-home";
 import { BottomNav } from "./bottom-nav";
@@ -49,7 +48,6 @@ export default function ClientApp() {
 
   return (
     <div className="min-h-screen flex flex-col bg-background relative">
-      <AnimatedBackground />
       <ClientNavbar />
       <main className="flex-1 pb-20 px-3 sm:px-6 lg:px-8 overflow-x-hidden">
         <div className="max-w-7xl mx-auto">

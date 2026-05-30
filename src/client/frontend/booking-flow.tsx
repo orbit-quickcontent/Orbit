@@ -5,7 +5,7 @@
  * 
  * 3-step booking flow: Your Details → Schedule & Location → Review & Payment.
  * Includes diagonal clock time picker, "Book Right Now" option, Brand DNA
- * integration for Professional tier, and payment gate with Stripe/PayPal.
+ * integration for Professional tier, and payment gate with UPI/Razorpay.
  * 
  * Used by: client-app.tsx
  * Category: Client UI
@@ -359,7 +359,7 @@ export function BookingFlow() {
                 </div>
 
                 <div className="flex gap-3">
-                  {["Stripe", "PayPal"].map((method) => (
+                  {["UPI", "Razorpay"].map((method) => (
                     <div key={method} className="flex-1 orbit-card rounded-xl p-3 text-center text-xs sm:text-sm font-medium border border-orbit-cyan/20">
                       <CreditCard className="w-4 h-4 mx-auto mb-1.5 text-orbit-cyan" />{method}
                     </div>

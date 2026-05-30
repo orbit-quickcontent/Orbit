@@ -174,3 +174,31 @@ Stage Summary:
 - Phone numbers already in +91 format
 - App performance improved: reduced backdrop-blur GPU usage, fewer animations
 - Lint passes cleanly, dev server compiles successfully
+
+---
+Task ID: 9
+Agent: Main Agent
+Task: Remove background image, keep only black, setup PWA for iOS/Android, fix all feature issues
+
+Work Log:
+- Removed hero-bg.png background image from login-page.tsx — replaced with pure black div
+- Removed AnimatedBackground component from client-app.tsx and partner-app.tsx
+- Removed floating particles and orbital rings from splash-screen.tsx
+- Removed LOGIN_PARTICLES constant and all background effects
+- Fixed Stripe/PayPal labels → UPI/Razorpay in booking-flow.tsx (Indian payment methods)
+- Fixed duplicate formatRupee() in partner-profile-view.tsx → now imports shared formatCurrency
+- Fixed payment pipeline: added EN_ROUTE step between PARTNER_DISPATCHED and SHOOTING
+- Fixed fetchAvailableBookings() in store.ts to properly parse nested API response (booking inside dispatch)
+- Created PWA manifest.json in public/ with standalone display, black theme, icons
+- Installed next-pwa package and configured next.config.ts with PWA support
+- Added PWA meta tags to layout.tsx (apple-mobile-web-app-capable, mobile-web-app-capable, etc.)
+- Added apple-touch-icon links and MS tile color meta tags
+- Lint passes, dev server compiles successfully
+
+Stage Summary:
+- All backgrounds removed — pure black (#000000) throughout
+- PWA configured: manifest.json, service worker (production), Apple/Android meta tags
+- Indian payment methods (UPI/Razorpay) replace Stripe/PayPal
+- All currency consistently uses formatCurrency() with ₹ symbol
+- Fixed API response parsing for partner available bookings
+- Fixed status pipeline to include EN_ROUTE step

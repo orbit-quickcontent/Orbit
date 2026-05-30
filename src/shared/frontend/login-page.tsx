@@ -38,15 +38,6 @@ import { type UserRole } from "@/lib/types";
 import { toast } from "sonner";
 import OTPVerification from "./otp-verification";
 
-// Pre-computed particle positions (avoids hydration mismatch)
-const LOGIN_PARTICLES = Array.from({ length: 20 }, (_, i) => ({
-  top: ((i * 41 + 17) % 100),
-  left: ((i * 59 + 23) % 100),
-  delay: (i * 0.2) % 4,
-  dur: 3 + (i % 5),
-  cyan: i % 2 === 0,
-}));
-
 type LoginStep = "role" | "profile" | "otp";
 type AvatarMode = "avatar" | "photo";
 
@@ -202,38 +193,8 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen flex flex-col bg-background relative overflow-hidden">
-      {/* Background Effects */}
-      <div className="absolute inset-0">
-        <div
-          className="absolute inset-0"
-          style={{ backgroundImage: "url(/hero-bg.png)", backgroundSize: "cover", backgroundPosition: "center" }}
-        />
-        <div className="absolute inset-0 bg-gradient-to-b from-background/90 via-background/80 to-background" />
-
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 hidden sm:block">
-          <div className="w-[600px] h-[600px] border border-orbit-cyan/5 rounded-full animate-orbit" />
-        </div>
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 hidden sm:block">
-          <div
-            className="w-[400px] h-[400px] border border-orbit-purple/8 rounded-full animate-orbit"
-            style={{ animationDirection: "reverse", animationDuration: "15s" }}
-          />
-        </div>
-
-        {LOGIN_PARTICLES.map((p, i) => (
-          <div
-            key={i}
-            className="absolute w-1 h-1 rounded-full animate-float"
-            style={{
-              top: `${p.top}%`,
-              left: `${p.left}%`,
-              animationDelay: `${p.delay}s`,
-              animationDuration: `${p.dur}s`,
-              background: p.cyan ? "rgba(0, 191, 255, 0.3)" : "rgba(160, 32, 240, 0.3)",
-            }}
-          />
-        ))}
-      </div>
+      {/* Background — pure black, no image */}
+      <div className="absolute inset-0 bg-black" />
 
       {/* Header */}
       <header className="relative z-10 pt-8 pb-4 px-4">

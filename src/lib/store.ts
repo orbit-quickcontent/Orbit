@@ -585,25 +585,30 @@ export const useAppStore = create<AppState>((set, get) => ({
       const res = await fetch(`/api/bookings/available?partnerId=${state.partnerId}`);
       if (res.ok) {
         const data = await res.json();
-        const bookings: BookingInfo[] = (data.availableBookings || []).map((d: Record<string, unknown>) => ({
-          id: d.id as string,
-          packageId: d.packageId as string,
-          packageName: d.packageName as string,
-          packagePrice: d.packagePrice as number,
-          status: d.status as BookingStatus,
-          paymentStatus: d.paymentStatus as PaymentStatus,
-          bookingDate: d.bookingDate as string,
-          timeSlot: d.timeSlot as string,
-          location: (d.location as string) || "",
-          syncPercentage: (d.syncPercentage as number) || 0,
-          editCountdown: (d.editCountdown as number | null) || null,
-          partnerName: (d.partnerName as string | null) || null,
-          notes: (d.notes as string) || "",
-          deliveredAt: (d.deliveredAt as string | null) || null,
-          downloaded: (d.downloaded as boolean) || false,
-          cancelledBy: (d.cancelledBy as "CLIENT" | "PARTNER" | null) || null,
-          declinedByPartners: (d.declinedByPartners as string[]) || [],
-        }));
+        const bookings: BookingInfo[] = (data.availableBookings || []).map((d: Record<string, unknown>) => {
+          // API returns nested { dispatchId, round, dispatchedAt, booking: {...} }
+          const booking = (d.booking as Record<string, unknown>) ?? d;
+          const pkg = (booking.package as Record<string, unknown>) ?? {};
+          return {
+            id: booking.id as string,
+            packageId: (booking.packageId as string) ?? (pkg.id as string) ?? "",
+            packageName: (booking.packageName as string) ?? (pkg.name as string) ?? "",
+            packagePrice: (booking.packagePrice as number) ?? (pkg.price as number) ?? 0,
+            status: booking.status as BookingStatus,
+            paymentStatus: booking.paymentStatus as PaymentStatus,
+            bookingDate: booking.bookingDate as string,
+            timeSlot: booking.timeSlot as string,
+            location: (booking.location as string) || "",
+            syncPercentage: (booking.syncPercentage as number) || 0,
+            editCountdown: (booking.editCountdown as number | null) || null,
+            partnerName: (booking.partnerName as string | null) || null,
+            notes: (booking.notes as string) || "",
+            deliveredAt: (booking.deliveredAt as string | null) || null,
+            downloaded: (booking.downloaded as boolean) || false,
+            cancelledBy: (booking.cancelledBy as "CLIENT" | "PARTNER" | null) || null,
+            declinedByPartners: (booking.declinedByPartners as string[]) || [],
+          };
+        });
         set({ availableBookings: bookings });
       }
     } catch {

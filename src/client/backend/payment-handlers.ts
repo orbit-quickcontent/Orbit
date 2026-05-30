@@ -15,7 +15,8 @@ import { NextRequest, NextResponse } from 'next/server'
 // Status progression pipeline for partner dispatch and shooting
 const STATUS_PIPELINE: Record<string, string> = {
   PAID: 'PARTNER_DISPATCHED',
-  PARTNER_DISPATCHED: 'SHOOTING',
+  PARTNER_DISPATCHED: 'EN_ROUTE',
+  EN_ROUTE: 'SHOOTING',
   SHOOTING: 'SYNCING',
   SYNCING: 'EDITING',
   EDITING: 'DELIVERED',

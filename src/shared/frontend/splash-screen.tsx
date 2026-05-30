@@ -64,60 +64,7 @@ export default function SplashScreen({ onComplete }: SplashScreenProps) {
           transition={{ duration: 0.5, ease: "easeInOut" }}
           className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-[#000000]"
         >
-          {/* Subtle background particles */}
-          <div className="absolute inset-0 overflow-hidden pointer-events-none">
-            {Array.from({ length: 10 }, (_, i) => (
-              <div
-                key={i}
-                className="absolute rounded-full animate-float"
-                style={{
-                  width: `${2 + (i % 4)}px`,
-                  height: `${2 + (i % 4)}px`,
-                  top: `${(i * 7.3 + 5) % 95}%`,
-                  left: `${(i * 11.7 + 8) % 95}%`,
-                  animationDelay: `${(i * 0.3) % 5}s`,
-                  animationDuration: `${3 + (i % 5)}s`,
-                  background: i % 3 === 0
-                    ? "rgba(0, 191, 255, 0.15)"
-                    : i % 3 === 1
-                    ? "rgba(160, 32, 240, 0.15)"
-                    : "rgba(255, 255, 255, 0.05)",
-                }}
-              />
-            ))}
-          </div>
 
-          {/* Orbital ring behind logo */}
-          <motion.div
-            className="absolute"
-            initial={{ scale: 0.8, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{ duration: 1, ease: "easeOut" }}
-          >
-            <div className="w-40 h-40 sm:w-52 sm:h-52 rounded-full border border-orbit-cyan/10" />
-          </motion.div>
-          <motion.div
-            className="absolute"
-            initial={{ scale: 0.6, opacity: 0 }}
-            animate={{ scale: 1, opacity: 0.6 }}
-            transition={{ duration: 1.2, delay: 0.2, ease: "easeOut" }}
-          >
-            <div
-              className="w-56 h-56 sm:w-72 sm:h-72 rounded-full border border-orbit-purple/8"
-              style={{ animation: "orbit-spin 8s linear infinite" }}
-            />
-          </motion.div>
-          <motion.div
-            className="absolute"
-            initial={{ scale: 0.5, opacity: 0 }}
-            animate={{ scale: 1, opacity: 0.3 }}
-            transition={{ duration: 1.4, delay: 0.4, ease: "easeOut" }}
-          >
-            <div
-              className="w-72 h-72 sm:w-96 sm:h-96 rounded-full border border-orbit-cyan/5"
-              style={{ animation: "orbit-spin 12s linear infinite reverse" }}
-            />
-          </motion.div>
 
           {/* Logo container with glow */}
           <motion.div

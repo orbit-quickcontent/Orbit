@@ -41,20 +41,11 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { useAppStore } from "@/lib/store";
-import { AVATAR_COLORS, AVATAR_PRESETS } from "@/lib/constants";
+import { AVATAR_COLORS, AVATAR_PRESETS, formatCurrency } from "@/lib/constants";
 import { getInitials } from "@/lib/utils";
 import type { BankAccount } from "@/lib/types";
 
 type EditAvatarMode = "color" | "avatar" | "photo";
-
-/** Format Indian rupee amount */
-function formatRupee(amount: number): string {
-  return new Intl.NumberFormat("en-IN", {
-    style: "currency",
-    currency: "INR",
-    maximumFractionDigits: 0,
-  }).format(amount);
-}
 
 /** Mask account number: show only last 4 digits */
 function maskAccountNumber(accNum: string): string {
@@ -308,15 +299,15 @@ export function PartnerProfileView() {
               </div>
               <div>
                 <p className="text-[9px] text-muted-foreground uppercase tracking-wider">Wallet Balance</p>
-                <p className="text-base font-black text-foreground">{formatRupee(wallet.balance)}</p>
+                <p className="text-base font-black text-foreground">{formatCurrency(wallet.balance)}</p>
               </div>
             </div>
             <div className="text-right">
               {wallet.pendingClearance > 0 && (
-                <p className="text-[9px] text-amber-400/80">{formatRupee(wallet.pendingClearance)} pending</p>
+                <p className="text-[9px] text-amber-400/80">{formatCurrency(wallet.pendingClearance)} pending</p>
               )}
               {wallet.totalWithdrawn > 0 && (
-                <p className="text-[8px] text-muted-foreground/50">Withdrawn: {formatRupee(wallet.totalWithdrawn)}</p>
+                <p className="text-[8px] text-muted-foreground/50">Withdrawn: {formatCurrency(wallet.totalWithdrawn)}</p>
               )}
             </div>
           </div>
