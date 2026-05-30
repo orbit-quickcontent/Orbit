@@ -11,6 +11,18 @@
 import { create } from "zustand";
 import { type AppView, type AppPhase, type BookingStatus, type PaymentStatus, type UserRole, type PackageInfo, type BookingInfo, type UserProfile, type ReviewInfo, type BankAccount, type PartnerWallet, type PartnerSettings } from "./types";
 
+// Generate a stable ID for this device/session
+function generatePartnerId(): string {
+  if (typeof window === "undefined") return "";
+  const key = "orbit-partner-id";
+  let id = localStorage.getItem(key);
+  if (!id) {
+    id = `partner-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+    localStorage.setItem(key, id);
+  }
+  return id;
+}
+
 // ─── localStorage helpers ─────────────────────────────────────────────────────
 const STORAGE_KEY = "orbit-app-state";
 
@@ -34,6 +46,7 @@ function saveToStorage(state: Record<string, unknown>) {
       bookings: state.bookings,
       reviews: state.reviews,
       partnerActiveBooking: state.partnerActiveBooking,
+      partnerId: state.partnerId,
     };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(toSave));
   } catch { /* ignore */ }
@@ -141,6 +154,19 @@ interface AppState {
   // Partner settings
   updatePartnerSettings: (settings: Partial<PartnerSettings>) => void;
 
+  // Available bookings pushed to this partner via API/WebSocket
+  availableBookings: BookingInfo[];
+  setAvailableBookings: (bookings: BookingInfo[]) => void;
+  addAvailableBooking: (booking: BookingInfo) => void;
+  removeAvailableBooking: (bookingId: string) => void;
+
+  // Partner ID for API/WebSocket identification
+  partnerId: string;
+  setPartnerId: (id: string) => void;
+
+  // Fetch available bookings from API
+  fetchAvailableBookings: () => Promise<void>;
+
   // Booking form
   bookingDate: Date | undefined;
   setBookingDate: (date: Date | undefined) => void;
@@ -163,7 +189,6 @@ export const useAppStore = create<AppState>((set, get) => ({
     const stored = loadFromStorage();
     if (stored) {
       const storedUser = (stored.user as UserProfile) ?? defaultUser;
-      // Migrate old bookings that don't have new fields
       const storedBookings = ((stored.bookings as BookingInfo[]) ?? []).map((b) => ({
         ...b,
         deliveredAt: b.deliveredAt ?? null,
@@ -189,10 +214,11 @@ export const useAppStore = create<AppState>((set, get) => ({
         bookings: storedBookings,
         reviews: (stored.reviews as ReviewInfo[]) ?? [],
         partnerActiveBooking: (stored.partnerActiveBooking as BookingInfo | null) ?? null,
+        partnerId: (stored.partnerId as string) || generatePartnerId(),
         appPhase: stored.isAuthenticated ? "app" : "splash",
       });
     } else {
-      set({ _hydrated: true });
+      set({ _hydrated: true, partnerId: generatePartnerId() });
     }
   },
 
@@ -204,11 +230,13 @@ export const useAppStore = create<AppState>((set, get) => ({
   isAuthenticated: false,
   userRole: "USER",
   login: (role) => {
+    const pid = get().partnerId || generatePartnerId();
     const newState = {
       isAuthenticated: true,
       userRole: role,
       currentView: (role === "PARTNER" ? "partner" : "landing") as AppView,
       appPhase: "app" as AppPhase,
+      partnerId: pid,
     };
     set(newState);
     saveToStorage({ ...get(), ...newState });
@@ -224,6 +252,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       user: defaultUser,
       bookings: [],
       reviews: [],
+      availableBookings: [],
     });
     clearStorage();
   },
@@ -316,7 +345,6 @@ export const useAppStore = create<AppState>((set, get) => ({
   bookings: [],
   addBooking: (booking) =>
     set((state) => {
-      // Prevent duplicate bookings — if ID already exists, update instead
       const exists = state.bookings.some((b) => b.id === booking.id);
       if (exists) {
         const newBookings = state.bookings.map((b) =>
@@ -339,7 +367,6 @@ export const useAppStore = create<AppState>((set, get) => ({
           state.currentBooking?.id === id
             ? { ...state.currentBooking, status }
             : state.currentBooking,
-        // When booking is delivered, credit partner wallet automatically
         ...(status === "DELIVERED" && state.userRole === "PARTNER"
           ? {
               user: {
@@ -406,7 +433,6 @@ export const useAppStore = create<AppState>((set, get) => ({
       const newState = {
         bookings: updatedBookings,
         currentBooking: null as BookingInfo | null,
-        // Auto-credit partner wallet when booking is completed
         ...(state.userRole === "PARTNER"
           ? {
               user: {
@@ -533,6 +559,57 @@ export const useAppStore = create<AppState>((set, get) => ({
       saveToStorage({ ...get(), ...newState });
       return newState;
     }),
+
+  // Available bookings for partner (from API/WebSocket)
+  availableBookings: [],
+  setAvailableBookings: (bookings) => set({ availableBookings: bookings }),
+  addAvailableBooking: (booking) =>
+    set((state) => {
+      if (state.availableBookings.some((b) => b.id === booking.id)) return state;
+      return { availableBookings: [...state.availableBookings, booking] };
+    }),
+  removeAvailableBooking: (bookingId) =>
+    set((state) => ({
+      availableBookings: state.availableBookings.filter((b) => b.id !== bookingId),
+    })),
+
+  // Partner ID
+  partnerId: "",
+  setPartnerId: (id) => set({ partnerId: id }),
+
+  // Fetch available bookings from API
+  fetchAvailableBookings: async () => {
+    const state = get();
+    if (!state.partnerId || state.userRole !== "PARTNER") return;
+    try {
+      const res = await fetch(`/api/bookings/available?partnerId=${state.partnerId}`);
+      if (res.ok) {
+        const data = await res.json();
+        const bookings: BookingInfo[] = (data.availableBookings || []).map((d: Record<string, unknown>) => ({
+          id: d.id as string,
+          packageId: d.packageId as string,
+          packageName: d.packageName as string,
+          packagePrice: d.packagePrice as number,
+          status: d.status as BookingStatus,
+          paymentStatus: d.paymentStatus as PaymentStatus,
+          bookingDate: d.bookingDate as string,
+          timeSlot: d.timeSlot as string,
+          location: (d.location as string) || "",
+          syncPercentage: (d.syncPercentage as number) || 0,
+          editCountdown: (d.editCountdown as number | null) || null,
+          partnerName: (d.partnerName as string | null) || null,
+          notes: (d.notes as string) || "",
+          deliveredAt: (d.deliveredAt as string | null) || null,
+          downloaded: (d.downloaded as boolean) || false,
+          cancelledBy: (d.cancelledBy as "CLIENT" | "PARTNER" | null) || null,
+          declinedByPartners: (d.declinedByPartners as string[]) || [],
+        }));
+        set({ availableBookings: bookings });
+      }
+    } catch {
+      // Graceful fallback — keep existing state
+    }
+  },
 
   // Booking form
   bookingDate: undefined,

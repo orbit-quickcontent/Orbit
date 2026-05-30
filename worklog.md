@@ -93,3 +93,47 @@ Stage Summary:
 - Earnings page now shows wallet balance and withdrawal
 - Available work filtered to exclude already-accepted bookings
 - Offline behavior confirmed working correctly
+
+---
+Task ID: 7
+Agent: Main Agent
+Task: Full backend integration — dispatch, accept, decline, cancel with partner re-assignment + WebSocket real-time push + PRD
+
+Work Log:
+- Updated Prisma schema with WorkDispatch, Transaction models; added bank/wallet fields to Partner; added dispatch tracking fields to Booking
+- Ran db:push to sync schema to SQLite database
+- Built WebSocket mini-service at mini-services/orbit-ws/ on port 3003 with socket.io
+  - Partner online/offline tracking with rooms
+  - booking:dispatched push to specific partners
+  - booking:accepted-by-other notification when another partner accepts
+  - booking:cancelled notification
+  - Internal REST endpoints: /internal/dispatch, /internal/notify-client, /internal/notify-partners, /internal/online-partners
+- Built API routes for booking lifecycle:
+  - POST /api/bookings/[id]/dispatch — dispatch to 5 nearest online partners, create WorkDispatch records
+  - POST /api/bookings/[id]/accept — partner accepts, expire other dispatches, set EN_ROUTE
+  - POST /api/bookings/[id]/decline — partner declines, auto re-dispatch if all declined
+  - GET /api/bookings/available — list available dispatches for a partner
+  - GET /api/partners/[id]/wallet — wallet details with transactions
+  - POST /api/partners/[id]/withdraw — withdrawal with min $500, bank verification check
+  - Updated PATCH /api/bookings/[id] to credit wallet on DELIVERED, re-dispatch on PARTNER cancel
+- Updated Zustand store with:
+  - availableBookings state + setAvailableBookings/addAvailableBooking/removeAvailableBooking
+  - partnerId (stable per device via localStorage)
+  - fetchAvailableBookings() API call
+- Rewrote partner-dashboard.tsx to use real API + WebSocket:
+  - Fetches available work from /api/bookings/available
+  - WebSocket connection for real-time push of new bookings
+  - Accept calls /api/bookings/[id]/accept API
+  - Decline calls /api/bookings/[id]/decline API
+  - Complete work credits wallet via API
+  - Cancel triggers re-dispatch
+- Updated booking-flow.tsx to trigger /api/bookings/[id]/dispatch after payment
+- Created comprehensive PRD document
+
+Stage Summary:
+- Full backend connected: Client books → Payment → Dispatch to 5 partners → Accept/Decline → Complete → Wallet credit
+- Real-time WebSocket push for new work opportunities
+- Partner cancel triggers automatic re-dispatch to next 5 online partners
+- All partner declines trigger automatic re-dispatch to next round of 5 partners
+- Bank linking and withdrawal functional via API
+- Partner profile editing restricted (verified fields locked)

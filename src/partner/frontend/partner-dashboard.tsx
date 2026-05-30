@@ -3,15 +3,18 @@
 /**
  * 🟣 PARTNER FRONTEND | PartnerDashboard (Home)
  *
- * Home screen showing only Available Work bookings.
+ * Home screen showing Available Work bookings fetched from API + WebSocket.
  * Active workflow (navigate → shoot → sync → privacy → payment)
  * is also handled here since it starts from accepting a booking.
+ *
+ * Real-time: WebSocket pushes new bookings to this partner.
+ * Accept/Decline: Calls API to update server state + notify others.
  *
  * Used by: partner-app.tsx
  * Category: Partner UI
  */
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Clock,
@@ -20,13 +23,15 @@ import {
   MapPin,
   Briefcase,
   Play,
+  Loader2,
+  X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { useAppStore } from "@/lib/store";
 import { type BookingInfo } from "@/lib/types";
-import { SHOT_LIST, MOCK_AVAILABLE_BOOKINGS } from "./constants";
+import { SHOT_LIST } from "./constants";
 import { formatCurrency } from "@/lib/constants";
 import { staggerContainer, staggerItem } from "@/lib/animations";
 import { MapNavigation } from "./map-navigation";
@@ -34,15 +39,19 @@ import { ShootingPhase } from "./shooting-phase";
 import { SyncModule } from "./sync-module";
 import { PrivacyShield } from "./privacy-shield";
 import { PaymentReceived } from "./payment-received";
+import { io, Socket } from "socket.io-client";
 
 type PartnerPhase = "available" | "navigating" | "shooting" | "syncing" | "privacy" | "payment";
 
 export function PartnerDashboard() {
-  const { partnerActiveBooking, setPartnerActiveBooking, cancelBooking, updateBookingStatus, markBookingDelivered, markBookingDownloaded, addBooking, user, bookings } = useAppStore();
+  const {
+    partnerActiveBooking, setPartnerActiveBooking, cancelBooking,
+    updateBookingStatus, markBookingDelivered, markBookingDownloaded,
+    addBooking, user, bookings, availableBookings, userRole,
+    setAvailableBookings, addAvailableBooking, removeAvailableBooking,
+    partnerId, fetchAvailableBookings, creditPartnerWallet,
+  } = useAppStore();
 
-  // Filter out bookings that are already in the store (already accepted)
-  const bookingIds = new Set(bookings.map((b) => b.id));
-  const availableBookings = MOCK_AVAILABLE_BOOKINGS.filter((b) => !bookingIds.has(b.id));
   const [partnerPhase, setPartnerPhase] = useState<PartnerPhase>("available");
   const [shotUploads, setShotUploads] = useState<Map<string, string>>(new Map());
   const [uploadingShotId, setUploadingShotId] = useState<string | null>(null);
@@ -52,8 +61,80 @@ export function PartnerDashboard() {
   const [syncSpeed, setSyncSpeed] = useState(0);
   const [currentFile, setCurrentFile] = useState("");
   const syncIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const socketRef = useRef<Socket | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isAccepting, setIsAccepting] = useState<string | null>(null);
 
-  // Cleanup sync interval on unmount to prevent memory leaks
+  // ─── Fetch available bookings on mount ─────────────────────────────
+  useEffect(() => {
+    if (user.isOnline && partnerId) {
+      setIsLoading(true);
+      fetchAvailableBookings().finally(() => setIsLoading(false));
+    }
+  }, [user.isOnline, partnerId, fetchAvailableBookings]);
+
+  // ─── WebSocket connection for real-time push ──────────────────────
+  useEffect(() => {
+    if (!partnerId || userRole !== "PARTNER") return;
+
+    const socket = io("/?XTransformPort=3003", {
+      path: "/socket.io/",
+      transports: ["websocket", "polling"],
+      reconnection: true,
+      reconnectionDelay: 1000,
+      reconnectionAttempts: 10,
+    });
+
+    socket.on("connect", () => {
+      // Register this partner as online
+      if (user.isOnline) {
+        socket.emit("partner:online", { partnerId });
+      }
+    });
+
+    // Listen for new booking dispatches
+    socket.on("booking:dispatched", (data: { booking: BookingInfo; dispatchId: string; round: number }) => {
+      addAvailableBooking(data.booking);
+      toast.success("New work available!", {
+        description: `${data.booking.packageName} — ${data.booking.location}`,
+        duration: 6000,
+      });
+    });
+
+    // Listen for when another partner accepts a booking we were offered
+    socket.on("booking:accepted-by-other", (data: { bookingId: string; acceptedByPartnerId: string }) => {
+      removeAvailableBooking(data.bookingId);
+      // Don't show toast if we were the one who accepted
+      if (data.acceptedByPartnerId !== partnerId) {
+        toast.info("Booking taken by another partner", { duration: 3000 });
+      }
+    });
+
+    // Listen for booking cancellations
+    socket.on("booking:cancelled", (data: { bookingId: string; cancelledBy: string }) => {
+      removeAvailableBooking(data.bookingId);
+    });
+
+    socketRef.current = socket;
+
+    return () => {
+      socket.emit("partner:offline", { partnerId });
+      socket.disconnect();
+      socketRef.current = null;
+    };
+  }, [partnerId, userRole, user.isOnline, addAvailableBooking, removeAvailableBooking]);
+
+  // ─── Notify WebSocket when going online/offline ───────────────────
+  useEffect(() => {
+    if (!socketRef.current?.connected) return;
+    if (user.isOnline) {
+      socketRef.current.emit("partner:online", { partnerId });
+    } else {
+      socketRef.current.emit("partner:offline", { partnerId });
+    }
+  }, [user.isOnline, partnerId]);
+
+  // Cleanup sync interval on unmount
   useEffect(() => {
     return () => {
       if (syncIntervalRef.current) clearInterval(syncIntervalRef.current);
@@ -62,15 +143,71 @@ export function PartnerDashboard() {
 
   const syncFiles = ["clip_001_4k.mov", "clip_002_4k.mov", "clip_003_4k.mov", "clip_004_4k.mov", "clip_005_4k.mov"];
 
-  const handleAcceptBooking = (booking: BookingInfo) => {
-    // Add the booking to the store's bookings array so earnings/history can track it
-    addBooking(booking);
-    setPartnerActiveBooking(booking);
-    setPartnerPhase("navigating");
-    setCompletedShots(new Set());
-    setShotUploads(new Map());
-    toast.success("Booking accepted!", { description: `Navigate to ${booking.location}` });
-  };
+  // ─── Accept a booking via API ─────────────────────────────────────
+  const handleAcceptBooking = useCallback(async (booking: BookingInfo) => {
+    setIsAccepting(booking.id);
+    try {
+      // Call the accept API
+      const res = await fetch(`/api/bookings/${booking.id}/accept`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ partnerId }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || "Failed to accept booking");
+      }
+
+      // Update local state
+      addBooking(booking);
+      setPartnerActiveBooking(booking);
+      removeAvailableBooking(booking.id);
+      setPartnerPhase("navigating");
+      setCompletedShots(new Set());
+      setShotUploads(new Map());
+      toast.success("Booking accepted!", { description: `Navigate to ${booking.location}` });
+
+      // Notify WebSocket that we accepted
+      socketRef.current?.emit("booking:accept", { bookingId: booking.id, partnerId });
+    } catch (err) {
+      toast.error("Could not accept booking", {
+        description: err instanceof Error ? err.message : "Another partner may have already accepted it.",
+      });
+      // Refresh available bookings in case state changed
+      fetchAvailableBookings();
+    } finally {
+      setIsAccepting(null);
+    }
+  }, [partnerId, addBooking, setPartnerActiveBooking, removeAvailableBooking, fetchAvailableBookings]);
+
+  // ─── Decline a booking via API ────────────────────────────────────
+  const handleDeclineBooking = useCallback(async (booking: BookingInfo) => {
+    try {
+      const res = await fetch(`/api/bookings/${booking.id}/decline`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ partnerId }),
+      });
+
+      removeAvailableBooking(booking.id);
+      toast.info("Booking declined", { description: "It will be offered to other partners." });
+
+      // Notify WebSocket
+      socketRef.current?.emit("booking:decline", { bookingId: booking.id, partnerId });
+
+      // If the decline triggered a re-dispatch, we might get a new booking
+      if (res.ok) {
+        const data = await res.json().catch(() => ({}));
+        if (data.reDispatched) {
+          // Slight delay then refresh to get any new dispatches
+          setTimeout(() => fetchAvailableBookings(), 1500);
+        }
+      }
+    } catch {
+      removeAvailableBooking(booking.id);
+    }
+  }, [partnerId, removeAvailableBooking, fetchAvailableBookings]);
 
   const handleFileUpload = (shotId: string) => {
     setUploadingShotId(shotId);
@@ -85,7 +222,6 @@ export function PartnerDashboard() {
         next.set(uploadingShotId, fileName);
         return next;
       });
-      // Auto-check the shot checkbox when file is uploaded
       setCompletedShots((prev) => {
         const next = new Set(prev);
         next.add(uploadingShotId);
@@ -131,12 +267,24 @@ export function PartnerDashboard() {
     setPartnerPhase("payment");
   };
 
-  const handleCompleteAndReturn = () => {
-    // Update the booking in the store to DELIVERED status
+  const handleCompleteAndReturn = async () => {
     if (partnerActiveBooking) {
+      // Update booking status via API
+      try {
+        await fetch(`/api/bookings/${partnerActiveBooking.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ status: "DELIVERED" }),
+        });
+      } catch {
+        // Still update local state even if API fails
+      }
+
+      // Update local state
       updateBookingStatus(partnerActiveBooking.id, "DELIVERED");
       markBookingDelivered(partnerActiveBooking.id);
       markBookingDownloaded(partnerActiveBooking.id);
+      creditPartnerWallet(partnerActiveBooking.packagePrice);
     }
     setPartnerPhase("available");
     setPartnerActiveBooking(null);
@@ -145,7 +293,26 @@ export function PartnerDashboard() {
     toast.success("Project completed! Payment credited to your wallet.");
   };
 
-  // ─── Active Workflow (when partner has accepted a booking) ──────────────
+  // ─── Cancel booking via API ───────────────────────────────────────
+  const handleCancelBooking = useCallback(async () => {
+    if (!partnerActiveBooking) return;
+    if (!confirm("Are you sure you want to cancel this booking? It will be reassigned to another partner.")) return;
+
+    try {
+      await fetch(`/api/bookings/${partnerActiveBooking.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "CANCELLED", cancelledBy: "PARTNER" }),
+      });
+    } catch { /* still update local */ }
+
+    cancelBooking(partnerActiveBooking.id, "PARTNER");
+    setPartnerPhase("available");
+    setPartnerActiveBooking(null);
+    toast.success("Booking cancelled. It will be reassigned to another partner.");
+  }, [partnerActiveBooking, cancelBooking, setPartnerActiveBooking]);
+
+  // ─── Active Workflow (when partner has accepted a booking) ──────────
   if (partnerActiveBooking && partnerPhase !== "available") {
     return (
       <section className="pb-8 sm:pb-16 px-0 sm:px-4">
@@ -176,18 +343,11 @@ export function PartnerDashboard() {
               {partnerActiveBooking.packageName} · {partnerActiveBooking.location}
             </p>
             {/* Cancel Booking Button - Only show before arriving at location */}
-            {(partnerPhase === "navigating") && (
+            {partnerPhase === "navigating" && (
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => {
-                  if (confirm("Are you sure you want to cancel this booking? It will be reassigned to another partner.")) {
-                    cancelBooking(partnerActiveBooking.id, "PARTNER");
-                    setPartnerPhase("available");
-                    setPartnerActiveBooking(null);
-                    toast.success("Booking cancelled. It will be reassigned to another partner.");
-                  }
-                }}
+                onClick={handleCancelBooking}
                 className="mt-3 border-red-500/20 text-red-400 hover:bg-red-500/10 hover:border-red-500/30 text-xs"
               >
                 Cancel Booking
@@ -229,8 +389,7 @@ export function PartnerDashboard() {
     );
   }
 
-  // ─── Home: Available Work ────────────────────────────────────────────────
-  // If partner is offline, show prompt to go online
+  // ─── If partner is offline ──────────────────────────────────────────
   if (!user.isOnline) {
     return (
       <motion.div
@@ -257,7 +416,7 @@ export function PartnerDashboard() {
     );
   }
 
-  // ─── If partner has an active booking restored from storage (page refresh) ──
+  // ─── If partner has an active booking restored from storage ──────────
   if (partnerActiveBooking && partnerPhase === "available") {
     return (
       <motion.div
@@ -288,11 +447,7 @@ export function PartnerDashboard() {
               </Button>
               <Button
                 variant="outline"
-                onClick={() => {
-                  cancelBooking(partnerActiveBooking.id, "PARTNER");
-                  setPartnerActiveBooking(null);
-                  toast.success("Booking cancelled.");
-                }}
+                onClick={handleCancelBooking}
                 className="border-red-500/20 text-red-400 hover:bg-red-500/10 text-xs h-9"
               >
                 Cancel
@@ -304,6 +459,7 @@ export function PartnerDashboard() {
     );
   }
 
+  // ─── Home: Available Work ────────────────────────────────────────
   return (
     <motion.div
       variants={staggerContainer}
@@ -331,8 +487,16 @@ export function PartnerDashboard() {
         </div>
       </motion.div>
 
-      {/* Work Cards */}
-      {availableBookings.length === 0 ? (
+      {/* Loading State */}
+      {isLoading ? (
+        <motion.div variants={staggerItem}>
+          <div className="orbit-card rounded-xl p-8 text-center">
+            <Loader2 className="w-6 h-6 text-orbit-cyan animate-spin mx-auto mb-3" />
+            <p className="text-xs text-muted-foreground">Looking for available work...</p>
+          </div>
+        </motion.div>
+      ) : availableBookings.length === 0 ? (
+        /* Empty State */
         <motion.div variants={staggerItem}>
           <div className="orbit-card rounded-xl p-6 sm:p-8 text-center">
             <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-white/[0.03] flex items-center justify-center">
@@ -342,11 +506,15 @@ export function PartnerDashboard() {
             <p className="text-xs text-muted-foreground">
               New bookings will appear here when clients book sessions.
             </p>
+            <p className="text-[10px] text-muted-foreground/40 mt-2">
+              Keep the app open to receive real-time notifications.
+            </p>
           </div>
         </motion.div>
       ) : (
+        /* Work Cards */
         <div className="space-y-2.5">
-          {availableBookings.map((booking, idx) => (
+          {availableBookings.map((booking) => (
             <motion.div
               key={booking.id}
               variants={staggerItem}
@@ -407,14 +575,29 @@ export function PartnerDashboard() {
                   </p>
                 )}
 
-                {/* Row 4: Accept Button */}
-                <Button
-                  onClick={() => handleAcceptBooking(booking)}
-                  className="w-full bg-gradient-to-r from-orbit-cyan to-orbit-purple text-white hover:opacity-90 font-bold orbit-glow h-9 text-xs"
-                >
-                  Accept Booking
-                  <ArrowRight className="w-3.5 h-3.5 ml-1 group-hover:translate-x-1 transition-transform" />
-                </Button>
+                {/* Row 4: Accept + Decline Buttons */}
+                <div className="flex gap-2">
+                  <Button
+                    onClick={() => handleAcceptBooking(booking)}
+                    disabled={isAccepting === booking.id}
+                    className="flex-1 bg-gradient-to-r from-orbit-cyan to-orbit-purple text-white hover:opacity-90 font-bold orbit-glow h-9 text-xs"
+                  >
+                    {isAccepting === booking.id ? (
+                      <><Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" /> Accepting...</>
+                    ) : (
+                      <>Accept Booking <ArrowRight className="w-3.5 h-3.5 ml-1 group-hover:translate-x-1 transition-transform" /></>
+                    )}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleDeclineBooking(booking)}
+                    disabled={isAccepting === booking.id}
+                    className="border-orbit-border/50 text-muted-foreground hover:text-red-400 hover:border-red-500/30 h-9 text-xs px-3"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </Button>
+                </div>
               </div>
             </motion.div>
           ))}

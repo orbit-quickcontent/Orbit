@@ -79,7 +79,14 @@ export function BookingFlow() {
       if (!bookingRes.ok) throw new Error(bookingData.error || "Failed to create booking");
 
       const bookingId = bookingData.booking?.id || `OL-${Date.now().toString(36).toUpperCase()}`;
+      
+      // Process payment
       await fetch(`/api/bookings/${bookingId}/payment`, { method: "POST", headers: { "Content-Type": "application/json" } });
+
+      // Dispatch booking to 5 nearest online partners
+      try {
+        await fetch(`/api/bookings/${bookingId}/dispatch`, { method: "POST", headers: { "Content-Type": "application/json" } });
+      } catch { /* dispatch may fail gracefully — booking still tracked */ }
 
       const newBooking: BookingInfo = {
         id: bookingId, packageId: selectedPackage.id, packageName: selectedPackage.name, packagePrice: selectedPackage.price,
@@ -91,7 +98,7 @@ export function BookingFlow() {
       setCurrentBooking(newBooking);
       addBooking(newBooking);
       setIsProcessing(false);
-      toast.success("Payment initiated!", { description: `Booking ${bookingId}` });
+      toast.success("Payment initiated!", { description: `Booking ${bookingId} — dispatching to partners` });
       setCurrentView("tracking");
     } catch {
       setIsProcessing(false);
