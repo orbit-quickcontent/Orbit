@@ -287,45 +287,61 @@ export const useAppStore = create<AppState>((set, get) => ({
       return { bookings: newBookings };
     }),
   updateBookingStatus: (id, status) =>
-    set((state) => ({
-      bookings: state.bookings.map((b) =>
-        b.id === id ? { ...b, status } : b
-      ),
-      currentBooking:
-        state.currentBooking?.id === id
-          ? { ...state.currentBooking, status }
-          : state.currentBooking,
-    })),
+    set((state) => {
+      const newState = {
+        bookings: state.bookings.map((b) =>
+          b.id === id ? { ...b, status } : b
+        ),
+        currentBooking:
+          state.currentBooking?.id === id
+            ? { ...state.currentBooking, status }
+            : state.currentBooking,
+      };
+      saveToStorage({ ...get(), ...newState });
+      return newState;
+    }),
   updatePaymentStatus: (id, paymentStatus) =>
-    set((state) => ({
-      bookings: state.bookings.map((b) =>
-        b.id === id ? { ...b, paymentStatus } : b
-      ),
-      currentBooking:
-        state.currentBooking?.id === id
-          ? { ...state.currentBooking, paymentStatus }
-          : state.currentBooking,
-    })),
+    set((state) => {
+      const newState = {
+        bookings: state.bookings.map((b) =>
+          b.id === id ? { ...b, paymentStatus } : b
+        ),
+        currentBooking:
+          state.currentBooking?.id === id
+            ? { ...state.currentBooking, paymentStatus }
+            : state.currentBooking,
+      };
+      saveToStorage({ ...get(), ...newState });
+      return newState;
+    }),
   updateSyncPercentage: (id, syncPercentage) =>
-    set((state) => ({
-      bookings: state.bookings.map((b) =>
-        b.id === id ? { ...b, syncPercentage } : b
-      ),
-      currentBooking:
-        state.currentBooking?.id === id
-          ? { ...state.currentBooking, syncPercentage }
-          : state.currentBooking,
-    })),
+    set((state) => {
+      const newState = {
+        bookings: state.bookings.map((b) =>
+          b.id === id ? { ...b, syncPercentage } : b
+        ),
+        currentBooking:
+          state.currentBooking?.id === id
+            ? { ...state.currentBooking, syncPercentage }
+            : state.currentBooking,
+      };
+      saveToStorage({ ...get(), ...newState });
+      return newState;
+    }),
   updateEditCountdown: (id, editCountdown) =>
-    set((state) => ({
-      bookings: state.bookings.map((b) =>
-        b.id === id ? { ...b, editCountdown } : b
-      ),
-      currentBooking:
-        state.currentBooking?.id === id
-          ? { ...state.currentBooking, editCountdown }
-          : state.currentBooking,
-    })),
+    set((state) => {
+      const newState = {
+        bookings: state.bookings.map((b) =>
+          b.id === id ? { ...b, editCountdown } : b
+        ),
+        currentBooking:
+          state.currentBooking?.id === id
+            ? { ...state.currentBooking, editCountdown }
+            : state.currentBooking,
+      };
+      saveToStorage({ ...get(), ...newState });
+      return newState;
+    }),
   completeBooking: (id) =>
     set((state) => {
       const updatedBookings = state.bookings.map((b) =>
@@ -357,25 +373,33 @@ export const useAppStore = create<AppState>((set, get) => ({
       return newState;
     }),
   markBookingDownloaded: (id) =>
-    set((state) => ({
-      bookings: state.bookings.map((b) =>
-        b.id === id ? { ...b, downloaded: true } : b
-      ),
-      currentBooking:
-        state.currentBooking?.id === id
-          ? { ...state.currentBooking, downloaded: true }
-          : state.currentBooking,
-    })),
+    set((state) => {
+      const newState = {
+        bookings: state.bookings.map((b) =>
+          b.id === id ? { ...b, downloaded: true } : b
+        ),
+        currentBooking:
+          state.currentBooking?.id === id
+            ? { ...state.currentBooking, downloaded: true }
+            : state.currentBooking,
+      };
+      saveToStorage({ ...get(), ...newState });
+      return newState;
+    }),
   markBookingDelivered: (id) =>
-    set((state) => ({
-      bookings: state.bookings.map((b) =>
-        b.id === id ? { ...b, deliveredAt: new Date().toISOString() } : b
-      ),
-      currentBooking:
-        state.currentBooking?.id === id
-          ? { ...state.currentBooking, deliveredAt: new Date().toISOString() }
-          : state.currentBooking,
-    })),
+    set((state) => {
+      const newState = {
+        bookings: state.bookings.map((b) =>
+          b.id === id ? { ...b, deliveredAt: new Date().toISOString() } : b
+        ),
+        currentBooking:
+          state.currentBooking?.id === id
+            ? { ...state.currentBooking, deliveredAt: new Date().toISOString() }
+            : state.currentBooking,
+      };
+      saveToStorage({ ...get(), ...newState });
+      return newState;
+    }),
 
   // Partner
   partnerActiveBooking: null,

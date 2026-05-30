@@ -68,7 +68,7 @@ export function PartnerBottomNav() {
     <nav className="fixed bottom-0 left-0 right-0 z-50">
       <div className="px-4 sm:px-6 pb-[env(safe-area-inset-bottom,8px)] pt-1">
         <div className="orbit-nav-pill max-w-lg mx-auto">
-          <div className="flex items-center justify-around h-[60px] sm:h-[64px] relative">
+          <div className="flex items-center justify-around h-[52px] sm:h-[56px] relative">
             {NAV_ITEMS.map((navItem, idx) => {
               const isActive = getIsActive(navItem.view);
               const Icon = navItem.icon;
@@ -79,7 +79,7 @@ export function PartnerBottomNav() {
                   <button
                     key={navItem.view}
                     onClick={() => setCurrentView(navItem.view)}
-                    className="relative flex flex-col items-center justify-center gap-1 w-16 sm:w-20 h-full group"
+                    className="relative flex flex-col items-center justify-center gap-0.5 w-14 sm:w-18 h-full group"
                   >
                     {/* Active indicator */}
                     {isActive && (
@@ -95,11 +95,11 @@ export function PartnerBottomNav() {
                         ? "ring-2 ring-white/30 scale-110"
                         : "opacity-50 group-hover:opacity-80 group-hover:scale-105"
                     }`}>
-                      {renderNavAvatar("w-7 h-7 sm:w-8 sm:h-8", "text-[9px] sm:text-[10px]")}
+                      {renderNavAvatar("w-5 h-5 sm:w-6 sm:h-6", "text-[8px] sm:text-[10px]")}
                     </div>
 
                     <span
-                      className={`relative z-10 text-[9px] sm:text-[10px] leading-tight transition-colors duration-200 ${
+                      className={`relative z-10 text-[8px] sm:text-[10px] leading-tight transition-colors duration-200 ${
                         isActive
                           ? "text-foreground font-bold"
                           : "text-muted-foreground/40 font-medium group-hover:text-muted-foreground/70"
@@ -116,7 +116,7 @@ export function PartnerBottomNav() {
                 <button
                   key={navItem.label + idx}
                   onClick={() => setCurrentView(navItem.view)}
-                  className="relative flex flex-col items-center justify-center gap-1 w-16 sm:w-20 h-full group"
+                  className="relative flex flex-col items-center justify-center gap-0.5 w-14 sm:w-18 h-full group"
                 >
                   {/* Active indicator bar */}
                   {isActive && (
@@ -129,14 +129,14 @@ export function PartnerBottomNav() {
 
                   <div className="relative z-10">
                     <div
-                      className={`w-8 h-8 sm:w-9 sm:h-9 rounded-xl flex items-center justify-center transition-all duration-200 ${
+                      className={`w-7 h-7 sm:w-8 sm:h-8 rounded-xl flex items-center justify-center transition-all duration-200 ${
                         isActive
                           ? "bg-gradient-to-br from-orbit-cyan/15 to-orbit-purple/15 scale-105"
                           : "group-hover:bg-white/[0.04] group-hover:scale-105"
                       }`}
                     >
                       <Icon
-                        className={`w-[18px] h-[18px] sm:w-5 sm:h-5 transition-all duration-200 ${
+                        className={`w-[16px] h-[16px] sm:w-[18px] sm:h-[18px] transition-all duration-200 ${
                           isActive
                             ? navItem.view === "partner-earnings"
                               ? "text-green-400"
@@ -151,7 +151,7 @@ export function PartnerBottomNav() {
                   </div>
 
                   <span
-                    className={`relative z-10 text-[9px] sm:text-[10px] leading-tight transition-colors duration-200 ${
+                    className={`relative z-10 text-[8px] sm:text-[10px] leading-tight transition-colors duration-200 ${
                       isActive
                         ? "text-foreground font-bold"
                         : "text-muted-foreground/40 font-medium group-hover:text-muted-foreground/70"

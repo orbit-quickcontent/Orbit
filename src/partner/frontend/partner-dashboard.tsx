@@ -141,7 +141,7 @@ export function PartnerDashboard() {
   // ─── Active Workflow (when partner has accepted a booking) ──────────────
   if (partnerActiveBooking && partnerPhase !== "available") {
     return (
-      <section className="pb-12 sm:pb-20 px-0 sm:px-4">
+      <section className="pb-8 sm:pb-16 px-0 sm:px-4">
         <div className="max-w-4xl mx-auto">
           <motion.div
             className="text-center mb-4 sm:mb-6"

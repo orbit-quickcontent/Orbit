@@ -67,7 +67,7 @@ export function BottomNav() {
     <nav className="fixed bottom-0 left-0 right-0 z-50">
       <div className="px-3 sm:px-4 pb-[env(safe-area-inset-bottom,8px)] pt-1">
         <div className="orbit-nav-pill max-w-md mx-auto">
-          <div className="flex items-center justify-around h-[58px] sm:h-[62px] relative">
+          <div className="flex items-center justify-around h-[52px] sm:h-[56px] relative">
             {NAV_ITEMS.map((item) => {
               const isActive = getIsActive(item.view);
 
@@ -77,7 +77,7 @@ export function BottomNav() {
                   <button
                     key={item.view}
                     onClick={() => setCurrentView(item.view)}
-                    className="relative flex flex-col items-center justify-center gap-1 w-16 sm:w-20 h-full group"
+                    className="relative flex flex-col items-center justify-center gap-0.5 w-14 sm:w-18 h-full group"
                   >
                     {/* Active bg */}
                     {isActive && (
@@ -96,12 +96,12 @@ export function BottomNav() {
                             : "opacity-60 group-hover:opacity-100 group-hover:scale-105"
                         }`}
                       >
-                        {renderNavAvatar("w-6 h-6 sm:w-7 sm:h-7", "text-[10px] sm:text-xs")}
+                        {renderNavAvatar("w-5 h-5 sm:w-6 sm:h-6", "text-[8px] sm:text-[10px]")}
                       </div>
                     </div>
 
                     <span
-                      className={`relative z-10 text-[9px] sm:text-[10px] leading-tight transition-colors duration-200 ${
+                      className={`relative z-10 text-[8px] sm:text-[10px] leading-tight transition-colors duration-200 ${
                         isActive
                           ? "text-orbit-purple font-bold"
                           : "text-muted-foreground/40 font-medium group-hover:text-muted-foreground/70"
@@ -119,7 +119,7 @@ export function BottomNav() {
                 <button
                   key={item.view}
                   onClick={() => setCurrentView(item.view)}
-                  className="relative flex flex-col items-center justify-center gap-1 w-16 sm:w-20 h-full group"
+                  className="relative flex flex-col items-center justify-center gap-0.5 w-14 sm:w-18 h-full group"
                 >
                   {/* Active bg */}
                   {isActive && (
@@ -132,7 +132,7 @@ export function BottomNav() {
 
                   <div className="relative z-10">
                     <Icon
-                      className={`w-[20px] h-[20px] sm:w-[22px] sm:h-[22px] transition-all duration-200 ${
+                      className={`w-[18px] h-[18px] sm:w-[20px] sm:h-[20px] transition-all duration-200 ${
                         isActive
                           ? "text-orbit-cyan scale-105"
                           : "text-muted-foreground/40 group-hover:text-muted-foreground/70"
@@ -142,7 +142,7 @@ export function BottomNav() {
                   </div>
 
                   <span
-                    className={`relative z-10 text-[9px] sm:text-[10px] leading-tight transition-colors duration-200 ${
+                    className={`relative z-10 text-[8px] sm:text-[10px] leading-tight transition-colors duration-200 ${
                       isActive
                         ? "text-orbit-cyan font-bold"
                         : "text-muted-foreground/40 font-medium group-hover:text-muted-foreground/70"

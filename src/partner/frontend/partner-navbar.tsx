@@ -71,14 +71,14 @@ export function PartnerNavbar() {
     <header className="sticky top-0 z-50">
       <div className="bg-[#000000] border-b border-white/[0.06]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between py-4 sm:py-5">
+          <div className="flex items-center justify-between py-2.5 sm:py-3">
             {/* Left: Avatar + Greeting */}
             <div className="flex items-center gap-3 sm:gap-4">
               <button className="relative group">
                 <div className="transition-transform duration-200 group-hover:scale-105 group-active:scale-95">
-                  {renderAvatar("w-11 h-11 sm:w-12 sm:h-12", "text-sm sm:text-base")}
+                  {renderAvatar("w-9 h-9 sm:w-11 sm:h-11", "text-xs sm:text-sm")}
                 </div>
-                <div className={`absolute bottom-0 right-0 w-3 h-3 sm:w-3.5 sm:h-3.5 rounded-full border-2 border-[#000000] ${user.isOnline ? "bg-green-400" : "bg-gray-400"}`} />
+                <div className={`absolute bottom-0 right-0 w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full border-2 border-[#000000] ${user.isOnline ? "bg-green-400" : "bg-gray-400"}`} />
               </button>
 
               <div>
@@ -98,14 +98,14 @@ export function PartnerNavbar() {
 
             {/* Right: Search + Online Toggle + Notification + Menu */}
             <div className="flex items-center gap-2 sm:gap-3">
-              <button className="w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-white/[0.08] backdrop-blur-xl flex items-center justify-center text-muted-foreground hover:text-orbit-purple hover:bg-white/10 transition-all duration-200">
-                <Search className="w-4 h-4 sm:w-5 sm:h-5" />
+              <button className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-white/[0.08] backdrop-blur-xl flex items-center justify-center text-muted-foreground hover:text-orbit-purple hover:bg-white/10 transition-all duration-200">
+                <Search className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
               </button>
 
               {/* Online/Offline Toggle */}
               <button
                 onClick={handleToggleOnline}
-                className="flex items-center gap-1.5 h-10 sm:h-11 px-3 rounded-full bg-white/[0.08] backdrop-blur-xl hover:bg-white/10 transition-all duration-200"
+                className="flex items-center gap-1.5 h-9 sm:h-10 px-2.5 rounded-full bg-white/[0.08] backdrop-blur-xl hover:bg-white/10 transition-all duration-200"
                 title={user.isOnline ? "Go Offline" : "Go Online"}
               >
                 <div className={`w-2.5 h-2.5 rounded-full transition-colors duration-200 ${user.isOnline ? "bg-green-400" : "bg-gray-400"}`} />
@@ -115,10 +115,10 @@ export function PartnerNavbar() {
               </button>
 
               <button
-                className="relative w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-white/[0.08] backdrop-blur-xl flex items-center justify-center text-muted-foreground hover:text-orbit-purple hover:bg-white/10 transition-all duration-200"
+                className="relative w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-white/[0.08] backdrop-blur-xl flex items-center justify-center text-muted-foreground hover:text-orbit-purple hover:bg-white/10 transition-all duration-200"
                 onClick={() => setMenuOpen(!menuOpen)}
               >
-                <Bell className="w-4 h-4 sm:w-5 sm:h-5" />
+                <Bell className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                 {unreadNotifications > 0 && (
                   <span className="absolute -top-0.5 -right-0.5 w-5 h-5 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center shadow-lg animate-pulse">
                     {unreadNotifications}
@@ -140,7 +140,7 @@ export function PartnerNavbar() {
           </div>
 
           {/* Subtitle / Status line */}
-          <div className="pb-3 sm:pb-4 flex items-center gap-2">
+          <div className="pb-2 sm:pb-3 flex items-center gap-2">
             {hasActiveWork ? (
               <div className="flex items-center gap-2">
                 <div className="w-2 h-2 rounded-full bg-orbit-purple animate-pulse" />

@@ -189,11 +189,11 @@ export function PartnerProfileView() {
   return (
     <div className="pb-4">
       {/* Profile Header */}
-      <div className="orbit-card rounded-2xl p-6 sm:p-8 mb-4">
+      <div className="orbit-card rounded-xl p-4 sm:p-6 mb-3">
         <div className="flex flex-col sm:flex-row items-center gap-6">
           <div className="relative">
-            {renderProfileAvatar("w-24 h-24 sm:w-28 sm:h-28", "text-3xl sm:text-4xl")}
-            <div className={`absolute bottom-1 right-1 w-4 h-4 rounded-full border-2 border-[#000000] ${user.isOnline ? "bg-green-400" : "bg-gray-400"}`} />
+            {renderProfileAvatar("w-20 h-20 sm:w-24 sm:h-24", "text-2xl sm:text-3xl")}
+            <div className={`absolute bottom-1 right-1 w-3 h-3 rounded-full border-2 border-[#000000] ${user.isOnline ? "bg-green-400" : "bg-gray-400"}`} />
           </div>
 
           <div className="flex-1 text-center sm:text-left">
@@ -260,7 +260,7 @@ export function PartnerProfileView() {
             transition={{ duration: 0.3 }}
             className="overflow-hidden"
           >
-            <div className="orbit-card rounded-2xl p-6 space-y-4 mb-4">
+            <div className="orbit-card rounded-xl p-4 sm:p-5 space-y-3 mb-3">
               <h3 className="text-sm font-bold text-foreground uppercase tracking-wider">Edit Profile</h3>
 
               {/* Avatar Preview */}

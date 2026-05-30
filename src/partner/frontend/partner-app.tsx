@@ -83,7 +83,7 @@ export default function PartnerApp() {
     <div className="min-h-screen flex flex-col bg-background relative">
       <AnimatedBackground />
       <PartnerNavbar />
-      <main className="flex-1 pb-28 px-4 sm:px-6 lg:px-8">
+      <main className="flex-1 pb-20 px-3 sm:px-6 lg:px-8">
         <div className="max-w-2xl mx-auto">
           <AnimatePresence mode="wait">
             {renderView()}

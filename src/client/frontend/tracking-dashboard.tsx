@@ -425,7 +425,7 @@ export function TrackingDashboard() {
   // ─── No Active Booking ────────────────────────────────────
   if (!currentBooking) {
     return (
-      <section className="pt-4 sm:pt-6 pb-12 sm:pb-20 px-0 sm:px-4 flex items-center justify-center min-h-[60vh]">
+      <section className="pt-2 sm:pt-4 pb-8 sm:pb-12 px-0 sm:px-4 flex items-center justify-center min-h-[50vh]">
         <motion.div
           className="text-center orbit-card rounded-2xl p-6 sm:p-10 max-w-md mx-auto"
           initial={{ opacity: 0, y: 20 }}
@@ -455,7 +455,7 @@ export function TrackingDashboard() {
   const isSyncingPhase = activeStep === 4;
 
   return (
-    <section className="pt-4 sm:pt-6 pb-12 sm:pb-20 px-0 sm:px-4">
+    <section className="pt-2 sm:pt-4 pb-8 sm:pb-12 px-0 sm:px-4">
       <div className="max-w-4xl mx-auto space-y-4 sm:space-y-5">
         {/* Header */}
         <motion.div

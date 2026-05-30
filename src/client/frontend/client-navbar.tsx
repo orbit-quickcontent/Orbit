@@ -184,7 +184,7 @@ export function ClientNavbar() {
       {/* Solid background to prevent text overlap */}
       <div className="bg-[#000000] border-b border-white/[0.06]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between py-4 sm:py-5">
+          <div className="flex items-center justify-between py-2.5 sm:py-3">
             {/* Left: Avatar + Greeting */}
             <div className="flex items-center gap-3 sm:gap-4">
               {/* Avatar */}
@@ -193,10 +193,10 @@ export function ClientNavbar() {
                 className="relative group"
               >
                 <div className="transition-transform duration-200 group-hover:scale-105 group-active:scale-95">
-                  {renderAvatar("w-11 h-11 sm:w-12 sm:h-12", "text-sm sm:text-base")}
+                  {renderAvatar("w-9 h-9 sm:w-11 sm:h-11", "text-xs sm:text-sm")}
                 </div>
                 {/* Online indicator */}
-                <div className="absolute bottom-0 right-0 w-3 h-3 sm:w-3.5 sm:h-3.5 rounded-full bg-green-400 border-2 border-[#000000]" />
+                <div className="absolute bottom-0 right-0 w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-green-400 border-2 border-[#000000]" />
               </button>
 
               {/* Greeting Text */}
@@ -221,7 +221,7 @@ export function ClientNavbar() {
                       animate={{ opacity: 1, x: 0 }}
                       exit={{ opacity: 0, x: 8 }}
                       transition={{ duration: 0.2, ease: "easeInOut" }}
-                      className="absolute right-0 top-0 z-10 flex items-center w-[calc(100vw-2rem)] sm:w-[220px]"
+                      className="absolute right-0 top-0 z-10 flex items-center w-[260px] sm:w-[220px]"
                     >
                       <div className="w-full flex items-center gap-2 bg-white/[0.10] backdrop-blur-xl rounded-full px-3 h-10 sm:h-11 border border-white/10">
                         <Search className="w-4 h-4 text-muted-foreground shrink-0" />
@@ -253,7 +253,7 @@ export function ClientNavbar() {
                       animate={{ opacity: 1, y: 0, scale: 1 }}
                       exit={{ opacity: 0, y: -4, scale: 0.95 }}
                       transition={{ duration: 0.15 }}
-                      className="absolute right-0 top-12 sm:top-13 w-[calc(100vw-2rem)] sm:w-56 bg-[#0A0A0A]/95 backdrop-blur-xl border border-white/10 rounded-2xl overflow-hidden shadow-2xl z-[70]"
+                      className="absolute right-0 top-12 sm:top-13 w-56 bg-[#0A0A0A]/95 backdrop-blur-xl border border-white/10 rounded-2xl overflow-hidden shadow-2xl z-[70]"
                     >
                       <div className="p-2">
                         <p className="px-3 py-1.5 text-[10px] font-semibold text-muted-foreground/60 uppercase tracking-wider">
@@ -284,9 +284,9 @@ export function ClientNavbar() {
                     setNotifOpen(false);
                     if (searchOpen) setSearchQuery("");
                   }}
-                  className="w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-white/[0.08] backdrop-blur-xl flex items-center justify-center text-muted-foreground hover:text-orbit-cyan hover:bg-white/10 transition-all duration-200"
+                  className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-white/[0.08] backdrop-blur-xl flex items-center justify-center text-muted-foreground hover:text-orbit-cyan hover:bg-white/10 transition-all duration-200"
                 >
-                  <Search className="w-4 h-4 sm:w-5 sm:h-5" />
+                  <Search className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                 </button>
               </div>
 
@@ -316,7 +316,7 @@ export function ClientNavbar() {
                       animate={{ opacity: 1, y: 0, scale: 1 }}
                       exit={{ opacity: 0, y: -8, scale: 0.95 }}
                       transition={{ duration: 0.2 }}
-                      className="absolute right-0 top-12 sm:top-13 w-[calc(100vw-2rem)] sm:w-80 max-w-[320px] bg-[#0A0A0A]/95 backdrop-blur-xl border border-white/10 rounded-2xl overflow-hidden shadow-2xl z-[70]"
+                      className="absolute right-0 top-12 sm:top-13 w-72 max-w-[300px] bg-[#0A0A0A]/95 backdrop-blur-xl border border-white/10 rounded-2xl overflow-hidden shadow-2xl z-[70]"
                     >
                       <div className="p-3 border-b border-white/5">
                         <div className="flex items-center justify-between">
@@ -415,7 +415,7 @@ export function ClientNavbar() {
           </div>
 
           {/* Subtitle / Status line */}
-          <div className="pb-3 sm:pb-4 flex items-center gap-2">
+          <div className="pb-2 sm:pb-3 flex items-center gap-2">
             {hasActiveBooking ? (
               <div className="flex items-center gap-2 min-w-0">
                 <div className="w-2 h-2 rounded-full bg-orbit-cyan animate-pulse shrink-0" />

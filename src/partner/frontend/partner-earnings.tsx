@@ -63,7 +63,7 @@ export function PartnerEarnings() {
       variants={staggerContainer}
       initial="hidden"
       animate="show"
-      className="space-y-5 sm:space-y-6"
+      className="space-y-4 sm:space-y-5"
     >
       {/* Hero Earnings Card */}
       <motion.div variants={staggerItem}>
@@ -72,7 +72,7 @@ export function PartnerEarnings() {
           <div className="absolute top-0 right-0 w-40 h-40 bg-gradient-to-bl from-orbit-cyan/10 to-transparent rounded-bl-full" />
           <div className="absolute bottom-0 left-0 w-24 h-24 bg-gradient-to-tr from-green-400/5 to-transparent rounded-tr-full" />
 
-          <div className="relative p-5 sm:p-6">
+          <div className="relative p-4 sm:p-5">
             <div className="flex items-center justify-between mb-6">
               <div className="flex items-center gap-2.5">
                 <div className="w-10 h-10 rounded-xl bg-green-500/15 flex items-center justify-center">
@@ -97,8 +97,8 @@ export function PartnerEarnings() {
                 Total Amount Earned
               </p>
               <div className="flex items-center justify-center gap-1.5">
-                <DollarSign className="w-6 h-6 sm:w-7 sm:h-7 text-green-400" />
-                <span className="text-3xl sm:text-5xl font-black text-foreground tracking-tight">
+                <DollarSign className="w-5 h-5 sm:w-6 sm:h-6 text-green-400" />
+                <span className="text-2xl sm:text-4xl font-black text-foreground tracking-tight">
                   {totalEarned.toLocaleString("en-US")}
                 </span>
               </div>

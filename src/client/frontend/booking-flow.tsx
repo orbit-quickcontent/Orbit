@@ -110,7 +110,7 @@ export function BookingFlow() {
   };
 
   return (
-    <section className="min-h-screen pt-4 sm:pt-6 pb-12 sm:pb-20 px-0 sm:px-4">
+    <section className="pt-2 sm:pt-4 pb-8 sm:pb-12 px-0 sm:px-4">
       <div className="max-w-2xl mx-auto">
         <motion.div className="text-center mb-6 sm:mb-8" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
           <h2 className="text-2xl sm:text-3xl font-black tracking-tight mb-2">

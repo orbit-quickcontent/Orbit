@@ -77,7 +77,7 @@ export function PackageDashboard() {
   };
 
   return (
-    <section className="min-h-screen pt-4 sm:pt-6 pb-12 sm:pb-20 px-0 sm:px-4">
+    <section className="pt-2 sm:pt-4 pb-8 sm:pb-12 px-0 sm:px-4">
       <div className="max-w-6xl mx-auto">
         <motion.div className="text-center mb-8 sm:mb-12" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
           <Badge variant="outline" className="mb-4 border-orbit-cyan/30 text-orbit-cyan bg-orbit-cyan/5">
