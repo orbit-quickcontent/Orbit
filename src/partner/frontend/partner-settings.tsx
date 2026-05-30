@@ -94,7 +94,7 @@ export function PartnerSettings() {
   const handleWithdraw = () => {
     const amount = parseFloat(withdrawAmount);
     if (isNaN(amount) || amount < 500) {
-      toast.error("Minimum withdrawal amount is $500");
+      toast.error("Minimum withdrawal amount is ₹500");
       return;
     }
     if (amount > wallet.balance) {
@@ -108,7 +108,7 @@ export function PartnerSettings() {
     withdrawFromWallet(amount);
     setWithdrawAmount("");
     setShowWithdrawInput(false);
-    toast.success(`$${amount.toLocaleString()} withdrawn successfully`);
+    toast.success(`₹${amount.toLocaleString("en-IN")} withdrawn successfully`);
   };
 
   const maskAccountNumber = (acc: string) => {
@@ -471,7 +471,7 @@ export function PartnerSettings() {
                     type="number"
                     value={withdrawAmount}
                     onChange={(e) => setWithdrawAmount(e.target.value)}
-                    placeholder="Min $500"
+                    placeholder="Min ₹500"
                     className="bg-white/5 border-orbit-border text-foreground h-9 text-xs flex-1"
                   />
                   <Button
@@ -483,7 +483,7 @@ export function PartnerSettings() {
                   </Button>
                 </div>
                 <p className="text-[10px] text-muted-foreground/50">
-                  Minimum withdrawal: $500 &middot; Funds will be sent to {bankAccount?.bankName || "your bank account"}
+                  Minimum withdrawal: ₹500 &middot; Funds will be sent to {bankAccount?.bankName || "your bank account"}
                 </p>
                 <Button
                   variant="ghost"
@@ -521,7 +521,7 @@ export function PartnerSettings() {
                 <div className="flex items-center justify-between mt-1">
                   <span className="text-[10px] text-muted-foreground/50">Last Withdrawal</span>
                   <span className="text-[10px] text-muted-foreground/70">
-                    {new Date(wallet.lastWithdrawnAt).toLocaleDateString("en-US", {
+                    {new Date(wallet.lastWithdrawnAt).toLocaleDateString("en-IN", {
                       month: "short",
                       day: "numeric",
                       year: "numeric",

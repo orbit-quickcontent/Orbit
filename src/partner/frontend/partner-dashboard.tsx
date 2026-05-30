@@ -557,7 +557,7 @@ export function PartnerDashboard() {
                 <div className="flex flex-wrap gap-x-3 gap-y-1 text-[10px] sm:text-xs text-muted-foreground mb-2">
                   <div className="flex items-center gap-1">
                     <CalendarIcon className="w-2.5 h-2.5 text-orbit-cyan/70" />
-                    <span className="truncate">{new Date(booking.bookingDate).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</span>
+                    <span className="truncate">{new Date(booking.bookingDate).toLocaleDateString("en-IN", { month: "short", day: "numeric" })}</span>
                   </div>
                   <div className="flex items-center gap-1">
                     <Clock className="w-2.5 h-2.5 text-orbit-cyan/70" />

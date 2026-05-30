@@ -223,7 +223,7 @@ export function ClientNavbar() {
                       transition={{ duration: 0.2, ease: "easeInOut" }}
                       className="absolute right-0 top-0 z-10 flex items-center w-[260px] sm:w-[220px]"
                     >
-                      <div className="w-full flex items-center gap-2 bg-white/[0.10] backdrop-blur-xl rounded-full px-3 h-10 sm:h-11 border border-white/10">
+                      <div className="w-full flex items-center gap-2 bg-white/[0.10] backdrop-blur-lg rounded-full px-3 h-10 sm:h-11 border border-white/10">
                         <Search className="w-4 h-4 text-muted-foreground shrink-0" />
                         <input
                           autoFocus
@@ -253,7 +253,7 @@ export function ClientNavbar() {
                       animate={{ opacity: 1, y: 0, scale: 1 }}
                       exit={{ opacity: 0, y: -4, scale: 0.95 }}
                       transition={{ duration: 0.15 }}
-                      className="absolute right-0 top-12 sm:top-13 w-56 bg-[#0A0A0A]/95 backdrop-blur-xl border border-white/10 rounded-2xl overflow-hidden shadow-2xl z-[70]"
+                      className="absolute right-0 top-12 sm:top-13 w-56 bg-[#0A0A0A]/95 backdrop-blur-lg border border-white/10 rounded-2xl overflow-hidden shadow-2xl z-[70]"
                     >
                       <div className="p-2">
                         <p className="px-3 py-1.5 text-[10px] font-semibold text-muted-foreground/60 uppercase tracking-wider">
@@ -284,7 +284,7 @@ export function ClientNavbar() {
                     setNotifOpen(false);
                     if (searchOpen) setSearchQuery("");
                   }}
-                  className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-white/[0.08] backdrop-blur-xl flex items-center justify-center text-muted-foreground hover:text-orbit-cyan hover:bg-white/10 transition-all duration-200"
+                  className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-white/[0.08] backdrop-blur-lg flex items-center justify-center text-muted-foreground hover:text-orbit-cyan hover:bg-white/10 transition-all duration-200"
                 >
                   <Search className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                 </button>
@@ -293,7 +293,7 @@ export function ClientNavbar() {
               {/* Notification bell */}
               <div ref={notifRef} className="relative">
                 <button
-                  className="relative w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-white/[0.08] backdrop-blur-xl flex items-center justify-center text-muted-foreground hover:text-orbit-cyan hover:bg-white/10 transition-all duration-200"
+                  className="relative w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-white/[0.08] backdrop-blur-lg flex items-center justify-center text-muted-foreground hover:text-orbit-cyan hover:bg-white/10 transition-all duration-200"
                   onClick={() => {
                     setNotifOpen(!notifOpen);
                     setSearchOpen(false);
@@ -316,7 +316,7 @@ export function ClientNavbar() {
                       animate={{ opacity: 1, y: 0, scale: 1 }}
                       exit={{ opacity: 0, y: -8, scale: 0.95 }}
                       transition={{ duration: 0.2 }}
-                      className="absolute right-0 top-12 sm:top-13 w-72 max-w-[300px] bg-[#0A0A0A]/95 backdrop-blur-xl border border-white/10 rounded-2xl overflow-hidden shadow-2xl z-[70]"
+                      className="absolute right-0 top-12 sm:top-13 w-72 max-w-[300px] bg-[#0A0A0A]/95 backdrop-blur-lg border border-white/10 rounded-2xl overflow-hidden shadow-2xl z-[70]"
                     >
                       <div className="p-3 border-b border-white/5">
                         <div className="flex items-center justify-between">
@@ -403,7 +403,7 @@ export function ClientNavbar() {
                   setSearchOpen(false);
                   setNotifOpen(false);
                 }}
-                className="md:hidden w-10 h-10 rounded-full bg-white/[0.08] backdrop-blur-xl flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
+                className="md:hidden w-10 h-10 rounded-full bg-white/[0.08] backdrop-blur-lg flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
               >
                 <ChevronDown
                   className={`w-4 h-4 transition-transform duration-200 ${
@@ -446,7 +446,7 @@ export function ClientNavbar() {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -8, scale: 0.95 }}
             transition={{ duration: 0.2 }}
-            className="absolute right-4 sm:right-6 top-[4.5rem] sm:top-[5.5rem] w-56 bg-[#0A0A0A]/95 backdrop-blur-xl border border-white/10 rounded-2xl overflow-hidden shadow-2xl z-[60]"
+            className="absolute right-4 sm:right-6 top-[4.5rem] sm:top-[5.5rem] w-56 bg-[#0A0A0A]/95 backdrop-blur-lg border border-white/10 rounded-2xl overflow-hidden shadow-2xl z-[60]"
           >
             <div className="p-2">
               {/* Notifications */}
@@ -539,5 +539,5 @@ function getTimeAgo(date: Date): string {
   if (diffHours < 24) return `${diffHours}h ago`;
   const diffDays = Math.floor(diffHours / 24);
   if (diffDays < 7) return `${diffDays}d ago`;
-  return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  return date.toLocaleDateString("en-IN", { month: "short", day: "numeric" });
 }

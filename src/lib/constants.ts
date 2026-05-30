@@ -24,9 +24,9 @@ export const AVATAR_PRESETS = [
   { id: "explorer", emoji: "🌍", label: "Explorer", gradient: "from-green-400 to-emerald-500", description: "Adventurous Explorer", image: "/avatars/explorer.png" },
 ] as const;
 
-// Format currency in US Dollars
+// Format currency in Indian Rupees (₹)
 export function formatCurrency(amount: number): string {
-  return `$${amount.toLocaleString("en-US")}`;
+  return `₹${amount.toLocaleString("en-IN")}`;
 }
 
 // Redownload window: 30 days in milliseconds

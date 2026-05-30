@@ -291,7 +291,7 @@ export default function LoginPage() {
                     className="group cursor-pointer"
                     onClick={() => handleRoleSelect("USER")}
                   >
-                    <div className={`relative bg-white/[0.07] backdrop-blur-xl rounded-2xl p-6 sm:p-8 h-full transition-all duration-300 border ${
+                    <div className={`relative bg-white/[0.07] backdrop-blur-lg rounded-2xl p-6 sm:p-8 h-full transition-all duration-300 border ${
                       hoveredRole === "USER" ? "border-orbit-cyan/50 scale-[1.02] shadow-lg shadow-orbit-cyan/10" : "border-white/10 hover:border-orbit-cyan/20"
                     }`}>
                       <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-gradient-to-br from-orbit-cyan/15 to-orbit-purple/15 flex items-center justify-center mb-6 group-hover:from-orbit-cyan/25 group-hover:to-orbit-purple/25 transition-colors">
@@ -331,7 +331,7 @@ export default function LoginPage() {
                     className="group cursor-pointer"
                     onClick={() => handleRoleSelect("PARTNER")}
                   >
-                    <div className={`relative bg-white/[0.07] backdrop-blur-xl rounded-2xl p-6 sm:p-8 h-full transition-all duration-300 border ${
+                    <div className={`relative bg-white/[0.07] backdrop-blur-lg rounded-2xl p-6 sm:p-8 h-full transition-all duration-300 border ${
                       hoveredRole === "PARTNER" ? "border-orbit-purple/50 scale-[1.02] shadow-lg shadow-orbit-purple/10" : "border-white/10 hover:border-orbit-purple/20"
                     }`}>
                       <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-gradient-to-br from-orbit-purple/15 to-orbit-cyan/15 flex items-center justify-center mb-6 group-hover:from-orbit-purple/25 group-hover:to-orbit-cyan/25 transition-colors">
@@ -450,7 +450,7 @@ export default function LoginPage() {
                   </div>
 
                   {/* ─── Avatar Selection (Unified: Avatar + Photo) ─── */}
-                  <div className="bg-white/[0.07] backdrop-blur-xl rounded-2xl p-5 sm:p-6 mb-4 border border-white/10">
+                  <div className="bg-white/[0.07] backdrop-blur-lg rounded-2xl p-5 sm:p-6 mb-4 border border-white/10">
                     <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-4 text-center">
                       Choose Your Profile Picture
                     </h3>
@@ -540,7 +540,7 @@ export default function LoginPage() {
                   </div>
 
                   {/* ─── Profile Form ─── */}
-                  <div className="bg-white/[0.07] backdrop-blur-xl rounded-2xl p-5 sm:p-6 space-y-4 border border-white/10">
+                  <div className="bg-white/[0.07] backdrop-blur-lg rounded-2xl p-5 sm:p-6 space-y-4 border border-white/10">
                     {/* Full Name */}
                     <div className="space-y-2">
                       <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-2">

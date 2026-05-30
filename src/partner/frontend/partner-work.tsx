@@ -161,7 +161,7 @@ export function PartnerWork() {
                   </div>
                   <div className="text-[9px] text-muted-foreground/60 flex items-center gap-1.5 mt-0.5">
                     <span>
-                      {new Date(entry.bookingDate).toLocaleDateString("en-US", {
+                      {new Date(entry.bookingDate).toLocaleDateString("en-IN", {
                         month: "short",
                         day: "numeric",
                       })}

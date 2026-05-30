@@ -66,7 +66,7 @@ export default function SplashScreen({ onComplete }: SplashScreenProps) {
         >
           {/* Subtle background particles */}
           <div className="absolute inset-0 overflow-hidden pointer-events-none">
-            {Array.from({ length: 30 }, (_, i) => (
+            {Array.from({ length: 10 }, (_, i) => (
               <div
                 key={i}
                 className="absolute rounded-full animate-float"
@@ -169,10 +169,9 @@ export default function SplashScreen({ onComplete }: SplashScreenProps) {
             transition={{ duration: 0.4, delay: 0.8 }}
           >
             <div className="h-1 rounded-full bg-white/5 overflow-hidden">
-              <motion.div
-                className="h-full rounded-full bg-gradient-to-r from-orbit-cyan to-orbit-purple"
+              <div
+                className="h-full rounded-full bg-gradient-to-r from-orbit-cyan to-orbit-purple transition-[width] duration-100 ease-linear"
                 style={{ width: `${progress}%` }}
-                transition={{ duration: 0.1, ease: "linear" }}
               />
             </div>
             <div className="flex justify-between mt-2">

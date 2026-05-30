@@ -172,7 +172,7 @@ export function PartnerNavbar() {
             <div className="flex items-center gap-2 sm:gap-3">
               <button
                 onClick={() => { setSearchOpen(true); setMenuOpen(false); }}
-                className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-white/[0.08] backdrop-blur-xl flex items-center justify-center text-muted-foreground hover:text-orbit-purple hover:bg-white/10 transition-all duration-200"
+                className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-white/[0.08] backdrop-blur-lg flex items-center justify-center text-muted-foreground hover:text-orbit-purple hover:bg-white/10 transition-all duration-200"
               >
                 <Search className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
               </button>
@@ -180,7 +180,7 @@ export function PartnerNavbar() {
               {/* Online/Offline Toggle */}
               <button
                 onClick={handleToggleOnline}
-                className="flex items-center gap-1.5 h-9 sm:h-10 px-2.5 rounded-full bg-white/[0.08] backdrop-blur-xl hover:bg-white/10 transition-all duration-200"
+                className="flex items-center gap-1.5 h-9 sm:h-10 px-2.5 rounded-full bg-white/[0.08] backdrop-blur-lg hover:bg-white/10 transition-all duration-200"
                 title={user.isOnline ? "Go Offline" : "Go Online"}
               >
                 <div className={`w-2.5 h-2.5 rounded-full transition-colors duration-200 ${user.isOnline ? "bg-green-400" : "bg-gray-400"}`} />
@@ -190,7 +190,7 @@ export function PartnerNavbar() {
               </button>
 
               <button
-                className="relative w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-white/[0.08] backdrop-blur-xl flex items-center justify-center text-muted-foreground hover:text-orbit-purple hover:bg-white/10 transition-all duration-200"
+                className="relative w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-white/[0.08] backdrop-blur-lg flex items-center justify-center text-muted-foreground hover:text-orbit-purple hover:bg-white/10 transition-all duration-200"
                 onClick={() => setMenuOpen(!menuOpen)}
               >
                 <Bell className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
@@ -203,7 +203,7 @@ export function PartnerNavbar() {
 
               <button
                 onClick={() => setMenuOpen(!menuOpen)}
-                className="md:hidden w-10 h-10 rounded-full bg-white/[0.08] backdrop-blur-xl flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
+                className="md:hidden w-10 h-10 rounded-full bg-white/[0.08] backdrop-blur-lg flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
               >
                 <ChevronDown
                   className={`w-4 h-4 transition-transform duration-200 ${
@@ -256,7 +256,7 @@ export function PartnerNavbar() {
             transition={{ duration: 0.2 }}
             className="absolute left-4 right-4 sm:left-6 sm:right-6 top-16 sm:top-20 z-[70]"
           >
-            <div className="bg-[#0A0A0A]/95 backdrop-blur-xl border border-white/[0.08] rounded-2xl shadow-2xl overflow-hidden">
+            <div className="bg-[#0A0A0A]/95 backdrop-blur-lg border border-white/[0.08] rounded-2xl shadow-2xl overflow-hidden">
               {/* Search Input */}
               <div className="flex items-center gap-3 px-4 py-3 border-b border-white/[0.06]">
                 <Search className="w-4 h-4 text-orbit-cyan shrink-0" />
@@ -347,7 +347,7 @@ export function PartnerNavbar() {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -8, scale: 0.95 }}
             transition={{ duration: 0.2 }}
-            className="absolute right-4 sm:right-6 top-20 sm:top-24 w-56 bg-[#0A0A0A]/95 backdrop-blur-xl border border-orbit-border/40 rounded-2xl overflow-hidden shadow-2xl z-[60]"
+            className="absolute right-4 sm:right-6 top-20 sm:top-24 w-56 bg-[#0A0A0A]/95 backdrop-blur-lg border border-orbit-border/40 rounded-2xl overflow-hidden shadow-2xl z-[60]"
           >
             <div className="p-2">
               {hasActiveWork && (

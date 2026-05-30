@@ -26,7 +26,7 @@ export function BrandDNASection() {
   const { user, setUser } = useAppStore();
   const [chatInput, setChatInput] = useState("");
   const [messages, setMessages] = useState<{ text: string; sender: "user" | "system"; time: string }[]>([
-    { text: "Welcome! Describe your editing requirements here. Tell us about the style, mood, transitions, music preference, or any specific look you want for your reel.", sender: "system", time: new Date().toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" }) },
+    { text: "Welcome! Describe your editing requirements here. Tell us about the style, mood, transitions, music preference, or any specific look you want for your reel.", sender: "system", time: new Date().toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" }) },
   ]);
   const chatEndRef = useRef<HTMLDivElement>(null);
 
@@ -39,7 +39,7 @@ export function BrandDNASection() {
     const newMsg = {
       text: chatInput.trim(),
       sender: "user" as const,
-      time: new Date().toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" }),
+      time: new Date().toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" }),
     };
     setMessages((prev) => [...prev, newMsg]);
     setUser({ editorRequirements: user.editorRequirements ? `${user.editorRequirements}\n${chatInput.trim()}` : chatInput.trim() });

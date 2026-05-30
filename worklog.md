@@ -137,3 +137,40 @@ Stage Summary:
 - All partner declines trigger automatic re-dispatch to next round of 5 partners
 - Bank linking and withdrawal functional via API
 - Partner profile editing restricted (verified fields locked)
+
+---
+Task ID: 8
+Agent: Main Agent
+Task: Convert all USD/$ to INR/₹ and Indian locale standards + optimize performance
+
+Work Log:
+- Changed formatCurrency() in constants.ts from `$${amount.toLocaleString("en-US")}` to `₹${amount.toLocaleString("en-IN")}`
+- Replaced DollarSign icon with IndianRupee icon in partner-earnings.tsx (wallet balance, total earned, withdraw input)
+- Changed wallet balance and total earned number formatting from en-US to en-IN locale
+- Fixed partner-settings.tsx: $500 → ₹500 minimum withdrawal references, toast messages use ₹ symbol
+- Changed all date formatting from toLocaleDateString("en-US") to toLocaleDateString("en-IN") across 7 files:
+  - client/frontend/booking-flow.tsx
+  - client/frontend/dashboard-home.tsx
+  - client/frontend/tracking-dashboard.tsx
+  - client/frontend/client-navbar.tsx
+  - client/frontend/profile-view.tsx
+  - partner/frontend/partner-dashboard.tsx
+  - partner/frontend/partner-work.tsx
+  - partner/frontend/partner-settings.tsx
+- Changed time formatting from toLocaleTimeString("en-US") to toLocaleTimeString("en-IN") in brand-dna-section.tsx
+- Verified phone numbers already use +91 Indian format (login-page.tsx, booking-flow.tsx)
+- Verified Prisma schema already has INR comment, ifscCode (Indian banking), correct data
+- Performance optimizations:
+  - Reduced backdrop-blur from 24px (xl) to 16px (lg) on navbars and login page
+  - Reduced .orbit-card blur from 20px to 12px in globals.css
+  - Reduced .orbit-card-strong blur from 28px to 16px
+  - Reduced .orbit-nav-pill blur from 28px to 16px
+  - Changed splash screen progress bar from framer-motion to CSS transition (fewer re-renders)
+  - Reduced splash screen particles from 15 to 10
+
+Stage Summary:
+- All currency now displays as ₹ (Indian Rupee) with en-IN locale formatting
+- All dates/times use en-IN locale
+- Phone numbers already in +91 format
+- App performance improved: reduced backdrop-blur GPU usage, fewer animations
+- Lint passes cleanly, dev server compiles successfully

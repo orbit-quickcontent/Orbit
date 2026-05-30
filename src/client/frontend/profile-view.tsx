@@ -458,7 +458,7 @@ export function ProfileView() {
                                 {b.packageName}
                               </div>
                               <div className="text-[9px] text-muted-foreground/60">
-                                {new Date(b.bookingDate).toLocaleDateString("en-US", {
+                                {new Date(b.bookingDate).toLocaleDateString("en-IN", {
                                   month: "short",
                                   day: "numeric",
                                   year: "numeric",

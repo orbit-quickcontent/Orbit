@@ -751,7 +751,7 @@ export function TrackingDashboard() {
           <h4 className="text-xs sm:text-sm font-semibold mb-3 sm:mb-4 text-muted-foreground">Booking Details</h4>
           <div className="grid grid-cols-2 gap-3 sm:gap-4 text-xs sm:text-sm">
             {[
-              { label: "Date", value: new Date(currentBooking.bookingDate).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" }) },
+              { label: "Date", value: new Date(currentBooking.bookingDate).toLocaleDateString("en-IN", { weekday: "short", month: "short", day: "numeric" }) },
               { label: "Time", value: currentBooking.timeSlot },
               { label: "Location", value: currentBooking.location },
               { label: "Amount", value: formatCurrency(currentBooking.packagePrice) },

@@ -153,18 +153,18 @@
   background: #2A2A3E;
 }
 
-/* Orbit Card — Glassmorphism on black bg */
+/* Orbit Card — Glassmorphism on black bg (optimized blur for mobile) */
 .orbit-card {
   background: rgba(10, 10, 10, 0.85);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   border: 1px solid rgba(0, 191, 255, 0.12);
 }
 
 .orbit-card-strong {
   background: rgba(10, 10, 10, 0.95);
-  backdrop-filter: blur(28px);
-  -webkit-backdrop-filter: blur(28px);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
   border: 1px solid rgba(0, 191, 255, 0.2);
 }
 
@@ -240,8 +240,8 @@
 /* ─── Floating Navigation Pill ──────────────────────────────────────────────── */
 .orbit-nav-pill {
   background: rgba(5, 5, 5, 0.75);
-  backdrop-filter: blur(28px) saturate(1.4);
-  -webkit-backdrop-filter: blur(28px) saturate(1.4);
+  backdrop-filter: blur(16px) saturate(1.2);
+  -webkit-backdrop-filter: blur(16px) saturate(1.2);
   border: 1px solid rgba(0, 191, 255, 0.12);
   border-radius: 28px;
   box-shadow:

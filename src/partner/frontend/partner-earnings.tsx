@@ -12,7 +12,7 @@ import { motion } from "framer-motion";
 import {
   Wallet,
   TrendingUp,
-  DollarSign,
+  IndianRupee,
   CreditCard,
   Star,
   CircleCheckBig,
@@ -123,9 +123,9 @@ export function PartnerEarnings() {
 
             <div className="text-center mb-3 pb-3 border-b border-white/[0.06]">
               <div className="flex items-center justify-center gap-1">
-                <DollarSign className="w-4 h-4 sm:w-5 sm:h-5 text-green-400" />
+                <IndianRupee className="w-4 h-4 sm:w-5 sm:h-5 text-green-400" />
                 <span className="text-xl sm:text-3xl font-black text-foreground tracking-tight">
-                  {wallet.balance.toLocaleString("en-US")}
+                  {wallet.balance.toLocaleString("en-IN")}
                 </span>
               </div>
             </div>
@@ -198,7 +198,7 @@ export function PartnerEarnings() {
               {/* Withdraw Input */}
               <div className="flex gap-2">
                 <div className="relative flex-1">
-                  <DollarSign className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground/40" />
+                  <IndianRupee className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground/40" />
                   <input
                     type="number"
                     value={withdrawAmount}
@@ -271,9 +271,9 @@ export function PartnerEarnings() {
                 Total Earned
               </p>
               <div className="flex items-center justify-center gap-1">
-                <DollarSign className="w-4 h-4 sm:w-5 sm:h-5 text-green-400" />
+                <IndianRupee className="w-4 h-4 sm:w-5 sm:h-5 text-green-400" />
                 <span className="text-xl sm:text-3xl font-black text-foreground tracking-tight">
-                  {totalEarned.toLocaleString("en-US")}
+                  {totalEarned.toLocaleString("en-IN")}
                 </span>
               </div>
               {weeklyEarnings > 0 && (

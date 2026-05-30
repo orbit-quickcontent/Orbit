@@ -329,7 +329,7 @@ export function BookingFlow() {
                   <div className="space-y-2 text-xs sm:text-sm">
                     {[
                       { label: "Package", value: selectedPackage.name },
-                      { label: "Date", value: bookingDate?.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" }) },
+                      { label: "Date", value: bookingDate?.toLocaleDateString("en-IN", { weekday: "short", month: "short", day: "numeric" }) },
                       { label: "Time", value: bookingTimeSlot },
                       { label: "Location", value: bookingLocation },
                     ].map((row) => (

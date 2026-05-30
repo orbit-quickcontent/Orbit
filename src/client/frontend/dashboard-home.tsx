@@ -416,7 +416,7 @@ export function DashboardHome() {
                               {b.packageName}
                             </div>
                             <div className="text-[9px] text-muted-foreground/70 truncate">
-                              {new Date(b.bookingDate).toLocaleDateString("en-US", { month: "short", day: "numeric" })} · {b.timeSlot}
+                              {new Date(b.bookingDate).toLocaleDateString("en-IN", { month: "short", day: "numeric" })} · {b.timeSlot}
                             </div>
                           </div>
                           <div className="flex items-center gap-1 shrink-0">
