@@ -68,8 +68,8 @@ export function PartnerProfileView() {
 
   // Avatar editing state
   const [editAvatar, setEditAvatar] = useState(
-    AVATAR_COLORS.indexOf(user.avatar || "") >= 0
-      ? AVATAR_COLORS.indexOf(user.avatar || "")
+    (AVATAR_COLORS as readonly string[]).indexOf(user.avatar || "") >= 0
+      ? (AVATAR_COLORS as readonly string[]).indexOf(user.avatar || "")
       : 0
   );
   const [editAvatarMode, setEditAvatarMode] = useState<EditAvatarMode>(
@@ -189,7 +189,7 @@ export function PartnerProfileView() {
   }, [editAvatar, editAvatarMode, editAvatarPreset, editPhotoPreview, setUser]);
 
   const handleCancel = useCallback(() => {
-    const idx = AVATAR_COLORS.indexOf(user.avatar || "");
+    const idx = (AVATAR_COLORS as readonly string[]).indexOf(user.avatar || "");
     setEditAvatar(idx >= 0 ? idx : 0);
     setEditAvatarMode(
       user.avatarType === "photo" ? "photo" : user.avatarType === "avatar" ? "avatar" : "color"

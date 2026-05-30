@@ -3,25 +3,44 @@
 /**
  * 🔵 CLIENT FRONTEND | ClientApp
  * 
- * Main client orchestrator component. Composes the personalized
- * greeting header, modern dashboard home, and all sub-views with
- * Instagram-style bottom navigation.
+ * Main client orchestrator component. Uses React.lazy for
+ * code-splitting heavy sub-views. Only DashboardHome loads
+ * eagerly since it's the default view.
  * 
  * Used by: page.tsx
  * Category: Client UI
  */
 
-import { useEffect } from "react";
+import { useEffect, lazy, Suspense } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useAppStore } from "@/lib/store";
 import { AnimatedBackground } from "@/shared/frontend";
 import { ClientNavbar } from "./client-navbar";
 import { DashboardHome } from "./dashboard-home";
-import { PackageDashboard } from "./package-dashboard";
-import { BookingFlow } from "./booking-flow";
-import { TrackingDashboard } from "./tracking-dashboard";
 import { BottomNav } from "./bottom-nav";
-import { ProfileView } from "./profile-view";
+
+// Lazy-load heavy views — they only load when user navigates to them
+const PackageDashboard = lazy(() =>
+  import("./package-dashboard").then((m) => ({ default: m.PackageDashboard }))
+);
+const BookingFlow = lazy(() =>
+  import("./booking-flow").then((m) => ({ default: m.BookingFlow }))
+);
+const TrackingDashboard = lazy(() =>
+  import("./tracking-dashboard").then((m) => ({ default: m.TrackingDashboard }))
+);
+const ProfileView = lazy(() =>
+  import("./profile-view").then((m) => ({ default: m.ProfileView }))
+);
+
+// Minimal loading fallback — avoids layout shift
+function ViewLoader() {
+  return (
+    <div className="flex items-center justify-center py-20">
+      <div className="w-8 h-8 rounded-full border-2 border-orbit-cyan/30 border-t-orbit-cyan animate-spin" />
+    </div>
+  );
+}
 
 export default function ClientApp() {
   const { currentView, fetchPackages } = useAppStore();
@@ -38,10 +57,10 @@ export default function ClientApp() {
             {currentView === "landing" && (
               <motion.div
                 key="dashboard"
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -8 }}
-                transition={{ duration: 0.3 }}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.2 }}
               >
                 <DashboardHome />
               </motion.div>
@@ -49,45 +68,53 @@ export default function ClientApp() {
             {currentView === "packages" && (
               <motion.div
                 key="packages"
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -8 }}
-                transition={{ duration: 0.3 }}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.2 }}
               >
-                <PackageDashboard />
+                <Suspense fallback={<ViewLoader />}>
+                  <PackageDashboard />
+                </Suspense>
               </motion.div>
             )}
             {currentView === "booking" && (
               <motion.div
                 key="booking"
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -8 }}
-                transition={{ duration: 0.3 }}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.2 }}
               >
-                <BookingFlow />
+                <Suspense fallback={<ViewLoader />}>
+                  <BookingFlow />
+                </Suspense>
               </motion.div>
             )}
             {currentView === "tracking" && (
               <motion.div
                 key="tracking"
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -8 }}
-                transition={{ duration: 0.3 }}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.2 }}
               >
-                <TrackingDashboard />
+                <Suspense fallback={<ViewLoader />}>
+                  <TrackingDashboard />
+                </Suspense>
               </motion.div>
             )}
             {currentView === "profile" && (
               <motion.div
                 key="profile"
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -8 }}
-                transition={{ duration: 0.3 }}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.2 }}
               >
-                <ProfileView />
+                <Suspense fallback={<ViewLoader />}>
+                  <ProfileView />
+                </Suspense>
               </motion.div>
             )}
           </AnimatePresence>

@@ -81,8 +81,9 @@ export function PartnerDashboard() {
       path: "/socket.io/",
       transports: ["websocket", "polling"],
       reconnection: true,
-      reconnectionDelay: 1000,
-      reconnectionAttempts: 10,
+      reconnectionDelay: 3000,
+      reconnectionAttempts: 5,
+      timeout: 10000,
     });
 
     socket.on("connect", () => {

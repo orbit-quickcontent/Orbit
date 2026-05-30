@@ -3,26 +3,44 @@
 /**
  * 🟣 PARTNER FRONTEND | PartnerApp
  *
- * Main partner orchestrator component. Routes between:
- * - Home (partner): Available Work
- * - Work (partner-work): Completed Work History
- * - Earnings (partner-earnings): Earnings Overview + Stats
- * - Profile: User profile page
+ * Main partner orchestrator component. Uses React.lazy for
+ * code-splitting heavy sub-views. Only PartnerDashboard loads
+ * eagerly since it's the default view.
  *
  * Used by: page.tsx
  * Category: Partner UI
  */
 
+import { lazy, Suspense } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useAppStore } from "@/lib/store";
 import { AnimatedBackground } from "@/shared/frontend";
 import { PartnerNavbar } from "./partner-navbar";
 import { PartnerDashboard } from "./partner-dashboard";
-import { PartnerWork } from "./partner-work";
-import { PartnerEarnings } from "./partner-earnings";
 import { PartnerBottomNav } from "./partner-bottom-nav";
-import { PartnerProfileView } from "./partner-profile-view";
-import { PartnerSettings } from "./partner-settings";
+
+// Lazy-load heavy views
+const PartnerWork = lazy(() =>
+  import("./partner-work").then((m) => ({ default: m.PartnerWork }))
+);
+const PartnerEarnings = lazy(() =>
+  import("./partner-earnings").then((m) => ({ default: m.PartnerEarnings }))
+);
+const PartnerProfileView = lazy(() =>
+  import("./partner-profile-view").then((m) => ({ default: m.PartnerProfileView }))
+);
+const PartnerSettings = lazy(() =>
+  import("./partner-settings").then((m) => ({ default: m.PartnerSettings }))
+);
+
+// Minimal loading fallback
+function ViewLoader() {
+  return (
+    <div className="flex items-center justify-center py-20">
+      <div className="w-8 h-8 rounded-full border-2 border-orbit-purple/30 border-t-orbit-purple animate-spin" />
+    </div>
+  );
+}
 
 export default function PartnerApp() {
   const { currentView } = useAppStore();
@@ -33,58 +51,66 @@ export default function PartnerApp() {
         return (
           <motion.div
             key="work"
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -20 }}
-            transition={{ duration: 0.25 }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
           >
-            <PartnerWork />
+            <Suspense fallback={<ViewLoader />}>
+              <PartnerWork />
+            </Suspense>
           </motion.div>
         );
       case "partner-earnings":
         return (
           <motion.div
             key="earnings"
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -20 }}
-            transition={{ duration: 0.25 }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
           >
-            <PartnerEarnings />
+            <Suspense fallback={<ViewLoader />}>
+              <PartnerEarnings />
+            </Suspense>
           </motion.div>
         );
       case "profile":
         return (
           <motion.div
             key="profile"
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -8 }}
-            transition={{ duration: 0.3 }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
           >
-            <PartnerProfileView />
+            <Suspense fallback={<ViewLoader />}>
+              <PartnerProfileView />
+            </Suspense>
           </motion.div>
         );
       case "partner-settings":
         return (
           <motion.div
             key="partner-settings"
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -20 }}
-            transition={{ duration: 0.25 }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
           >
-            <PartnerSettings />
+            <Suspense fallback={<ViewLoader />}>
+              <PartnerSettings />
+            </Suspense>
           </motion.div>
         );
       default:
         return (
           <motion.div
             key="dashboard"
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: 20 }}
-            transition={{ duration: 0.25 }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
           >
             <PartnerDashboard />
           </motion.div>

@@ -67,8 +67,8 @@ export function ProfileView() {
       : "color"
   );
   const [editAvatar, setEditAvatar] = useState(
-    AVATAR_COLORS.indexOf(user.avatar || "") >= 0
-      ? AVATAR_COLORS.indexOf(user.avatar || "")
+    (AVATAR_COLORS as readonly string[]).indexOf(user.avatar || "") >= 0
+      ? (AVATAR_COLORS as readonly string[]).indexOf(user.avatar || "")
       : 0
   );
   const [editAvatarPreset, setEditAvatarPreset] = useState<string | null>(
@@ -234,7 +234,7 @@ export function ProfileView() {
     setEditName(user.name);
     setEditEmail(user.email);
     setEditPhone(user.phone);
-    const idx = AVATAR_COLORS.indexOf(user.avatar || "");
+    const idx = (AVATAR_COLORS as readonly string[]).indexOf(user.avatar || "");
     setEditAvatar(idx >= 0 ? idx : 0);
     setEditAvatarMode(
       user.avatarType === "photo"
