@@ -38,7 +38,11 @@ import { PaymentReceived } from "./payment-received";
 type PartnerPhase = "available" | "navigating" | "shooting" | "syncing" | "privacy" | "payment";
 
 export function PartnerDashboard() {
-  const { partnerActiveBooking, setPartnerActiveBooking, cancelBooking, updateBookingStatus, markBookingDelivered, markBookingDownloaded, addBooking, user } = useAppStore();
+  const { partnerActiveBooking, setPartnerActiveBooking, cancelBooking, updateBookingStatus, markBookingDelivered, markBookingDownloaded, addBooking, user, bookings } = useAppStore();
+
+  // Filter out bookings that are already in the store (already accepted)
+  const bookingIds = new Set(bookings.map((b) => b.id));
+  const availableBookings = MOCK_AVAILABLE_BOOKINGS.filter((b) => !bookingIds.has(b.id));
   const [partnerPhase, setPartnerPhase] = useState<PartnerPhase>("available");
   const [shotUploads, setShotUploads] = useState<Map<string, string>>(new Map());
   const [uploadingShotId, setUploadingShotId] = useState<string | null>(null);
@@ -319,16 +323,16 @@ export function PartnerDashboard() {
               <p className="text-[10px] text-muted-foreground/60">New bookings waiting for you</p>
             </div>
           </div>
-          {MOCK_AVAILABLE_BOOKINGS.length > 0 && (
+          {availableBookings.length > 0 && (
             <Badge className="bg-orbit-cyan/15 text-orbit-cyan border-0 text-[10px] font-bold px-2 py-0.5">
-              {MOCK_AVAILABLE_BOOKINGS.length} new
+              {availableBookings.length} new
             </Badge>
           )}
         </div>
       </motion.div>
 
       {/* Work Cards */}
-      {MOCK_AVAILABLE_BOOKINGS.length === 0 ? (
+      {availableBookings.length === 0 ? (
         <motion.div variants={staggerItem}>
           <div className="orbit-card rounded-xl p-6 sm:p-8 text-center">
             <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-white/[0.03] flex items-center justify-center">
@@ -342,7 +346,7 @@ export function PartnerDashboard() {
         </motion.div>
       ) : (
         <div className="space-y-2.5">
-          {MOCK_AVAILABLE_BOOKINGS.map((booking, idx) => (
+          {availableBookings.map((booking, idx) => (
             <motion.div
               key={booking.id}
               variants={staggerItem}

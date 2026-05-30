@@ -9,7 +9,7 @@
  */
 
 import { create } from "zustand";
-import { type AppView, type AppPhase, type BookingStatus, type PaymentStatus, type UserRole, type PackageInfo, type BookingInfo, type UserProfile, type ReviewInfo } from "./types";
+import { type AppView, type AppPhase, type BookingStatus, type PaymentStatus, type UserRole, type PackageInfo, type BookingInfo, type UserProfile, type ReviewInfo, type BankAccount, type PartnerWallet, type PartnerSettings } from "./types";
 
 // ─── localStorage helpers ─────────────────────────────────────────────────────
 const STORAGE_KEY = "orbit-app-state";
@@ -44,6 +44,22 @@ function clearStorage() {
   try { localStorage.removeItem(STORAGE_KEY); } catch { /* ignore */ }
 }
 
+const defaultWallet: PartnerWallet = {
+  balance: 0,
+  pendingClearance: 0,
+  totalWithdrawn: 0,
+  lastWithdrawnAt: null,
+};
+
+const defaultSettings: PartnerSettings = {
+  notificationsEnabled: true,
+  newBookingAlerts: true,
+  paymentAlerts: true,
+  autoSyncOnWifi: true,
+  highQualityUpload: false,
+  locationTracking: true,
+};
+
 const defaultUser: UserProfile = {
   name: "",
   email: "",
@@ -60,6 +76,10 @@ const defaultUser: UserProfile = {
   editorRequirements: "",
   authProvider: null,
   isOnline: true,
+  bankAccount: null,
+  wallet: defaultWallet,
+  settings: defaultSettings,
+  isVerified: false,
 };
 
 interface AppState {
@@ -113,6 +133,14 @@ interface AppState {
   partnerActiveBooking: BookingInfo | null;
   setPartnerActiveBooking: (booking: BookingInfo | null) => void;
 
+  // Partner wallet
+  creditPartnerWallet: (amount: number) => void;
+  withdrawFromWallet: (amount: number) => void;
+  linkBankAccount: (account: BankAccount) => void;
+
+  // Partner settings
+  updatePartnerSettings: (settings: Partial<PartnerSettings>) => void;
+
   // Booking form
   bookingDate: Date | undefined;
   setBookingDate: (date: Date | undefined) => void;
@@ -152,6 +180,10 @@ export const useAppStore = create<AppState>((set, get) => ({
           ...storedUser,
           authProvider: storedUser.authProvider ?? null,
           isOnline: storedUser.isOnline ?? true,
+          bankAccount: storedUser.bankAccount ?? null,
+          wallet: { ...defaultWallet, ...(storedUser.wallet ?? {}) },
+          settings: { ...defaultSettings, ...(storedUser.settings ?? {}) },
+          isVerified: storedUser.isVerified ?? false,
         },
         currentView: (stored.currentView as AppView) ?? "landing",
         bookings: storedBookings,
@@ -284,6 +316,15 @@ export const useAppStore = create<AppState>((set, get) => ({
   bookings: [],
   addBooking: (booking) =>
     set((state) => {
+      // Prevent duplicate bookings — if ID already exists, update instead
+      const exists = state.bookings.some((b) => b.id === booking.id);
+      if (exists) {
+        const newBookings = state.bookings.map((b) =>
+          b.id === booking.id ? booking : b
+        );
+        saveToStorage({ ...get(), bookings: newBookings });
+        return { bookings: newBookings };
+      }
       const newBookings = [...state.bookings, booking];
       saveToStorage({ ...get(), bookings: newBookings });
       return { bookings: newBookings };
@@ -298,6 +339,18 @@ export const useAppStore = create<AppState>((set, get) => ({
           state.currentBooking?.id === id
             ? { ...state.currentBooking, status }
             : state.currentBooking,
+        // When booking is delivered, credit partner wallet automatically
+        ...(status === "DELIVERED" && state.userRole === "PARTNER"
+          ? {
+              user: {
+                ...state.user,
+                wallet: {
+                  ...state.user.wallet,
+                  balance: state.user.wallet.balance + (state.bookings.find((b) => b.id === id)?.packagePrice ?? 0),
+                },
+              },
+            }
+          : {}),
       };
       saveToStorage({ ...get(), ...newState });
       return newState;
@@ -346,12 +399,25 @@ export const useAppStore = create<AppState>((set, get) => ({
     }),
   completeBooking: (id) =>
     set((state) => {
+      const bookingPrice = state.bookings.find((b) => b.id === id)?.packagePrice ?? 0;
       const updatedBookings = state.bookings.map((b) =>
         b.id === id ? { ...b, status: "DELIVERED" as BookingStatus } : b
       );
       const newState = {
         bookings: updatedBookings,
         currentBooking: null as BookingInfo | null,
+        // Auto-credit partner wallet when booking is completed
+        ...(state.userRole === "PARTNER"
+          ? {
+              user: {
+                ...state.user,
+                wallet: {
+                  ...state.user.wallet,
+                  balance: state.user.wallet.balance + bookingPrice,
+                },
+              },
+            }
+          : {}),
       };
       saveToStorage({ ...get(), ...newState });
       return newState;
@@ -410,6 +476,63 @@ export const useAppStore = create<AppState>((set, get) => ({
     set(newState);
     saveToStorage({ ...get(), ...newState });
   },
+
+  // Partner wallet operations
+  creditPartnerWallet: (amount) =>
+    set((state) => {
+      const newState = {
+        user: {
+          ...state.user,
+          wallet: {
+            ...state.user.wallet,
+            balance: state.user.wallet.balance + amount,
+          },
+        },
+      };
+      saveToStorage({ ...get(), ...newState });
+      return newState;
+    }),
+  withdrawFromWallet: (amount) =>
+    set((state) => {
+      if (amount > state.user.wallet.balance) return state;
+      const newState = {
+        user: {
+          ...state.user,
+          wallet: {
+            ...state.user.wallet,
+            balance: state.user.wallet.balance - amount,
+            totalWithdrawn: state.user.wallet.totalWithdrawn + amount,
+            lastWithdrawnAt: new Date().toISOString(),
+          },
+        },
+      };
+      saveToStorage({ ...get(), ...newState });
+      return newState;
+    }),
+  linkBankAccount: (account) =>
+    set((state) => {
+      const newState = {
+        user: {
+          ...state.user,
+          bankAccount: account,
+        },
+      };
+      saveToStorage({ ...get(), ...newState });
+      return newState;
+    }),
+
+  // Partner settings
+  updatePartnerSettings: (settings) =>
+    set((state) => {
+      const newState = {
+        user: {
+          ...state.user,
+          settings: { ...state.user.settings, ...settings },
+        },
+      };
+      saveToStorage({ ...get(), ...newState });
+      return newState;
+    }),
 
   // Booking form
   bookingDate: undefined,

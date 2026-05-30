@@ -10,4 +10,5 @@ export { PrivacyShield } from "./privacy-shield";
 export { PaymentReceived } from "./payment-received";
 export { PartnerBottomNav } from "./partner-bottom-nav";
 export { PartnerProfileView } from "./partner-profile-view";
+export { PartnerSettings } from "./partner-settings";
 

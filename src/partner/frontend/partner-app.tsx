@@ -22,6 +22,7 @@ import { PartnerWork } from "./partner-work";
 import { PartnerEarnings } from "./partner-earnings";
 import { PartnerBottomNav } from "./partner-bottom-nav";
 import { PartnerProfileView } from "./partner-profile-view";
+import { PartnerSettings } from "./partner-settings";
 
 export default function PartnerApp() {
   const { currentView } = useAppStore();
@@ -62,6 +63,18 @@ export default function PartnerApp() {
             transition={{ duration: 0.3 }}
           >
             <PartnerProfileView />
+          </motion.div>
+        );
+      case "partner-settings":
+        return (
+          <motion.div
+            key="partner-settings"
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -20 }}
+            transition={{ duration: 0.25 }}
+          >
+            <PartnerSettings />
           </motion.div>
         );
       default:

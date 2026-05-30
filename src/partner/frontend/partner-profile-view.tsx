@@ -3,7 +3,8 @@
 /**
  * 🟣 PARTNER FRONTEND | PartnerProfileView
  *
- * Partner profile page with stats, full edit functionality (color/avatar/photo),
+ * Partner profile page with avatar-only editing (verified fields locked),
+ * verification status badge, wallet balance, bank account section,
  * online/offline toggle, and logout.
  *
  * Used by: partner-app.tsx
@@ -27,6 +28,13 @@ import {
   Shield,
   HelpCircle,
   Upload,
+  Lock,
+  Building2,
+  Wallet,
+  Eye,
+  EyeOff,
+  Plus,
+  IndianRupee,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -35,15 +43,30 @@ import { Separator } from "@/components/ui/separator";
 import { useAppStore } from "@/lib/store";
 import { AVATAR_COLORS, AVATAR_PRESETS } from "@/lib/constants";
 import { getInitials } from "@/lib/utils";
+import type { BankAccount } from "@/lib/types";
 
 type EditAvatarMode = "color" | "avatar" | "photo";
 
+/** Format Indian rupee amount */
+function formatRupee(amount: number): string {
+  return new Intl.NumberFormat("en-IN", {
+    style: "currency",
+    currency: "INR",
+    maximumFractionDigits: 0,
+  }).format(amount);
+}
+
+/** Mask account number: show only last 4 digits */
+function maskAccountNumber(accNum: string): string {
+  if (accNum.length <= 4) return accNum;
+  return "•••••" + accNum.slice(-4);
+}
+
 export function PartnerProfileView() {
-  const { user, setUser, logout, bookings } = useAppStore();
+  const { user, setUser, logout, bookings, linkBankAccount, withdrawFromWallet, setCurrentView } = useAppStore();
   const [isEditing, setIsEditing] = useState(false);
-  const [editName, setEditName] = useState(user.name);
-  const [editEmail, setEditEmail] = useState(user.email);
-  const [editPhone, setEditPhone] = useState(user.phone);
+
+  // Avatar editing state
   const [editAvatar, setEditAvatar] = useState(
     AVATAR_COLORS.indexOf(user.avatar || "") >= 0
       ? AVATAR_COLORS.indexOf(user.avatar || "")
@@ -62,8 +85,24 @@ export function PartnerProfileView() {
   );
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Bank linking state
+  const [showBankForm, setShowBankForm] = useState(false);
+  const [bankForm, setBankForm] = useState({
+    bankName: "",
+    accountNumber: "",
+    ifscCode: "",
+    accountHolderName: "",
+  });
+
+  // Withdraw state
+  const [withdrawAmount, setWithdrawAmount] = useState("");
+  const [showWithdrawInput, setShowWithdrawInput] = useState(false);
+
   const avatarGradient = user.avatar || "from-orbit-purple to-orbit-cyan";
   const initials = getInitials(user.name);
+
+  const wallet = user.wallet;
+  const bankAccount = user.bankAccount;
 
   const renderProfileAvatar = (size: string, textSize: string) => {
     if (user.avatarType === "photo" && user.avatarPhotoUrl) {
@@ -112,7 +151,7 @@ export function PartnerProfileView() {
     }
     return (
       <div className={`w-16 h-16 rounded-full bg-gradient-to-br ${AVATAR_COLORS[editAvatar]} flex items-center justify-center text-xl font-black text-white shadow-xl`}>
-        {editName ? editName[0].toUpperCase() : "?"}
+        {user.name ? user.name[0].toUpperCase() : "?"}
       </div>
     );
   };
@@ -121,12 +160,9 @@ export function PartnerProfileView() {
   const activeBookings = bookings.filter((b) => !["DELIVERED", "CANCELLED"].includes(b.status)).length;
 
   const handleSave = useCallback(() => {
-    const updates: Record<string, unknown> = {
-      name: editName.trim(),
-      email: editEmail.trim(),
-      phone: editPhone.trim(),
-    };
+    const updates: Record<string, unknown> = {};
 
+    // Only save avatar changes — name/email/phone are locked
     if (editAvatarMode === "color") {
       updates.avatarType = "color";
       updates.avatar = AVATAR_COLORS[editAvatar];
@@ -150,12 +186,9 @@ export function PartnerProfileView() {
 
     setUser(updates as Partial<typeof user>);
     setIsEditing(false);
-  }, [editName, editEmail, editPhone, editAvatar, editAvatarMode, editAvatarPreset, editPhotoPreview, setUser]);
+  }, [editAvatar, editAvatarMode, editAvatarPreset, editPhotoPreview, setUser]);
 
   const handleCancel = useCallback(() => {
-    setEditName(user.name);
-    setEditEmail(user.email);
-    setEditPhone(user.phone);
     const idx = AVATAR_COLORS.indexOf(user.avatar || "");
     setEditAvatar(idx >= 0 ? idx : 0);
     setEditAvatarMode(
@@ -168,7 +201,7 @@ export function PartnerProfileView() {
     );
     setEditPhotoPreview(user.avatarPhotoUrl || null);
     setIsEditing(false);
-  }, [user.name, user.email, user.phone, user.avatar, user.avatarType, user.avatarEmoji, user.avatarPhotoUrl]);
+  }, [user.avatar, user.avatarType, user.avatarEmoji, user.avatarPhotoUrl]);
 
   const handlePhotoUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -180,10 +213,34 @@ export function PartnerProfileView() {
     reader.readAsDataURL(file);
   }, []);
 
+  const handleLinkBank = useCallback(() => {
+    if (!bankForm.bankName.trim() || !bankForm.accountNumber.trim() || !bankForm.ifscCode.trim() || !bankForm.accountHolderName.trim()) return;
+    const newAccount: BankAccount = {
+      id: `bank-${Date.now()}`,
+      bankName: bankForm.bankName.trim(),
+      accountNumber: bankForm.accountNumber.trim(),
+      ifscCode: bankForm.ifscCode.trim(),
+      accountHolderName: bankForm.accountHolderName.trim(),
+      isVerified: true,
+      linkedAt: new Date().toISOString(),
+    };
+    linkBankAccount(newAccount);
+    setShowBankForm(false);
+    setBankForm({ bankName: "", accountNumber: "", ifscCode: "", accountHolderName: "" });
+  }, [bankForm, linkBankAccount]);
+
+  const handleWithdraw = useCallback(() => {
+    const amount = parseFloat(withdrawAmount);
+    if (isNaN(amount) || amount <= 0 || amount > wallet.balance) return;
+    withdrawFromWallet(amount);
+    setWithdrawAmount("");
+    setShowWithdrawInput(false);
+  }, [withdrawAmount, wallet.balance, withdrawFromWallet]);
+
   const menuItems = [
-    { icon: <Shield className="w-4 h-4" />, label: "Privacy Shield", desc: "Client data protection" },
-    { icon: <Settings className="w-4 h-4" />, label: "App Settings", desc: "Notifications, sync preferences" },
-    { icon: <HelpCircle className="w-4 h-4" />, label: "Help & Support", desc: "Guides, contact, report" },
+    { icon: <Shield className="w-4 h-4" />, label: "Privacy Shield", desc: "Client data protection", action: () => {} },
+    { icon: <Settings className="w-4 h-4" />, label: "App Settings", desc: "Notifications, sync preferences", action: () => setCurrentView("partner-settings") },
+    { icon: <HelpCircle className="w-4 h-4" />, label: "Help & Support", desc: "Guides, contact, report", action: () => {} },
   ];
 
   return (
@@ -197,7 +254,19 @@ export function PartnerProfileView() {
           </div>
 
           <div className="flex-1 min-w-0">
-            <h2 className="text-lg font-black text-foreground truncate">{user.name || "Orbit Partner"}</h2>
+            <div className="flex items-center gap-2">
+              <h2 className="text-lg font-black text-foreground truncate">{user.name || "Orbit Partner"}</h2>
+              {/* Verification Status Badge */}
+              {user.isVerified ? (
+                <Badge className="bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 text-[8px] px-1.5 py-0 gap-0.5">
+                  <Shield className="w-2.5 h-2.5" /> Verified
+                </Badge>
+              ) : (
+                <Badge className="bg-amber-500/15 text-amber-400 border border-amber-500/30 text-[8px] px-1.5 py-0 gap-0.5">
+                  <Clock className="w-2.5 h-2.5" /> Pending
+                </Badge>
+              )}
+            </div>
             <p className="text-[11px] text-muted-foreground truncate">{user.email || "No email set"}</p>
             {user.phone && (
               <p className="text-[10px] text-muted-foreground/70 truncate">{user.phone}</p>
@@ -229,6 +298,71 @@ export function PartnerProfileView() {
             {isEditing ? "Close" : "Edit"}
           </Button>
         </div>
+
+        {/* Wallet Balance Row */}
+        <div className="mt-3 p-2.5 rounded-lg bg-gradient-to-r from-orbit-purple/10 to-orbit-cyan/10 border border-white/[0.06]">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-orbit-purple/20 to-orbit-cyan/20 flex items-center justify-center">
+                <Wallet className="w-4 h-4 text-orbit-cyan" />
+              </div>
+              <div>
+                <p className="text-[9px] text-muted-foreground uppercase tracking-wider">Wallet Balance</p>
+                <p className="text-base font-black text-foreground">{formatRupee(wallet.balance)}</p>
+              </div>
+            </div>
+            <div className="text-right">
+              {wallet.pendingClearance > 0 && (
+                <p className="text-[9px] text-amber-400/80">{formatRupee(wallet.pendingClearance)} pending</p>
+              )}
+              {wallet.totalWithdrawn > 0 && (
+                <p className="text-[8px] text-muted-foreground/50">Withdrawn: {formatRupee(wallet.totalWithdrawn)}</p>
+              )}
+            </div>
+          </div>
+          {wallet.balance > 0 && (
+            <div className="mt-2">
+              {!showWithdrawInput ? (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowWithdrawInput(true)}
+                  className="w-full h-7 text-[10px] border-orbit-cyan/30 text-orbit-cyan hover:bg-orbit-cyan/10"
+                >
+                  <IndianRupee className="w-3 h-3 mr-1" /> Withdraw Funds
+                </Button>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <Input
+                    type="number"
+                    placeholder="Amount"
+                    value={withdrawAmount}
+                    onChange={(e) => setWithdrawAmount(e.target.value)}
+                    className="flex-1 h-7 text-xs bg-white/5 border-orbit-border"
+                    max={wallet.balance}
+                    min={1}
+                  />
+                  <Button
+                    size="sm"
+                    onClick={handleWithdraw}
+                    disabled={!withdrawAmount || parseFloat(withdrawAmount) <= 0 || parseFloat(withdrawAmount) > wallet.balance}
+                    className="h-7 text-[10px] bg-gradient-to-r from-orbit-purple to-orbit-cyan text-white hover:opacity-90"
+                  >
+                    <Check className="w-3 h-3" />
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => { setShowWithdrawInput(false); setWithdrawAmount(""); }}
+                    className="h-7 text-[10px] border-orbit-border text-muted-foreground"
+                  >
+                    <X className="w-3 h-3" />
+                  </Button>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Stats - Compact */}
@@ -250,7 +384,105 @@ export function PartnerProfileView() {
         </motion.div>
       </div>
 
-      {/* Edit Profile */}
+      {/* Bank Account Section */}
+      <div className="orbit-card rounded-xl p-3 sm:p-4 mb-2">
+        <div className="flex items-center gap-2 mb-2">
+          <Building2 className="w-4 h-4 text-orbit-purple" />
+          <h3 className="text-sm font-bold text-foreground uppercase tracking-wider">Bank Account</h3>
+          {bankAccount && (
+            <Badge className={`text-[8px] px-1.5 py-0 gap-0.5 ${bankAccount.isVerified ? "bg-emerald-500/15 text-emerald-400 border border-emerald-500/30" : "bg-amber-500/15 text-amber-400 border border-amber-500/30"}`}>
+              <Shield className="w-2.5 h-2.5" /> {bankAccount.isVerified ? "Verified" : "Pending"}
+            </Badge>
+          )}
+        </div>
+
+        {bankAccount ? (
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between p-2.5 rounded-lg bg-white/[0.03] border border-white/[0.06]">
+              <div>
+                <p className="text-xs font-medium text-foreground">{bankAccount.bankName}</p>
+                <p className="text-[10px] text-muted-foreground">{maskAccountNumber(bankAccount.accountNumber)}</p>
+                <p className="text-[9px] text-muted-foreground/50">IFSC: {bankAccount.ifscCode}</p>
+              </div>
+              <div className="text-right">
+                <p className="text-[9px] text-muted-foreground/50">{bankAccount.accountHolderName}</p>
+                <p className="text-[8px] text-muted-foreground/40">Linked {new Date(bankAccount.linkedAt).toLocaleDateString()}</p>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div>
+            {!showBankForm ? (
+              <button
+                onClick={() => setShowBankForm(true)}
+                className="w-full flex items-center justify-center gap-2 p-3 rounded-lg border border-dashed border-orbit-purple/30 hover:border-orbit-purple/50 hover:bg-orbit-purple/5 transition-all duration-200"
+              >
+                <Plus className="w-4 h-4 text-orbit-purple" />
+                <span className="text-xs text-orbit-purple font-medium">Link Bank Account</span>
+              </button>
+            ) : (
+              <div className="space-y-2.5">
+                <div className="space-y-1.5">
+                  <label className="text-[10px] text-muted-foreground">Bank Name</label>
+                  <Input
+                    value={bankForm.bankName}
+                    onChange={(e) => setBankForm({ ...bankForm, bankName: e.target.value })}
+                    placeholder="e.g. HDFC Bank"
+                    className="bg-white/5 border-orbit-border text-foreground h-9 text-xs"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-[10px] text-muted-foreground">Account Number</label>
+                  <Input
+                    value={bankForm.accountNumber}
+                    onChange={(e) => setBankForm({ ...bankForm, accountNumber: e.target.value })}
+                    placeholder="Enter account number"
+                    className="bg-white/5 border-orbit-border text-foreground h-9 text-xs"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-[10px] text-muted-foreground">IFSC Code</label>
+                  <Input
+                    value={bankForm.ifscCode}
+                    onChange={(e) => setBankForm({ ...bankForm, ifscCode: e.target.value })}
+                    placeholder="e.g. HDFC0001234"
+                    className="bg-white/5 border-orbit-border text-foreground h-9 text-xs"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-[10px] text-muted-foreground">Account Holder Name</label>
+                  <Input
+                    value={bankForm.accountHolderName}
+                    onChange={(e) => setBankForm({ ...bankForm, accountHolderName: e.target.value })}
+                    placeholder="As per bank records"
+                    className="bg-white/5 border-orbit-border text-foreground h-9 text-xs"
+                  />
+                </div>
+                <div className="flex gap-2 pt-1">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => { setShowBankForm(false); setBankForm({ bankName: "", accountNumber: "", ifscCode: "", accountHolderName: "" }); }}
+                    className="flex-1 border-orbit-border text-muted-foreground h-8 text-[10px]"
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={handleLinkBank}
+                    disabled={!bankForm.bankName.trim() || !bankForm.accountNumber.trim() || !bankForm.ifscCode.trim() || !bankForm.accountHolderName.trim()}
+                    className="flex-1 bg-gradient-to-r from-orbit-purple to-orbit-cyan text-white hover:opacity-90 h-8 text-[10px]"
+                  >
+                    <Building2 className="w-3 h-3 mr-1" /> Link Account
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Edit Profile — Avatar Only */}
       <AnimatePresence>
         {isEditing && (
           <motion.div
@@ -261,7 +493,49 @@ export function PartnerProfileView() {
             className="overflow-hidden"
           >
             <div className="orbit-card rounded-xl p-3 sm:p-4 space-y-2.5 mb-2">
-              <h3 className="text-sm font-bold text-foreground uppercase tracking-wider">Edit Profile</h3>
+              <h3 className="text-sm font-bold text-foreground uppercase tracking-wider">Edit Avatar</h3>
+
+              {/* Locked Fields Notice */}
+              <div className="flex items-start gap-2 p-2.5 rounded-lg bg-amber-500/5 border border-amber-500/15">
+                <Lock className="w-3.5 h-3.5 text-amber-400 shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-[10px] font-medium text-amber-400">Contact Support to Change</p>
+                  <p className="text-[9px] text-amber-400/60">Verified fields are locked for security</p>
+                </div>
+              </div>
+
+              {/* Locked Profile Fields (Read-Only) */}
+              <div className="space-y-2">
+                <div className="space-y-1">
+                  <label className="text-[10px] text-muted-foreground flex items-center gap-1.5">
+                    <Lock className="w-2.5 h-2.5 text-amber-400/60" /> Name
+                  </label>
+                  <div className="flex items-center gap-2 h-9 px-3 rounded-md bg-white/[0.02] border border-white/[0.06] text-muted-foreground text-xs">
+                    <span className="flex-1 truncate">{user.name || "—"}</span>
+                    <Lock className="w-3 h-3 text-muted-foreground/30" />
+                  </div>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] text-muted-foreground flex items-center gap-1.5">
+                    <Lock className="w-2.5 h-2.5 text-amber-400/60" /> Email
+                  </label>
+                  <div className="flex items-center gap-2 h-9 px-3 rounded-md bg-white/[0.02] border border-white/[0.06] text-muted-foreground text-xs">
+                    <span className="flex-1 truncate">{user.email || "—"}</span>
+                    <Lock className="w-3 h-3 text-muted-foreground/30" />
+                  </div>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] text-muted-foreground flex items-center gap-1.5">
+                    <Lock className="w-2.5 h-2.5 text-amber-400/60" /> Phone
+                  </label>
+                  <div className="flex items-center gap-2 h-9 px-3 rounded-md bg-white/[0.02] border border-white/[0.06] text-muted-foreground text-xs">
+                    <span className="flex-1 truncate">{user.phone || "—"}</span>
+                    <Lock className="w-3 h-3 text-muted-foreground/30" />
+                  </div>
+                </div>
+              </div>
+
+              <Separator className="bg-white/[0.06]" />
 
               {/* Avatar Preview */}
               <div className="flex items-center justify-center mb-2">
@@ -358,25 +632,10 @@ export function PartnerProfileView() {
                 </div>
               )}
 
-              {/* Form Fields */}
-              <div className="space-y-3">
-                <div className="space-y-1.5">
-                  <label className="text-xs text-muted-foreground flex items-center gap-1.5"><Edit3 className="w-3 h-3" /> Name</label>
-                  <Input value={editName} onChange={(e) => setEditName(e.target.value)} className="bg-white/5 border-orbit-border text-foreground h-10" />
-                </div>
-                <div className="space-y-1.5">
-                  <label className="text-xs text-muted-foreground flex items-center gap-1.5"><Mail className="w-3 h-3" /> Email</label>
-                  <Input value={editEmail} onChange={(e) => setEditEmail(e.target.value)} type="email" className="bg-white/5 border-orbit-border text-foreground h-10" />
-                </div>
-                <div className="space-y-1.5">
-                  <label className="text-xs text-muted-foreground flex items-center gap-1.5"><Phone className="w-3 h-3" /> Phone</label>
-                  <Input value={editPhone} onChange={(e) => setEditPhone(e.target.value)} type="tel" className="bg-white/5 border-orbit-border text-foreground h-10" />
-                </div>
-              </div>
               <div className="flex gap-3 pt-2">
                 <Button onClick={handleCancel} variant="outline" className="flex-1 border-orbit-border text-muted-foreground">Cancel</Button>
-                <Button onClick={handleSave} disabled={!editName.trim() || !editEmail.trim()} className="flex-1 bg-gradient-to-r from-orbit-purple to-orbit-cyan text-white hover:opacity-90">
-                  <Check className="w-4 h-4 mr-1" /> Save
+                <Button onClick={handleSave} className="flex-1 bg-gradient-to-r from-orbit-purple to-orbit-cyan text-white hover:opacity-90">
+                  <Check className="w-4 h-4 mr-1" /> Save Avatar
                 </Button>
               </div>
             </div>
@@ -388,7 +647,7 @@ export function PartnerProfileView() {
       <div className="orbit-card rounded-xl overflow-hidden mb-2">
         {menuItems.map((item, i) => (
           <div key={i}>
-            <button className="w-full flex items-center gap-2.5 px-3 py-2.5 hover:bg-white/[0.03] transition-colors text-left">
+            <button onClick={item.action} className="w-full flex items-center gap-2.5 px-3 py-2.5 hover:bg-white/[0.03] transition-colors text-left">
               <span className="text-orbit-purple">{item.icon}</span>
               <div className="flex-1 min-w-0">
                 <div className="text-xs font-medium text-foreground">{item.label}</div>

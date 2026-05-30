@@ -4,7 +4,7 @@
  * Core types for Client and Partner frontends.
  */
 
-export type AppView = "landing" | "packages" | "booking" | "tracking" | "partner" | "partner-work" | "partner-earnings" | "profile";
+export type AppView = "landing" | "packages" | "booking" | "tracking" | "partner" | "partner-work" | "partner-earnings" | "partner-settings" | "profile";
 
 export type BookingStatus =
   | "PENDING"
@@ -58,6 +58,32 @@ export interface BookingInfo {
   declinedByPartners: string[];
 }
 
+export interface BankAccount {
+  id: string;
+  bankName: string;
+  accountNumber: string;
+  ifscCode: string;
+  accountHolderName: string;
+  isVerified: boolean;
+  linkedAt: string;
+}
+
+export interface PartnerWallet {
+  balance: number;
+  pendingClearance: number;
+  totalWithdrawn: number;
+  lastWithdrawnAt: string | null;
+}
+
+export interface PartnerSettings {
+  notificationsEnabled: boolean;
+  newBookingAlerts: boolean;
+  paymentAlerts: boolean;
+  autoSyncOnWifi: boolean;
+  highQualityUpload: boolean;
+  locationTracking: boolean;
+}
+
 export interface UserProfile {
   name: string;
   email: string;
@@ -76,6 +102,14 @@ export interface UserProfile {
   authProvider: "email" | "google" | "apple" | null;
   /** Whether partner is online (accepting bookings) */
   isOnline: boolean;
+  /** Partner bank account for withdrawals */
+  bankAccount: BankAccount | null;
+  /** Partner wallet balance */
+  wallet: PartnerWallet;
+  /** Partner app settings */
+  settings: PartnerSettings;
+  /** Partner verification status */
+  isVerified: boolean;
 }
 
 export interface ReviewInfo {

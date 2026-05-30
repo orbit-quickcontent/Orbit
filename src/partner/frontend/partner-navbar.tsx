@@ -11,9 +11,9 @@
  * Category: Partner UI
  */
 
-import { useState } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Bell, LogOut, Settings, ChevronDown, Search, Wallet } from "lucide-react";
+import { Bell, LogOut, Settings, ChevronDown, Search, Wallet, X, MapPin, FileText, Package } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useAppStore } from "@/lib/store";
 import { getInitials, getGreeting } from "@/lib/utils";
@@ -21,6 +21,80 @@ import { getInitials, getGreeting } from "@/lib/utils";
 export function PartnerNavbar() {
   const { user, setUser, partnerActiveBooking, bookings, logout, setCurrentView } = useAppStore();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const searchRef = useRef<HTMLDivElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
+  // Filter bookings for search
+  const searchableBookings = bookings.filter((b) => {
+    // When offline, don't show available work (PENDING / PARTNER_DISPATCHED) in results
+    if (!user.isOnline && (b.status === "PENDING" || b.status === "PARTNER_DISPATCHED")) {
+      return false;
+    }
+    return true;
+  });
+
+  const searchResults = searchQuery.trim()
+    ? searchableBookings.filter((b) => {
+        const q = searchQuery.toLowerCase();
+        return (
+          b.id.toLowerCase().includes(q) ||
+          b.packageName.toLowerCase().includes(q) ||
+          b.location.toLowerCase().includes(q) ||
+          b.notes.toLowerCase().includes(q)
+        );
+      })
+    : [];
+
+  const handleSearchSelect = useCallback(
+    (booking: (typeof bookings)[number]) => {
+      setSearchOpen(false);
+      setSearchQuery("");
+      // Navigate to the right view based on status
+      if (booking.status === "DELIVERED" || booking.status === "CANCELLED") {
+        setCurrentView("partner-earnings");
+      } else {
+        setCurrentView("partner");
+      }
+    },
+    [setCurrentView]
+  );
+
+  // Close search on Escape
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setSearchOpen(false);
+        setSearchQuery("");
+      }
+    };
+    if (searchOpen) {
+      document.addEventListener("keydown", handleKeyDown);
+      return () => document.removeEventListener("keydown", handleKeyDown);
+    }
+  }, [searchOpen]);
+
+  // Close search on click outside
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (searchRef.current && !searchRef.current.contains(e.target as Node)) {
+        setSearchOpen(false);
+        setSearchQuery("");
+      }
+    };
+    if (searchOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+      return () => document.removeEventListener("mousedown", handleClickOutside);
+    }
+  }, [searchOpen]);
+
+  // Auto-focus input when search opens
+  useEffect(() => {
+    if (searchOpen) {
+      setTimeout(() => searchInputRef.current?.focus(), 100);
+    }
+  }, [searchOpen]);
 
   const avatarGradient = user.avatar || "from-orbit-purple to-orbit-cyan";
   const initials = getInitials(user.name);
@@ -96,7 +170,10 @@ export function PartnerNavbar() {
 
             {/* Right: Search + Online Toggle + Notification + Menu */}
             <div className="flex items-center gap-2 sm:gap-3">
-              <button className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-white/[0.08] backdrop-blur-xl flex items-center justify-center text-muted-foreground hover:text-orbit-purple hover:bg-white/10 transition-all duration-200">
+              <button
+                onClick={() => { setSearchOpen(true); setMenuOpen(false); }}
+                className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-white/[0.08] backdrop-blur-xl flex items-center justify-center text-muted-foreground hover:text-orbit-purple hover:bg-white/10 transition-all duration-200"
+              >
                 <Search className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
               </button>
 
@@ -167,6 +244,100 @@ export function PartnerNavbar() {
           </div>
         </div>
       </div>
+
+      {/* Search Overlay */}
+      <AnimatePresence>
+        {searchOpen && (
+          <motion.div
+            ref={searchRef}
+            initial={{ opacity: 0, y: -8, scale: 0.97 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -8, scale: 0.97 }}
+            transition={{ duration: 0.2 }}
+            className="absolute left-4 right-4 sm:left-6 sm:right-6 top-16 sm:top-20 z-[70]"
+          >
+            <div className="bg-[#0A0A0A]/95 backdrop-blur-xl border border-white/[0.08] rounded-2xl shadow-2xl overflow-hidden">
+              {/* Search Input */}
+              <div className="flex items-center gap-3 px-4 py-3 border-b border-white/[0.06]">
+                <Search className="w-4 h-4 text-orbit-cyan shrink-0" />
+                <input
+                  ref={searchInputRef}
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search bookings by ID, package, location, notes…"
+                  className="flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground/50 outline-none"
+                />
+                {searchQuery && (
+                  <button
+                    onClick={() => setSearchQuery("")}
+                    className="w-6 h-6 rounded-full bg-white/[0.08] flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                )}
+              </div>
+
+              {/* Results */}
+              {searchQuery.trim() && (
+                <div className="max-h-72 overflow-y-auto p-2 custom-scrollbar">
+                  {searchResults.length === 0 ? (
+                    <div className="py-6 text-center">
+                      <p className="text-sm text-muted-foreground/60">No bookings found</p>
+                      <p className="text-xs text-muted-foreground/40 mt-1">Try a different search term</p>
+                    </div>
+                  ) : (
+                    searchResults.map((booking) => {
+                      const isActive = !["DELIVERED", "CANCELLED"].includes(booking.status);
+                      return (
+                        <button
+                          key={booking.id}
+                          onClick={() => handleSearchSelect(booking)}
+                          className="w-full flex items-start gap-3 px-3 py-2.5 rounded-xl hover:bg-white/[0.04] transition-colors text-left"
+                        >
+                          <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 mt-0.5 ${isActive ? "bg-orbit-purple/10" : "bg-white/[0.04]"}`}>
+                            <Package className={`w-4 h-4 ${isActive ? "text-orbit-purple" : "text-muted-foreground/60"}`} />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <p className="text-sm font-medium text-foreground truncate">{booking.packageName}</p>
+                              <span className={`text-[9px] font-semibold px-1.5 py-0.5 rounded-md ${isActive ? "bg-orbit-purple/10 text-orbit-purple" : "bg-white/[0.04] text-muted-foreground/60"}`}>
+                                {booking.status}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-3 mt-0.5">
+                              {booking.location && (
+                                <span className="flex items-center gap-1 text-xs text-muted-foreground/60 truncate">
+                                  <MapPin className="w-3 h-3 shrink-0" />{booking.location}
+                                </span>
+                              )}
+                              {booking.notes && (
+                                <span className="flex items-center gap-1 text-xs text-muted-foreground/40 truncate">
+                                  <FileText className="w-3 h-3 shrink-0" />{booking.notes}
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-[10px] text-muted-foreground/30 mt-0.5 font-mono">{booking.id}</p>
+                          </div>
+                        </button>
+                      );
+                    })
+                  )}
+                </div>
+              )}
+
+              {/* Hint when empty query */}
+              {!searchQuery.trim() && (
+                <div className="py-4 px-4">
+                  <p className="text-xs text-muted-foreground/40 text-center">
+                    Type to search across {searchableBookings.length} booking{searchableBookings.length !== 1 ? "s" : ""}
+                  </p>
+                </div>
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Dropdown Menu */}
       <AnimatePresence>
