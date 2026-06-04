@@ -28,15 +28,15 @@
 
 "use client";
 
-import { useEffect, useCallback } from "react";
+import { useEffect } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useAppStore } from "@/lib/store";
-import { LoginPage, SplashScreen } from "@/shared/frontend";
+import { LoginPage } from "@/shared/frontend";
 import ClientApp from "@/client/frontend/client-app";
 import PartnerApp from "@/partner/frontend/partner-app";
 
 export default function OrbitApp() {
-  const { appPhase, setAppPhase, isAuthenticated, userRole, logout, _hydrated, _hydrate } = useAppStore();
+  const { appPhase, isAuthenticated, userRole, logout, _hydrated, _hydrate } = useAppStore();
 
   // Hydrate state from localStorage after mount
   useEffect(() => {
@@ -54,14 +54,6 @@ export default function OrbitApp() {
     }
   }, [_hydrated, isAuthenticated, userRole, logout]);
 
-  const handleSplashComplete = useCallback(() => {
-    if (isAuthenticated) {
-      setAppPhase("app");
-    } else {
-      setAppPhase("auth");
-    }
-  }, [isAuthenticated, setAppPhase]);
-
   // Before hydration, show a blank loading state to avoid flicker
   if (!_hydrated) {
     return (
@@ -77,17 +69,6 @@ export default function OrbitApp() {
   return (
     <>
       <AnimatePresence mode="wait">
-        {appPhase === "splash" && (
-          <motion.div
-            key="splash"
-            initial={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.5 }}
-          >
-            <SplashScreen onComplete={handleSplashComplete} />
-          </motion.div>
-        )}
-
         {appPhase === "auth" && !isAuthenticated && (
           <motion.div
             key="login"

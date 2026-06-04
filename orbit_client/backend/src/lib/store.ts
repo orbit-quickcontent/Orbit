@@ -216,7 +216,7 @@ export const useAppStore = create<AppState>((set, get) => ({
         reviews: (stored.reviews as ReviewInfo[]) ?? [],
         partnerActiveBooking: (stored.partnerActiveBooking as BookingInfo | null) ?? null,
         partnerId: (stored.partnerId as string) || generatePartnerId(),
-        appPhase: stored.isAuthenticated ? "app" : "splash",
+        appPhase: stored.isAuthenticated ? "app" : "auth",
       });
     } else {
       set({ _hydrated: true, partnerId: generatePartnerId() });
@@ -224,7 +224,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   // App phase
-  appPhase: "splash",
+  appPhase: "auth",
   setAppPhase: (phase) => set({ appPhase: phase }),
 
   // Auth
