@@ -50,6 +50,7 @@ export function PartnerDashboard() {
     addBooking, user, bookings, availableBookings, userRole,
     setAvailableBookings, addAvailableBooking, removeAvailableBooking,
     partnerId, fetchAvailableBookings, creditPartnerWallet,
+    updateSyncPercentage, fetchPartnerProfile,
   } = useAppStore();
 
   const [partnerPhase, setPartnerPhase] = useState<PartnerPhase>("available");
@@ -65,13 +66,39 @@ export function PartnerDashboard() {
   const [isLoading, setIsLoading] = useState(true);
   const [isAccepting, setIsAccepting] = useState<string | null>(null);
 
-  // ─── Fetch available bookings on mount ─────────────────────────────
+  // Fetch partner profile on mount
+  useEffect(() => {
+    if (partnerId) {
+      fetchPartnerProfile();
+    }
+  }, [partnerId, fetchPartnerProfile]);
+
   useEffect(() => {
     if (user.isOnline && partnerId) {
-      setIsLoading(true);
+      Promise.resolve().then(() => setIsLoading(true));
       fetchAvailableBookings().finally(() => setIsLoading(false));
     }
   }, [user.isOnline, partnerId, fetchAvailableBookings]);
+
+  // Auto-detect phase from active booking status
+  useEffect(() => {
+    if (partnerActiveBooking) {
+      const status = partnerActiveBooking.status;
+      if (status === "EN_ROUTE") {
+        Promise.resolve().then(() => setPartnerPhase("navigating"));
+      } else if (status === "SHOOTING") {
+        Promise.resolve().then(() => setPartnerPhase("shooting"));
+      } else if (status === "SYNCING") {
+        Promise.resolve().then(() => setPartnerPhase("syncing"));
+      } else if (status === "EDITING") {
+        Promise.resolve().then(() => setPartnerPhase("privacy"));
+      } else if (status === "DELIVERED" || status === "CANCELLED") {
+        Promise.resolve().then(() => setPartnerPhase("available"));
+      }
+    } else {
+      Promise.resolve().then(() => setPartnerPhase("available"));
+    }
+  }, [partnerActiveBooking]);
 
   // ─── WebSocket connection for real-time push ──────────────────────
   useEffect(() => {
@@ -171,6 +198,9 @@ export function PartnerDashboard() {
 
       // Notify WebSocket that we accepted
       socketRef.current?.emit("booking:accept", { bookingId: booking.id, partnerId });
+
+      // Sync DB profile
+      await fetchPartnerProfile();
     } catch (err) {
       toast.error("Could not accept booking", {
         description: err instanceof Error ? err.message : "Another partner may have already accepted it.",
@@ -180,7 +210,7 @@ export function PartnerDashboard() {
     } finally {
       setIsAccepting(null);
     }
-  }, [partnerId, addBooking, setPartnerActiveBooking, removeAvailableBooking, fetchAvailableBookings]);
+  }, [partnerId, addBooking, setPartnerActiveBooking, removeAvailableBooking, fetchAvailableBookings, fetchPartnerProfile]);
 
   // ─── Decline a booking via API ────────────────────────────────────
   const handleDeclineBooking = useCallback(async (booking: BookingInfo) => {
@@ -239,29 +269,126 @@ export function PartnerDashboard() {
     toast.success("Arrived at location!", { description: "Ready to start shooting" });
   };
 
-  const handleCompleteShooting = () => {
+  const handleCompleteShooting = async () => {
+    if (!partnerActiveBooking) return;
     setPartnerPhase("syncing");
     setSyncProgress(0);
-    setCurrentFile(syncFiles[0]);
-    setSyncSpeed(42);
-    let fileIdx = 0;
-    syncIntervalRef.current = setInterval(() => {
-      setSyncProgress((prev) => {
-        const next = prev + 1;
-        if (next >= 100) {
-          if (syncIntervalRef.current) clearInterval(syncIntervalRef.current);
-          setTimeout(() => setPartnerPhase("privacy"), 500);
-          return 100;
-        }
-        const newFileIdx = Math.min(Math.floor((next / 100) * syncFiles.length), syncFiles.length - 1);
-        if (newFileIdx !== fileIdx) {
-          fileIdx = newFileIdx;
-          setCurrentFile(syncFiles[newFileIdx]);
-        }
-        setSyncSpeed(Math.floor(35 + Math.random() * 20));
-        return next;
+    
+    const filesCount = syncFiles.length;
+    const progressMap = new Map<string, number>();
+    syncFiles.forEach(f => progressMap.set(f, 0));
+
+    // Update overall progress based on individual file progresses
+    const updateOverallProgress = () => {
+      let totalProgress = 0;
+      progressMap.forEach((p) => {
+        totalProgress += p;
       });
-    }, 150);
+      const overall = Math.round(totalProgress / filesCount);
+      setSyncProgress(overall);
+      
+      // Update sync percentage in database periodically
+      if (partnerActiveBooking) {
+        updateSyncPercentage(partnerActiveBooking.id, overall);
+      }
+    };
+
+    try {
+      const uploadedUrls: string[] = [];
+      let totalBytesUploaded = 0;
+
+      // Upload each file
+      for (let i = 0; i < syncFiles.length; i++) {
+        const fileName = syncFiles[i];
+        setCurrentFile(fileName);
+        
+        // 1. Get pre-signed URL
+        const res = await fetch("/api/upload/presigned-url", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            filename: fileName,
+            contentType: "video/quicktime",
+            bookingId: partnerActiveBooking.id,
+          }),
+        });
+
+        if (!res.ok) throw new Error(`Failed to get presigned URL for ${fileName}`);
+        const { url, key } = await res.json();
+        uploadedUrls.push(`/upload/${key}`);
+
+        // Generate a mock video Blob (~500KB to make upload visible)
+        const mockBlob = new Blob([new Uint8Array(500 * 1024)], { type: "video/quicktime" });
+        totalBytesUploaded += mockBlob.size;
+
+        // 2. PUT file via XMLHttpRequest to track progress
+        await new Promise<void>((resolve, reject) => {
+          const xhr = new XMLHttpRequest();
+          xhr.open("PUT", url);
+          xhr.setRequestHeader("Content-Type", "video/quicktime");
+
+          let startTime = Date.now();
+
+          xhr.upload.onprogress = (event) => {
+            if (event.lengthComputable) {
+              const fileProgress = (event.loaded / event.total) * 100;
+              progressMap.set(fileName, fileProgress);
+              updateOverallProgress();
+
+              // Calculate speed (MB/s)
+              const elapsedSeconds = (Date.now() - startTime) / 1000;
+              if (elapsedSeconds > 0) {
+                const speed = (event.loaded / (1024 * 1024)) / elapsedSeconds;
+                setSyncSpeed(parseFloat(speed.toFixed(1)));
+              }
+            }
+          };
+
+          xhr.onload = () => {
+            if (xhr.status === 200) {
+              progressMap.set(fileName, 100);
+              updateOverallProgress();
+              resolve();
+            } else {
+              reject(new Error(`Upload failed for ${fileName} with status ${xhr.status}`));
+            }
+          };
+
+          xhr.onerror = () => reject(new Error(`Network error uploading ${fileName}`));
+          xhr.send(mockBlob);
+        });
+      }
+
+      // 3. Mark sync complete in backend
+      const completeRes = await fetch(`/api/bookings/${partnerActiveBooking.id}/sync-complete`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          footageUrls: uploadedUrls,
+          fileName: syncFiles[syncFiles.length - 1],
+          fileSize: totalBytesUploaded,
+        }),
+      });
+
+      if (!completeRes.ok) {
+        throw new Error("Failed to mark sync complete on server");
+      }
+
+      // Update local Zustand store
+      updateBookingStatus(partnerActiveBooking.id, "EDITING");
+      
+      // Sync DB profile
+      await fetchPartnerProfile();
+
+      toast.success("All files synced and uploaded to cloud!");
+      setTimeout(() => setPartnerPhase("privacy"), 500);
+
+    } catch (err: any) {
+      console.error(err);
+      toast.error("Sync failed", {
+        description: err.message || "An error occurred during footage sync.",
+      });
+    }
   };
 
   const handleViewPayment = () => {
@@ -286,6 +413,9 @@ export function PartnerDashboard() {
       markBookingDelivered(partnerActiveBooking.id);
       markBookingDownloaded(partnerActiveBooking.id);
       creditPartnerWallet(partnerActiveBooking.packagePrice);
+
+      // Sync DB profile
+      await fetchPartnerProfile();
     }
     setPartnerPhase("available");
     setPartnerActiveBooking(null);
@@ -310,8 +440,12 @@ export function PartnerDashboard() {
     cancelBooking(partnerActiveBooking.id, "PARTNER");
     setPartnerPhase("available");
     setPartnerActiveBooking(null);
+
+    // Sync DB profile
+    await fetchPartnerProfile();
+
     toast.success("Booking cancelled. It will be reassigned to another partner.");
-  }, [partnerActiveBooking, cancelBooking, setPartnerActiveBooking]);
+  }, [partnerActiveBooking, cancelBooking, setPartnerActiveBooking, fetchPartnerProfile]);
 
   // ─── Active Workflow (when partner has accepted a booking) ──────────
   if (partnerActiveBooking && partnerPhase !== "available") {

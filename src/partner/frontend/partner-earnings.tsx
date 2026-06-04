@@ -7,7 +7,7 @@
  * Compact mobile-first layout to reduce scrolling.
  */
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import {
   Wallet,
@@ -35,7 +35,13 @@ import { staggerContainer, staggerItem } from "@/lib/animations";
 const MIN_WITHDRAWAL = 500;
 
 export function PartnerEarnings() {
-  const { bookings, reviews, user, withdrawFromWallet, setCurrentView } = useAppStore();
+  const { bookings, reviews, user, withdrawFromWallet, setCurrentView, fetchPartnerProfile, partnerId } = useAppStore();
+
+  useEffect(() => {
+    if (partnerId) {
+      fetchPartnerProfile();
+    }
+  }, [partnerId, fetchPartnerProfile]);
   const [withdrawAmount, setWithdrawAmount] = useState("");
   const [isWithdrawing, setIsWithdrawing] = useState(false);
 

@@ -56,46 +56,6 @@ export default function OTPVerification({ email, role, onVerified, onBack }: OTP
   const cooldownRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const verifyCalledRef = useRef(false);
 
-  // Send OTP on mount
-  useEffect(() => {
-    sendOtp();
-    return () => {
-      if (cooldownRef.current) clearInterval(cooldownRef.current);
-    };
-  }, []);
-
-  // Cooldown timer
-  useEffect(() => {
-    if (resendCooldown <= 0) {
-      if (cooldownRef.current) clearInterval(cooldownRef.current);
-      return;
-    }
-
-    cooldownRef.current = setInterval(() => {
-      setResendCooldown((prev) => {
-        if (prev <= 1) {
-          if (cooldownRef.current) clearInterval(cooldownRef.current);
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-
-    return () => {
-      if (cooldownRef.current) clearInterval(cooldownRef.current);
-    };
-  }, [resendCooldown]);
-
-  // Auto-verify when OTP is fully entered
-  useEffect(() => {
-    if (otp.length === 6 && !verifyCalledRef.current) {
-      verifyCalledRef.current = true;
-      verifyOtp();
-    }
-    if (otp.length < 6) {
-      verifyCalledRef.current = false;
-    }
-  }, [otp]);
 
   const sendOtpViaApi = useCallback(async (emailAddr: string) => {
     const res = await fetch("/api/auth/send-otp", {
@@ -218,6 +178,47 @@ export default function OTPVerification({ email, role, onVerified, onBack }: OTP
     setError("");
     sendOtp();
   }, [resendCooldown, sendOtp]);
+
+  // Send OTP on mount
+  useEffect(() => {
+    Promise.resolve().then(() => sendOtp());
+    return () => {
+      if (cooldownRef.current) clearInterval(cooldownRef.current);
+    };
+  }, [sendOtp]);
+
+  // Cooldown timer
+  useEffect(() => {
+    if (resendCooldown <= 0) {
+      if (cooldownRef.current) clearInterval(cooldownRef.current);
+      return;
+    }
+
+    cooldownRef.current = setInterval(() => {
+      setResendCooldown((prev) => {
+        if (prev <= 1) {
+          if (cooldownRef.current) clearInterval(cooldownRef.current);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => {
+      if (cooldownRef.current) clearInterval(cooldownRef.current);
+    };
+  }, [resendCooldown]);
+
+  // Auto-verify when OTP is fully entered
+  useEffect(() => {
+    if (otp.length === 6 && !verifyCalledRef.current) {
+      verifyCalledRef.current = true;
+      verifyOtp();
+    }
+    if (otp.length < 6) {
+      verifyCalledRef.current = false;
+    }
+  }, [otp, verifyOtp]);
 
   const isCyan = role === "USER";
 

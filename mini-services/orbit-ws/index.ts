@@ -116,6 +116,68 @@ function restHandler(req: IncomingMessage, res: ServerResponse) {
     return
   }
 
+  // ─── POST /internal/accept ──────────────────────────────────────────────
+  if (req.method === 'POST' && pathname === '/internal/accept') {
+    readBody(req, (body) => {
+      try {
+        const { bookingId, partnerId, booking } = JSON.parse(body)
+        if (!bookingId || !partnerId || !booking) {
+          res.writeHead(400, { 'Content-Type': 'application/json' })
+          res.end(JSON.stringify({ error: 'Missing required fields: bookingId, partnerId, booking' }))
+          return
+        }
+
+        console.log(`[REST] Partner ${partnerId} accepted booking ${bookingId}`)
+
+        // Store the acceptance
+        bookingAcceptances.set(bookingId, partnerId)
+
+        // Find all other partners who had this booking dispatched and notify them
+        const allDispatchIds = bookingDispatches.get(bookingId)
+        if (allDispatchIds) {
+          for (const dId of allDispatchIds) {
+            const pIds = dispatchPartners.get(dId)
+            if (pIds) {
+              for (const pId of pIds) {
+                if (pId !== partnerId) {
+                  io.to(`partner:${pId}`).emit('booking:accepted-by-other', {
+                    bookingId,
+                    acceptedByPartnerId: partnerId,
+                  })
+                }
+              }
+            }
+          }
+        }
+
+        // Notify client if subscribed
+        const clientSocketId = clientSubscriptions.get(bookingId)
+        if (clientSocketId) {
+          io.to(clientSocketId).emit('booking:partner-assigned', {
+            bookingId,
+            partnerId,
+            partnerName: booking.partner?.user?.name || `Partner ${partnerId}`,
+          })
+
+          // Also emit status update
+          io.to(clientSocketId).emit('booking:status-update', {
+            bookingId,
+            status: 'EN_ROUTE',
+            previousStatus: 'PENDING',
+          })
+        }
+
+        res.writeHead(200, { 'Content-Type': 'application/json' })
+        res.end(JSON.stringify({ accepted: true }))
+      } catch (err) {
+        console.error('[REST] /internal/accept error:', err)
+        res.writeHead(400, { 'Content-Type': 'application/json' })
+        res.end(JSON.stringify({ error: 'Invalid JSON body' }))
+      }
+    })
+    return
+  }
+
   // ─── POST /internal/notify-client ───────────────────────────────────────
   if (req.method === 'POST' && pathname === '/internal/notify-client') {
     readBody(req, (body) => {

@@ -56,6 +56,7 @@ export function DashboardHome() {
     bookings,
     packages,
     setCurrentView,
+    selectedPackage,
     setSelectedPackage,
     setHighlightedPackageId,
   } = useAppStore();
@@ -71,8 +72,8 @@ export function DashboardHome() {
 
   const filteredBookings =
     activeTab === "total" ? bookings :
-    activeTab === "active" ? activeBookingsList :
-    completedBookingsList;
+      activeTab === "active" ? activeBookingsList :
+        completedBookingsList;
 
   return (
     <motion.div
@@ -91,7 +92,12 @@ export function DashboardHome() {
               desc: "Schedule a session",
               gradient: "from-orbit-cyan/20 to-blue-500/20",
               iconColor: "text-orbit-cyan",
-              onClick: () => setCurrentView("packages"),
+              onClick: () => {
+                if (packages.length > 0 && !selectedPackage) {
+                  setSelectedPackage(packages[0]);
+                }
+                setCurrentView("booking");
+              },
             },
             {
               icon: <Radar className="w-3.5 h-3.5" />,
@@ -192,12 +198,12 @@ export function DashboardHome() {
                     animate={{
                       width:
                         currentBooking.status === "PAID" ? "15%"
-                        : currentBooking.status === "PARTNER_DISPATCHED" ? "30%"
-                        : currentBooking.status === "EN_ROUTE" ? "45%"
-                        : currentBooking.status === "SHOOTING" ? "60%"
-                        : currentBooking.status === "SYNCING" ? "75%"
-                        : currentBooking.status === "EDITING" ? "90%"
-                        : "100%",
+                          : currentBooking.status === "PARTNER_DISPATCHED" ? "30%"
+                            : currentBooking.status === "EN_ROUTE" ? "45%"
+                              : currentBooking.status === "SHOOTING" ? "60%"
+                                : currentBooking.status === "SYNCING" ? "75%"
+                                  : currentBooking.status === "EDITING" ? "90%"
+                                    : "100%",
                     }}
                     transition={{ duration: 1.5, ease: "easeOut" }}
                   />
@@ -239,9 +245,8 @@ export function DashboardHome() {
                 className="w-full text-left group h-full"
               >
                 <div
-                  className={`orbit-card rounded-xl p-2.5 sm:p-3 transition-all duration-300 hover:scale-[1.02] hover:border-orbit-cyan/30 h-full flex flex-col ${
-                    pkg.popular ? "border-orbit-cyan/30 orbit-glow" : "border-orbit-border"
-                  }`}
+                  className={`orbit-card rounded-xl p-2.5 sm:p-3 transition-all duration-300 hover:scale-[1.02] hover:border-orbit-cyan/30 h-full flex flex-col ${pkg.popular ? "border-orbit-cyan/30 orbit-glow" : "border-orbit-border"
+                    }`}
                 >
                   {pkg.popular && (
                     <Badge className="bg-gradient-to-r from-orbit-cyan to-orbit-purple text-white text-[7px] font-bold px-1.5 py-0 mb-1.5 w-fit">
@@ -250,11 +255,10 @@ export function DashboardHome() {
                   )}
                   <div className="flex items-center gap-1.5 mb-1.5">
                     <div
-                      className={`w-6 h-6 rounded-md flex items-center justify-center shrink-0 ${
-                        pkg.popular
+                      className={`w-6 h-6 rounded-md flex items-center justify-center shrink-0 ${pkg.popular
                           ? "bg-gradient-to-br from-orbit-cyan/20 to-orbit-purple/20 text-orbit-cyan"
                           : "bg-white/5 text-muted-foreground"
-                      }`}
+                        }`}
                     >
                       {pkg.popular ? <Sparkles className="w-3 h-3" /> : <Star className="w-3 h-3" />}
                     </div>
@@ -323,9 +327,8 @@ export function DashboardHome() {
                 </div>
               </div>
               <ChevronDown
-                className={`w-3.5 h-3.5 text-muted-foreground/50 transition-transform duration-300 ${
-                  activeTab ? "rotate-180" : ""
-                }`}
+                className={`w-3.5 h-3.5 text-muted-foreground/50 transition-transform duration-300 ${activeTab ? "rotate-180" : ""
+                  }`}
               />
             </div>
           </button>
@@ -349,16 +352,14 @@ export function DashboardHome() {
                     <button
                       key={tab.key}
                       onClick={() => setActiveTab(tab.key)}
-                      className={`flex-1 py-1 rounded-md text-[9px] sm:text-[10px] font-bold uppercase tracking-wider transition-all duration-200 ${
-                        activeTab === tab.key
+                      className={`flex-1 py-1 rounded-md text-[9px] sm:text-[10px] font-bold uppercase tracking-wider transition-all duration-200 ${activeTab === tab.key
                           ? "bg-orbit-cyan/15 text-orbit-cyan"
                           : "text-muted-foreground/60 hover:text-muted-foreground hover:bg-white/[0.03]"
-                      }`}
+                        }`}
                     >
                       {tab.label}
-                      <span className={`ml-0.5 text-[8px] ${
-                        activeTab === tab.key ? "text-orbit-cyan/60" : "text-muted-foreground/40"
-                      }`}>
+                      <span className={`ml-0.5 text-[8px] ${activeTab === tab.key ? "text-orbit-cyan/60" : "text-muted-foreground/40"
+                        }`}>
                         ({tab.count})
                       </span>
                     </button>
@@ -395,13 +396,12 @@ export function DashboardHome() {
                           className="orbit-card rounded-lg p-2 flex items-center gap-2"
                         >
                           <div
-                            className={`w-6 h-6 rounded-md flex items-center justify-center shrink-0 ${
-                              isDelivered
+                            className={`w-6 h-6 rounded-md flex items-center justify-center shrink-0 ${isDelivered
                                 ? "bg-green-500/10 text-green-400"
                                 : isCancelled
-                                ? "bg-red-500/10 text-red-400"
-                                : "bg-orbit-cyan/10 text-orbit-cyan"
-                            }`}
+                                  ? "bg-red-500/10 text-red-400"
+                                  : "bg-orbit-cyan/10 text-orbit-cyan"
+                              }`}
                           >
                             {isDelivered ? (
                               <CheckCircle2 className="w-3 h-3" />
@@ -436,13 +436,12 @@ export function DashboardHome() {
                             )}
                             <Badge
                               variant="outline"
-                              className={`text-[7px] sm:text-[8px] ${
-                                isDelivered
+                              className={`text-[7px] sm:text-[8px] ${isDelivered
                                   ? "border-green-400/30 text-green-400"
                                   : isCancelled
-                                  ? "border-red-400/30 text-red-400"
-                                  : "border-orbit-cyan/30 text-orbit-cyan"
-                              }`}
+                                    ? "border-red-400/30 text-red-400"
+                                    : "border-orbit-cyan/30 text-orbit-cyan"
+                                }`}
                             >
                               {compactStatus(b.status)}
                             </Badge>
@@ -493,7 +492,12 @@ export function DashboardHome() {
                 Professional edits delivered in 60 minutes.
               </p>
               <Button
-                onClick={() => setCurrentView("packages")}
+                onClick={() => {
+                  if (packages.length > 0 && !selectedPackage) {
+                    setSelectedPackage(packages[0]);
+                  }
+                  setCurrentView("booking");
+                }}
                 className="bg-white text-[#000000] hover:bg-white/90 font-bold h-7 text-[10px]"
               >
                 <Zap className="w-2.5 h-2.5 mr-0.5" />

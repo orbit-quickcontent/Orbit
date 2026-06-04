@@ -43,6 +43,7 @@ import {
   Send,
   Download,
   CircleCheckBig,
+  X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -52,6 +53,7 @@ import { useAppStore } from "@/lib/store";
 import { formatCurrency } from "@/lib/constants";
 import { type BookingStatus } from "@/lib/types";
 import { toast } from "sonner";
+import { io } from "socket.io-client";
 
 // ─── Status Pipeline ────────────────────────────────────────────────────────────
 export const STATUS_PIPELINE: { status: BookingStatus; label: string; icon: React.ReactNode; description: string }[] = [
@@ -221,15 +223,24 @@ function ReviewSection({ bookingId, onReviewDone }: { bookingId: string; onRevie
         />
       </div>
 
-      {/* Submit */}
-      <Button
-        onClick={handleSubmit}
-        disabled={partnerRating === 0 || editorRating === 0}
-        className="w-full bg-gradient-to-r from-orbit-cyan to-orbit-purple text-white hover:opacity-90 font-bold disabled:opacity-40"
-      >
-        <Send className="w-4 h-4 mr-2" />
-        Submit Review
-      </Button>
+      {/* Action Buttons */}
+      <div className="flex flex-col sm:flex-row gap-3">
+        <Button
+          onClick={handleSubmit}
+          disabled={partnerRating === 0 || editorRating === 0}
+          className="flex-1 bg-gradient-to-r from-orbit-cyan to-orbit-purple text-white hover:opacity-90 font-bold disabled:opacity-45"
+        >
+          <Send className="w-4 h-4 mr-2" />
+          Submit Review
+        </Button>
+        <Button
+          variant="outline"
+          onClick={onReviewDone}
+          className="flex-1 border-orbit-border text-foreground hover:bg-white/5 font-bold"
+        >
+          Skip & Close
+        </Button>
+      </div>
     </motion.div>
   );
 }
@@ -291,33 +302,30 @@ export function TrackingDashboard() {
   const handleReviewDone = useCallback(() => {
     if (currentBooking) {
       completeBooking(currentBooking.id);
-      setCurrentView("packages");
+      setCurrentView("landing");
     }
   }, [currentBooking, completeBooking, setCurrentView]);
 
   // ─── Main effect: setup polling & auto-advance ──────────────
+  // ─── Main effect: setup WebSocket connection & updates ──────────────
   useEffect(() => {
     if (!currentBooking) return;
 
     // If already DELIVERED, no timers needed — just show final state
     if (currentBooking.status === "DELIVERED") {
       stopAllTimers();
-      setSyncProgress(100);
-      setCountdown(0);
+      Promise.resolve().then(() => {
+        setSyncProgress(100);
+        setCountdown(0);
+      });
       return;
     }
 
-    // If auto-advance already started for this booking, don't restart
     if (autoAdvanceStartedRef.current === currentBooking.id) return;
     autoAdvanceStartedRef.current = currentBooking.id;
 
-    // Backend polling (max 12 attempts, then stop)
-    const pollBackend = async () => {
-      pollCountRef.current++;
-      if (pollCountRef.current > 12) {
-        if (pollRef.current) clearInterval(pollRef.current);
-        return;
-      }
+    // Initial load: fetch latest state from API
+    const loadInitialState = async () => {
       try {
         const res = await fetch(`/api/bookings/${currentBooking.id}/track`);
         if (res.ok) {
@@ -332,44 +340,67 @@ export function TrackingDashboard() {
               updateEditCountdown(currentBooking.id, data.tracking.editCountdown);
             }
             updateBookingStatus(currentBooking.id, data.tracking.status);
-            if (data.tracking.status === "DELIVERED") {
-              stopAllTimers();
-            }
           }
         }
-      } catch { /* graceful fallback */ }
+      } catch { /* fallback */ }
     };
+    loadInitialState();
 
-    pollRef.current = setInterval(pollBackend, 5000);
+    // Setup Socket.IO connection
+    const socket = io("/?XTransformPort=3003", {
+      path: "/socket.io/",
+      transports: ["websocket", "polling"],
+      reconnection: true,
+      reconnectionDelay: 3000,
+      reconnectionAttempts: 5,
+      timeout: 10000,
+    });
 
-    // Auto-advance simulation — STOPS at DELIVERED (last step)
-    intervalRef.current = setInterval(() => {
-      // Use the store's currentBooking status to decide next step
-      const store = useAppStore.getState();
-      const booking = store.currentBooking;
-      if (!booking || booking.status === "DELIVERED") {
-        stopAllTimers();
-        return;
+    socket.on("connect", () => {
+      console.log("[WS Client] Connected, subscribing to booking:", currentBooking.id);
+      socket.emit("client:subscribe", { bookingId: currentBooking.id });
+    });
+
+    socket.on("booking:partner-assigned", (data: { bookingId: string; partnerId: string; partnerName: string }) => {
+      console.log("[WS Client] Partner assigned:", data);
+      toast.success("Videographer assigned!", {
+        description: `${data.partnerName} is now handling your booking.`,
+      });
+      loadInitialState();
+    });
+
+    socket.on("booking:status-update", (data: { bookingId: string; status: BookingStatus }) => {
+      console.log("[WS Client] Status update:", data.status);
+      updateBookingStatus(currentBooking.id, data.status);
+      
+      if (data.status === "EDITING") {
+        setSyncProgress(100);
       }
-
-      const currentIdx = STATUS_PIPELINE.findIndex((s) => s.status === booking.status);
-      const nextIdx = currentIdx + 1;
-      if (nextIdx >= STATUS_PIPELINE.length) {
-        stopAllTimers();
-        return;
-      }
-      const nextStatus = STATUS_PIPELINE[nextIdx].status;
-      updateBookingStatus(booking.id, nextStatus);
-
-      if (nextStatus === "DELIVERED") {
+      if (data.status === "DELIVERED") {
+        setSyncProgress(100);
+        setCountdown(0);
         stopAllTimers();
       }
-    }, 8000);
+    });
+
+    socket.on("booking:sync-update", (data: { bookingId: string; syncPercentage: number }) => {
+      console.log("[WS Client] Sync progress update:", data.syncPercentage);
+      setSyncProgress(data.syncPercentage);
+      updateSyncPercentage(currentBooking.id, data.syncPercentage);
+    });
+
+    socket.on("booking:countdown-update", (data: { bookingId: string; editCountdown: number }) => {
+      console.log("[WS Client] Countdown update:", data.editCountdown);
+      setCountdown(data.editCountdown);
+      updateEditCountdown(currentBooking.id, data.editCountdown);
+    });
 
     return () => {
-      stopAllTimers();
+      console.log("[WS Client] Disconnecting socket for booking:", currentBooking.id);
+      socket.disconnect();
+      autoAdvanceStartedRef.current = null;
     };
-  }, [currentBooking?.id]); // Only re-run when booking ID changes, not on every status change
+  }, [currentBooking?.id]); // Only re-run when booking ID changes
 
   // ─── Sync progress animation — ONLY during SYNCING phase ──────
   useEffect(() => {
@@ -377,7 +408,7 @@ export function TrackingDashboard() {
     if (activeStep !== 4) {
       // If we've moved past syncing, set to 100%
       if (activeStep > 4) {
-        setSyncProgress(100);
+        Promise.resolve().then(() => setSyncProgress(100));
       }
       return;
     }
@@ -396,8 +427,10 @@ export function TrackingDashboard() {
   useEffect(() => {
     if (isComplete) {
       stopAllTimers();
-      setSyncProgress(100);
-      setCountdown(0);
+      Promise.resolve().then(() => {
+        setSyncProgress(100);
+        setCountdown(0);
+      });
     }
   }, [isComplete, stopAllTimers]);
 
@@ -719,7 +752,14 @@ export function TrackingDashboard() {
               className="space-y-4"
             >
               {/* Task Complete Card */}
-              <div className="orbit-card rounded-2xl p-5 sm:p-6 text-center border border-green-500/25">
+              <div className="orbit-card rounded-2xl p-5 sm:p-6 text-center border border-green-500/25 relative">
+                <button
+                  onClick={handleReviewDone}
+                  className="absolute top-3 right-3 p-1.5 rounded-full bg-white/5 hover:bg-white/10 text-muted-foreground hover:text-foreground transition-all active:scale-95"
+                  title="Close completed screen"
+                >
+                  <X className="w-4 h-4" />
+                </button>
                 <motion.div
                   initial={{ scale: 0 }}
                   animate={{ scale: 1 }}

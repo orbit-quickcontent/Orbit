@@ -118,6 +118,7 @@ model Booking {
   cancelledBy    String?  // CLIENT or PARTNER
 
   notes          String?  // Additional notes from user
+  footageUrls    String?  // Serialized JSON array of uploaded footage URLs
   
   // Dispatch tracking
   dispatchRound  Int      @default(0) // How many rounds of dispatch attempted

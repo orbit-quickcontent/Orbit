@@ -42,10 +42,12 @@ type LoginStep = "role" | "profile" | "otp";
 type AvatarMode = "avatar" | "photo";
 
 export default function LoginPage() {
-  const { login, setUser } = useAppStore();
+  const { login, setUser, user } = useAppStore();
   const [step, setStep] = useState<LoginStep>("role");
   const [selectedRole, setSelectedRole] = useState<UserRole | null>(null);
   const [hoveredRole, setHoveredRole] = useState<"USER" | "PARTNER" | null>(null);
+  const [isAuthenticating, setIsAuthenticating] = useState(false);
+  const [isSocialLogin, setIsSocialLogin] = useState(false);
 
   // Profile form
   const [name, setName] = useState("");
@@ -98,6 +100,7 @@ export default function LoginPage() {
       ? AVATAR_PRESETS.find(p => p.id === selectedAvatarPreset)
       : null;
 
+    const isSocial = user.authProvider === "google" || user.authProvider === "apple" || isSocialLogin;
     setUser({
       name: name.trim(),
       email: email.trim(),
@@ -107,46 +110,134 @@ export default function LoginPage() {
       avatarEmoji: selectedPreset?.emoji ?? null,
       avatarPhotoUrl: avatarMode === "photo" ? photoPreview : null,
       avatarImage: selectedPreset?.image ?? null,
+      isVerified: isSocial,
     });
-    setStep("otp");
-  }, [name, email, phone, avatarMode, selectedAvatarPreset, photoPreview, setUser]);
+
+    if (isSocial) {
+      if (selectedRole) {
+        login(selectedRole);
+        toast.success("Welcome aboard!", { 
+          description: `Logged in successfully as a ${selectedRole === "USER" ? "Client" : "Partner"}.` 
+        });
+      }
+    } else {
+      setStep("otp");
+    }
+  }, [name, email, phone, avatarMode, selectedAvatarPreset, photoPreview, setUser, user.authProvider, isSocialLogin, selectedRole, login]);
 
   // Step 3→done
   const handleOtpVerified = useCallback(() => {
+    setUser({ authProvider: "email", isVerified: true });
     if (selectedRole) login(selectedRole);
-  }, [selectedRole, login]);
+  }, [selectedRole, login, setUser]);
 
   const handleOtpBack = useCallback(() => {
     setStep("profile");
   }, []);
 
   // Google OAuth
-  const handleGoogleLogin = useCallback(() => {
-    // In production, this would use Google Identity Services (GIS)
-    // For now, it opens a simulated OAuth flow
-    // On a real device, this would trigger the Google Sign-In prompt
-    // and receive the user's name/email from the OAuth callback
-    setName("Google User");
-    setEmail("user@gmail.com");
-    setSelectedAvatarPreset(AVATAR_PRESETS[0].id);
-    setAvatarMode("avatar");
-    setUser({ authProvider: "google" });
-    toast.success("Signed in with Google!", { description: "Profile auto-filled from your Google account" });
-  }, [setUser]);
+  const handleGoogleLogin = useCallback(async () => {
+    if (isAuthenticating) return;
+    setIsAuthenticating(true);
+    const loadingToast = toast.loading("Connecting to Google...");
+    try {
+      const { auth } = await import("@/lib/firebase");
+      const { signInWithPopup, GoogleAuthProvider } = await import("firebase/auth");
+      const provider = new GoogleAuthProvider();
+      const result = await signInWithPopup(auth, provider);
+      const user = result.user;
+      
+      setName(user.displayName || "Google User");
+      setEmail(user.email || "");
+      
+      if (user.photoURL) {
+        setPhotoPreview(user.photoURL);
+        setAvatarMode("photo");
+      } else {
+        setSelectedAvatarPreset(AVATAR_PRESETS[0].id);
+        setAvatarMode("avatar");
+      }
+      
+      setUser({ authProvider: "google" });
+      setIsSocialLogin(true);
+      
+      toast.dismiss(loadingToast);
+      toast.success("Signed in with Google!", { 
+        description: "Profile auto-filled from your Google account. You can now customize your details below." 
+      });
+    } catch (err: any) {
+      console.error("Firebase Google Login Error:", err);
+      toast.dismiss(loadingToast);
+      
+      if (err.code === "auth/cancelled-popup-request" || err.code === "auth/popup-closed-by-user") {
+        toast.info("Sign-in cancelled", {
+          description: "Google sign-in popup was closed."
+        });
+      } else if (err.code === "auth/popup-blocked") {
+        toast.warning("Popup blocked", {
+          description: "Please allow popups for this website in your browser settings to sign in."
+        });
+      } else {
+        toast.error("Google Sign-In failed", { 
+          description: err.message || "Please try again." 
+        });
+      }
+    } finally {
+      setIsAuthenticating(false);
+    }
+  }, [setUser, isAuthenticating]);
 
   // Apple OAuth
-  const handleAppleLogin = useCallback(() => {
-    // In production, this would use Apple Sign-In JS SDK
-    // For now, it opens a simulated OAuth flow
-    // On a real device, this would trigger the Apple Sign-In prompt
-    // and receive the user's name/email from the OAuth callback
-    setName("Apple User");
-    setEmail("user@icloud.com");
-    setSelectedAvatarPreset(AVATAR_PRESETS[1].id);
-    setAvatarMode("avatar");
-    setUser({ authProvider: "apple" });
-    toast.success("Signed in with Apple!", { description: "Profile auto-filled from your Apple ID" });
-  }, [setUser]);
+  const handleAppleLogin = useCallback(async () => {
+    if (isAuthenticating) return;
+    setIsAuthenticating(true);
+    const loadingToast = toast.loading("Connecting to Apple...");
+    try {
+      const { auth } = await import("@/lib/firebase");
+      const { signInWithPopup, OAuthProvider } = await import("firebase/auth");
+      const provider = new OAuthProvider("apple.com");
+      const result = await signInWithPopup(auth, provider);
+      const user = result.user;
+      
+      setName(user.displayName || "Apple User");
+      setEmail(user.email || "");
+      
+      if (user.photoURL) {
+        setPhotoPreview(user.photoURL);
+        setAvatarMode("photo");
+      } else {
+        setSelectedAvatarPreset(AVATAR_PRESETS[1].id);
+        setAvatarMode("avatar");
+      }
+      
+      setUser({ authProvider: "apple" });
+      setIsSocialLogin(true);
+      
+      toast.dismiss(loadingToast);
+      toast.success("Signed in with Apple!", { 
+        description: "Profile auto-filled from your Apple ID. You can now customize your details below." 
+      });
+    } catch (err: any) {
+      console.error("Firebase Apple Login Error:", err);
+      toast.dismiss(loadingToast);
+      
+      if (err.code === "auth/cancelled-popup-request" || err.code === "auth/popup-closed-by-user") {
+        toast.info("Sign-in cancelled", {
+          description: "Apple sign-in popup was closed."
+        });
+      } else if (err.code === "auth/popup-blocked") {
+        toast.warning("Popup blocked", {
+          description: "Please allow popups for this website in your browser settings to sign in."
+        });
+      } else {
+        toast.error("Apple Sign-In failed", { 
+          description: err.message || "Please try again." 
+        });
+      }
+    } finally {
+      setIsAuthenticating(false);
+    }
+  }, [setUser, isAuthenticating]);
 
   // Render the current avatar preview based on mode
   const renderAvatarPreview = () => {
@@ -192,7 +283,7 @@ export default function LoginPage() {
   const isAccentCyan = selectedRole === "USER";
 
   return (
-    <div className="min-h-screen flex flex-col bg-background relative overflow-hidden">
+    <div className="min-h-screen flex flex-col bg-background relative overflow-y-auto">
       {/* Background — pure black, no image */}
       <div className="absolute inset-0 bg-black" />
 
@@ -213,7 +304,7 @@ export default function LoginPage() {
       </header>
 
       {/* Main Content */}
-      <main className="relative z-10 flex-1 flex items-center justify-center px-4 py-8">
+      <main className="relative z-10 flex-1 flex items-start justify-center px-4 py-8">
         <div className="w-full max-w-4xl">
           <AnimatePresence mode="wait">
             {step === "role" && (
@@ -347,7 +438,7 @@ export default function LoginPage() {
                 <div className="max-w-md mx-auto">
                   {/* Back button */}
                   <button
-                    onClick={() => setStep("role")}
+                    onClick={() => { setStep("role"); setIsSocialLogin(false); }}
                     className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors mb-6"
                   >
                     <ChevronLeft className="w-4 h-4" />
@@ -377,7 +468,12 @@ export default function LoginPage() {
                     {/* Google Login */}
                     <button
                       onClick={handleGoogleLogin}
-                      className="bg-white rounded-xl px-4 py-3.5 flex items-center justify-center gap-2.5 hover:bg-gray-50 transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] shadow-sm border border-gray-200"
+                      disabled={isAuthenticating}
+                      className={`bg-white rounded-xl px-4 py-3.5 flex items-center justify-center gap-2.5 transition-all duration-200 border border-gray-200 ${
+                        isAuthenticating
+                          ? "opacity-50 cursor-not-allowed"
+                          : "hover:bg-gray-50 hover:scale-[1.02] active:scale-[0.98] shadow-sm"
+                      }`}
                     >
                       <svg className="w-5 h-5" viewBox="0 0 24 24">
                         <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/>
@@ -387,11 +483,16 @@ export default function LoginPage() {
                       </svg>
                       <span className="text-sm font-semibold text-gray-700">Google</span>
                     </button>
-
+ 
                     {/* Apple Login */}
                     <button
                       onClick={handleAppleLogin}
-                      className="bg-black rounded-xl px-4 py-3.5 flex items-center justify-center gap-2.5 hover:bg-gray-900 transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] shadow-sm"
+                      disabled={isAuthenticating}
+                      className={`bg-black rounded-xl px-4 py-3.5 flex items-center justify-center gap-2.5 transition-all duration-200 ${
+                        isAuthenticating
+                          ? "opacity-50 cursor-not-allowed"
+                          : "hover:bg-gray-900 hover:scale-[1.02] active:scale-[0.98] shadow-sm"
+                      }`}
                     >
                       <svg className="w-5 h-5 text-white" viewBox="0 0 24 24" fill="currentColor">
                         <path d="M17.05 20.28c-.98.95-2.05.88-3.08.4-1.09-.5-2.08-.48-3.24 0-1.44.62-2.2.44-3.06-.4C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z"/>
@@ -568,25 +669,38 @@ export default function LoginPage() {
                   </div>
 
                   {/* Continue Button */}
-                  <Button
-                    onClick={handleProfileComplete}
-                    disabled={!name.trim() || !email.trim() || !isPhoneValid}
-                    className={`w-full mt-6 font-bold py-6 text-base transition-all duration-300 ${
-                      !name.trim() || !email.trim() || !isPhoneValid
-                        ? "bg-white/5 text-muted-foreground/40 cursor-not-allowed"
-                        : isAccentCyan
-                        ? "bg-gradient-to-r from-orbit-cyan to-orbit-purple text-white hover:opacity-90 shadow-lg shadow-orbit-cyan/20"
-                        : "bg-gradient-to-r from-orbit-purple to-orbit-cyan text-white hover:opacity-90 shadow-lg shadow-orbit-purple/20"
-                    }`}
-                  >
-                    <Mail className="w-4 h-4 mr-2" />
-                    Continue to Verify Email
-                    <ArrowRight className="w-4 h-4 ml-2" />
-                  </Button>
+                  {(() => {
+                    const isSocial = user.authProvider === "google" || user.authProvider === "apple" || isSocialLogin;
+                    return (
+                      <>
+                        <Button
+                          onClick={handleProfileComplete}
+                          disabled={!name.trim() || !email.trim() || !isPhoneValid}
+                          className={`w-full mt-6 font-bold py-6 text-base transition-all duration-300 ${
+                            !name.trim() || !email.trim() || !isPhoneValid
+                              ? "bg-white/5 text-muted-foreground/40 cursor-not-allowed"
+                              : isAccentCyan
+                              ? "bg-gradient-to-r from-orbit-cyan to-orbit-purple text-white hover:opacity-90 shadow-lg shadow-orbit-cyan/20"
+                              : "bg-gradient-to-r from-orbit-purple to-orbit-cyan text-white hover:opacity-90 shadow-lg shadow-orbit-purple/20"
+                          }`}
+                        >
+                          {isSocial ? (
+                            <Sparkles className="w-4 h-4 mr-2 text-orbit-cyan animate-pulse" />
+                          ) : (
+                            <Mail className="w-4 h-4 mr-2" />
+                          )}
+                          {isSocial ? "Complete Profile & Enter" : "Continue to Verify Email"}
+                          <ArrowRight className="w-4 h-4 ml-2" />
+                        </Button>
 
-                  <p className="text-center text-xs text-muted-foreground/40 mt-4">
-                    You&apos;ll need to verify your email before continuing.
-                  </p>
+                        <p className="text-center text-xs text-muted-foreground/40 mt-4">
+                          {isSocial
+                            ? `Profile verified via ${user.authProvider === "google" || isSocialLogin ? "Google" : "Apple"}.`
+                            : "You'll need to verify your email before continuing."}
+                        </p>
+                      </>
+                    );
+                  })()}
 
                   {/* Footer links */}
                   <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 mt-6">

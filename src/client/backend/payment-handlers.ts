@@ -127,9 +127,10 @@ export async function POST(
         })
 
         // Trigger partner dispatch pipeline
-        progressBookingPipeline(id, 'PAID').catch((err) => {
-          console.error('Error in pipeline progression:', err)
-        })
+        // (Disabled for real-time partner manual acceptance and sync)
+        // progressBookingPipeline(id, 'PAID').catch((err) => {
+        //   console.error('Error in pipeline progression:', err)
+        // })
       } catch (err) {
         console.error('Error processing payment:', err)
         await db.booking.update({

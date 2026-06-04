@@ -3,15 +3,15 @@
 /**
  * 🟣 PARTNER FRONTEND | MapNavigation
  * 
- * SVG map visualization dashboard showing route from partner
- * location to destination. Includes animated route line, pulse
- * location markers, distance/ETA info, and navigation buttons.
+ * Interactive MapLibre GL map visualization showing route from partner
+ * location to destination. Includes interactive panning/zooming,
+ * markers, distance/ETA info, and navigation buttons.
  * 
  * Used by: partner-dashboard.tsx
  * Category: Partner UI
  */
 
-import { motion } from "framer-motion";
+import { useEffect, useRef, useState } from "react";
 import { Navigation2, MapPin, Route } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -24,100 +24,197 @@ interface MapNavigationProps {
 }
 
 export function MapNavigation({ booking, onArrived }: MapNavigationProps) {
+  const mapContainerRef = useRef<HTMLDivElement>(null);
+  const [mapError, setMapError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    let mapInstance: any = null;
+
+    // We load maplibre-gl dynamically to ensure SSR safety
+    import("maplibre-gl")
+      .then((maplibreglModule) => {
+        if (!active) return;
+        const maplibregl = maplibreglModule.default || maplibreglModule;
+
+        // Dynamically insert MapLibre CSS if not already present
+        if (!document.getElementById("maplibre-css")) {
+          const link = document.createElement("link");
+          link.id = "maplibre-css";
+          link.rel = "stylesheet";
+          link.href = "https://unpkg.com/maplibre-gl@5.24.0/dist/maplibre-gl.css";
+          document.head.appendChild(link);
+        }
+
+        if (!mapContainerRef.current) return;
+
+        // Bangalore default coordinates (Partner: [77.5800, 12.9650], Destination: [77.5946, 12.9716])
+        const partnerCoords: [number, number] = [77.5800, 12.9650];
+        const destCoords: [number, number] = [77.5946, 12.9716];
+
+        const map = new maplibregl.Map({
+          container: mapContainerRef.current,
+          style: "https://demotiles.maplibre.org/globe.json",
+          center: [77.5873, 12.9683], // center point
+          zoom: 13,
+          attributionControl: false,
+        });
+
+        mapInstance = map;
+
+        // Add zoom controls
+        map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "top-right");
+
+        map.on("load", () => {
+          if (!active) return;
+
+          // Partner marker (Cyan pulse)
+          const partnerEl = document.createElement("div");
+          partnerEl.className = "flex flex-col items-center justify-center";
+          partnerEl.innerHTML = `
+            <div class="relative flex items-center justify-center">
+              <div class="absolute w-8 h-8 rounded-full bg-[#00BFFF]/30 animate-ping"></div>
+              <div class="absolute w-5 h-5 rounded-full bg-[#00BFFF]/20 animate-pulse"></div>
+              <div class="w-3.5 h-3.5 rounded-full bg-[#00BFFF] border-2 border-white shadow-[0_0_10px_#00BFFF]"></div>
+            </div>
+            <div class="mt-1 px-2 py-0.5 rounded bg-black/85 border border-[#00BFFF]/30 text-[10px] font-bold text-[#00BFFF] whitespace-nowrap shadow-md">You</div>
+          `;
+
+          new maplibregl.Marker({ element: partnerEl })
+            .setLngLat(partnerCoords)
+            .addTo(map);
+
+          // Destination marker (Purple pulse)
+          const destEl = document.createElement("div");
+          destEl.className = "flex flex-col items-center justify-center";
+          destEl.innerHTML = `
+            <div class="relative flex items-center justify-center">
+              <div class="absolute w-8 h-8 rounded-full bg-[#A020F0]/30 animate-ping"></div>
+              <div class="absolute w-5 h-5 rounded-full bg-[#A020F0]/20 animate-pulse"></div>
+              <div class="w-3.5 h-3.5 rounded-full bg-[#A020F0] border-2 border-white shadow-[0_0_10px_#A020F0]"></div>
+            </div>
+            <div class="mt-1 px-2 py-0.5 rounded bg-black/85 border border-[#A020F0]/30 text-[10px] font-bold text-[#A020F0] whitespace-nowrap shadow-md">Destination</div>
+          `;
+
+          new maplibregl.Marker({ element: destEl })
+            .setLngLat(destCoords)
+            .addTo(map);
+
+          // Fit bounds to fit both points with nice padding
+          const bounds = new maplibregl.LngLatBounds();
+          bounds.extend(partnerCoords);
+          bounds.extend(destCoords);
+          map.fitBounds(bounds, { padding: 50, duration: 1500 });
+
+          // Route coordinates simulating turns on roads
+          const routeCoords = [
+            partnerCoords,
+            [77.5820, 12.9638],
+            [77.5835, 12.9658],
+            [77.5865, 12.9642],
+            [77.5895, 12.9682],
+            [77.5915, 12.9698],
+            destCoords,
+          ];
+
+          // Add route source and layers
+          map.addSource("route", {
+            type: "geojson",
+            data: {
+              type: "Feature",
+              properties: {},
+              geometry: {
+                type: "LineString",
+                coordinates: routeCoords,
+              },
+            },
+          });
+
+          // Glow shadow layer (purple)
+          map.addLayer({
+            id: "route-glow",
+            type: "line",
+            source: "route",
+            layout: {
+              "line-join": "round",
+              "line-cap": "round",
+            },
+            paint: {
+              "line-color": "#A020F0",
+              "line-width": 8,
+              "line-opacity": 0.4,
+            },
+          });
+
+          // Core route line (cyan)
+          map.addLayer({
+            id: "route-line",
+            type: "line",
+            source: "route",
+            layout: {
+              "line-join": "round",
+              "line-cap": "round",
+            },
+            paint: {
+              "line-color": "#00BFFF",
+              "line-width": 4,
+              "line-opacity": 0.9,
+            },
+          });
+        });
+
+        map.on("error", (e) => {
+          console.error("MapLibre GL error:", e);
+          if (active) {
+            setMapError("Failed to render map. Style or server may be offline.");
+          }
+        });
+      })
+      .catch((err) => {
+        console.error("Failed to load maplibre-gl:", err);
+        if (active) {
+          setMapError("Failed to initialize map library.");
+        }
+      });
+
+    return () => {
+      active = false;
+      if (mapInstance) {
+        mapInstance.remove();
+      }
+    };
+  }, []);
+
   return (
     <div className="orbit-card rounded-2xl p-3 sm:p-6 md:p-8">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 sm:mb-6 gap-3">
-        <h3 className="text-base sm:text-lg font-bold flex items-center gap-2"><Navigation2 className="w-4 h-4 sm:w-5 sm:h-5 text-orbit-cyan" />Navigate to Location</h3>
-        <Badge variant="outline" className="border-orbit-cyan/30 text-orbit-cyan bg-orbit-cyan/10 w-fit">{booking.id}</Badge>
+        <h3 className="text-base sm:text-lg font-bold flex items-center gap-2">
+          <Navigation2 className="w-4 h-4 sm:w-5 sm:h-5 text-orbit-cyan animate-pulse" />
+          Navigate to Location
+        </h3>
+        <Badge variant="outline" className="border-orbit-cyan/30 text-orbit-cyan bg-orbit-cyan/10 w-fit">
+          {booking.id}
+        </Badge>
       </div>
 
       {/* Map Visualization */}
-      <div className="orbit-card rounded-xl p-0 mb-4 sm:mb-6 border border-orbit-cyan/20 overflow-hidden relative" style={{ minHeight: "260px" }}>
-        <svg viewBox="0 0 600 320" className="w-full h-auto" style={{ minHeight: "240px" }}>
-          {/* Background grid */}
-          <defs>
-            <pattern id="grid" width="30" height="30" patternUnits="userSpaceOnUse">
-              <path d="M 30 0 L 0 0 0 30" fill="none" stroke="rgba(0,191,255,0.06)" strokeWidth="0.5" />
-            </pattern>
-            <pattern id="gridLarge" width="150" height="150" patternUnits="userSpaceOnUse">
-              <path d="M 150 0 L 0 0 0 150" fill="none" stroke="rgba(0,191,255,0.12)" strokeWidth="1" />
-            </pattern>
-            <linearGradient id="routeGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-              <stop offset="0%" stopColor="#00BFFF" stopOpacity="0.8" />
-              <stop offset="50%" stopColor="#6B5CE7" stopOpacity="0.8" />
-              <stop offset="100%" stopColor="#A020F0" stopOpacity="0.8" />
-            </linearGradient>
-            <filter id="glowCyan">
-              <feGaussianBlur stdDeviation="4" result="blur" />
-              <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
-            </filter>
-            <filter id="glowPurple">
-              <feGaussianBlur stdDeviation="4" result="blur" />
-              <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
-            </filter>
-          </defs>
-          <rect width="600" height="320" fill="#000000" />
-          <rect width="600" height="320" fill="url(#grid)" />
-          <rect width="600" height="320" fill="url(#gridLarge)" />
-
-          {/* Simulated roads/blocks */}
-          <rect x="80" y="60" width="180" height="80" rx="4" fill="rgba(0,191,255,0.04)" stroke="rgba(0,191,255,0.08)" strokeWidth="0.5" />
-          <rect x="300" y="140" width="200" height="100" rx="4" fill="rgba(160,32,240,0.04)" stroke="rgba(160,32,240,0.08)" strokeWidth="0.5" />
-          <rect x="60" y="200" width="160" height="80" rx="4" fill="rgba(0,191,255,0.03)" stroke="rgba(0,191,255,0.06)" strokeWidth="0.5" />
-          <rect x="380" y="40" width="140" height="70" rx="4" fill="rgba(160,32,240,0.03)" stroke="rgba(160,32,240,0.06)" strokeWidth="0.5" />
-
-          {/* Route line (animated dashed) */}
-          <motion.path
-            d="M 120 260 C 180 240, 220 200, 280 180 C 340 160, 380 140, 460 100"
-            fill="none"
-            stroke="url(#routeGrad)"
-            strokeWidth="3"
-            strokeLinecap="round"
-            strokeDasharray="12 8"
-            initial={{ pathLength: 0, opacity: 0 }}
-            animate={{ pathLength: 1, opacity: 1 }}
-            transition={{ duration: 2, ease: "easeInOut" }}
-          />
-          {/* Animated dash offset */}
-          <motion.path
-            d="M 120 260 C 180 240, 220 200, 280 180 C 340 160, 380 140, 460 100"
-            fill="none"
-            stroke="url(#routeGrad)"
-            strokeWidth="3"
-            strokeLinecap="round"
-            strokeDasharray="12 8"
-            animate={{ strokeDashoffset: [0, -40] }}
-            transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
-            opacity={0.5}
-          />
-
-          {/* Partner current location (animated pulse) */}
-          <motion.circle cx="120" cy="260" r="18" fill="rgba(0,191,255,0.1)" animate={{ r: [18, 28, 18] }} transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }} />
-          <motion.circle cx="120" cy="260" r="10" fill="rgba(0,191,255,0.15)" animate={{ r: [10, 16, 10] }} transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }} />
-          <circle cx="120" cy="260" r="6" fill="#00BFFF" filter="url(#glowCyan)" />
-          <circle cx="120" cy="260" r="3" fill="white" />
-          {/* Partner label */}
-          <text x="120" y="290" textAnchor="middle" fill="#00BFFF" fontSize="11" fontWeight="bold" fontFamily="system-ui">You</text>
-
-          {/* Destination location */}
-          <motion.circle cx="460" cy="100" r="18" fill="rgba(160,32,240,0.1)" animate={{ r: [18, 28, 18] }} transition={{ duration: 2.5, repeat: Infinity, ease: "easeInOut" }} />
-          <motion.circle cx="460" cy="100" r="10" fill="rgba(160,32,240,0.15)" animate={{ r: [10, 16, 10] }} transition={{ duration: 2.5, repeat: Infinity, ease: "easeInOut" }} />
-          <circle cx="460" cy="100" r="6" fill="#A020F0" filter="url(#glowPurple)" />
-          <circle cx="460" cy="100" r="3" fill="white" />
-          {/* Destination label */}
-          <text x="460" y="80" textAnchor="middle" fill="#A020F0" fontSize="11" fontWeight="bold" fontFamily="system-ui">Destination</text>
-
-          {/* Location pin icon at destination */}
-          <circle cx="460" cy="72" r="3" fill="#A020F0" />
-        </svg>
+      <div className="orbit-card rounded-xl p-0 mb-4 sm:mb-6 border border-orbit-cyan/20 overflow-hidden relative h-[320px] bg-black">
+        {mapError ? (
+          <div className="absolute inset-0 flex flex-col items-center justify-center p-4 text-center">
+            <span className="text-red-400 text-sm font-medium mb-1">{mapError}</span>
+            <span className="text-muted-foreground text-xs">Please check internet connection or tiles API</span>
+          </div>
+        ) : (
+          <div ref={mapContainerRef} className="w-full h-full" />
+        )}
 
         {/* Overlay info on map */}
-        <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between">
-          <div className="orbit-card-strong rounded-lg px-3 py-2 text-xs flex items-center gap-2">
+        <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between z-10 pointer-events-none">
+          <div className="orbit-card-strong rounded-lg px-3 py-2 text-xs flex items-center gap-2 pointer-events-auto">
             <div className="w-2 h-2 rounded-full bg-orbit-cyan animate-pulse" />
             <span className="text-orbit-cyan font-medium">Live Tracking</span>
           </div>
-          <div className="orbit-card-strong rounded-lg px-3 py-2 text-xs text-muted-foreground flex items-center gap-1">
+          <div className="orbit-card-strong rounded-lg px-3 py-2 text-xs text-muted-foreground flex items-center gap-1 pointer-events-auto">
             <Route className="w-3 h-3 text-orbit-purple" />
             <span className="text-orbit-purple font-medium">Optimized Route</span>
           </div>

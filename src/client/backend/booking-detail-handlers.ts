@@ -266,36 +266,62 @@ export async function PATCH(
       },
     })
 
-    // ── Handle DELIVERED: credit partner wallet ──
-    if (body.status === 'DELIVERED' && booking.partnerId) {
-      const packagePrice = booking.package?.price ?? 0
-      const partnerId = booking.partnerId
-
-      // Add package price to partner wallet
-      const partner = await db.partner.findUnique({
-        where: { id: partnerId },
-      })
-
-      if (partner) {
-        await db.partner.update({
-          where: { id: partnerId },
-          data: {
-            walletBalance: partner.walletBalance + packagePrice,
-            completedProjects: partner.completedProjects + 1,
-          },
-        })
-
-        // Create Transaction record
-        await db.transaction.create({
-          data: {
-            partnerId,
+    // Notify client via WebSocket server
+    if (body.status !== undefined && body.status !== existing.status) {
+      try {
+        await fetch('http://localhost:3003/internal/notify-client', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
             bookingId: id,
-            type: 'EARNING',
-            amount: packagePrice,
-            status: 'COMPLETED',
-            description: `Earning for booking ${id.substring(0, 8)}... (${booking.package?.name ?? 'Package'})`,
-          },
+            event: 'booking:status-update',
+            payload: {
+              bookingId: id,
+              status: booking.status,
+              previousStatus: existing.status,
+            },
+          }),
         })
+      } catch (wsError) {
+        console.error('Failed to notify WebSocket of status update:', wsError)
+      }
+    }
+
+    if (body.syncPercentage !== undefined && body.syncPercentage !== existing.syncPercentage) {
+      try {
+        await fetch('http://localhost:3003/internal/notify-client', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            bookingId: id,
+            event: 'booking:sync-update',
+            payload: {
+              bookingId: id,
+              syncPercentage: booking.syncPercentage,
+            },
+          }),
+        })
+      } catch (wsError) {
+        console.error('Failed to notify WebSocket of sync update:', wsError)
+      }
+    }
+
+    if (body.editCountdown !== undefined && body.editCountdown !== existing.editCountdown) {
+      try {
+        await fetch('http://localhost:3003/internal/notify-client', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            bookingId: id,
+            event: 'booking:countdown-update',
+            payload: {
+              bookingId: id,
+              editCountdown: booking.editCountdown,
+            },
+          }),
+        })
+      } catch (wsError) {
+        console.error('Failed to notify WebSocket of countdown update:', wsError)
       }
     }
 

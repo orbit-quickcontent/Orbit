@@ -11,7 +11,7 @@
  * Category: Client UI
  */
 
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Clock,
@@ -23,6 +23,7 @@ import {
   Loader2,
   Lock,
   MapPin,
+  Locate,
   Users,
   ChevronDown,
   Zap as ZapIcon,
@@ -51,6 +52,77 @@ export function BookingFlow() {
 
   const [step, setStep] = useState(1);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isLocating, setIsLocating] = useState(false);
+  const locationInputRef = useRef<HTMLTextAreaElement>(null);
+
+  const handleGetLiveLocation = () => {
+    if (!navigator.geolocation) {
+      toast.error("Geolocation is not supported by your browser");
+      return;
+    }
+
+    setIsLocating(true);
+    toast.info("Fetching your location...");
+
+    const options = { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 };
+
+    const successCallback = (position: GeolocationPosition) => {
+      const { latitude, longitude } = position.coords;
+      
+      // Reverse geocoding using openstreetmap's free nominatim API
+      fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=18&addressdetails=1`)
+        .then((res) => res.json())
+        .then((data) => {
+          setIsLocating(false);
+          if (data && data.display_name) {
+            setBookingLocation(data.display_name);
+            toast.success("Location updated successfully!");
+          } else {
+            setBookingLocation(`Shoot Location (${latitude.toFixed(4)}, ${longitude.toFixed(4)})`);
+            toast.success("Location coordinates fetched!");
+          }
+        })
+        .catch((err) => {
+          console.error("Reverse geocoding error:", err);
+          setIsLocating(false);
+          setBookingLocation(`Shoot Location (${latitude.toFixed(4)}, ${longitude.toFixed(4)})`);
+          toast.success("Location coordinates fetched!");
+        });
+    };
+
+    const errorCallback = (error: GeolocationPositionError) => {
+      // If high accuracy failed, retry with low accuracy
+      if (options.enableHighAccuracy) {
+        console.warn("High accuracy geolocation failed, retrying with low accuracy...", error.message || error);
+        options.enableHighAccuracy = false;
+        options.timeout = 12000;
+        navigator.geolocation.getCurrentPosition(successCallback, finalErrorCallback, options);
+      } else {
+        finalErrorCallback(error);
+      }
+    };
+
+    const finalErrorCallback = (error: GeolocationPositionError) => {
+      setIsLocating(false);
+      console.error("Geolocation error:", error.message || error);
+      switch (error.code) {
+        case error.PERMISSION_DENIED:
+          toast.error("Location permission denied. Please enable location access.");
+          break;
+        case error.POSITION_UNAVAILABLE:
+          toast.error("Location information is unavailable. Try typing it manually.");
+          break;
+        case error.TIMEOUT:
+          toast.error("Location request timed out. Try typing it manually.");
+          break;
+        default:
+          toast.error("An unknown error occurred while fetching location.");
+          break;
+      }
+    };
+
+    navigator.geolocation.getCurrentPosition(successCallback, errorCallback, options);
+  };
 
   const canProceedStep1 = user.name && user.email && user.phone;
   const canProceedStep2 = bookingDate && bookingTimeSlot && bookingLocation;
@@ -186,6 +258,10 @@ export function BookingFlow() {
                       setBookingDate(now);
                       setBookingTimeSlot(`${h}:${String(m % 60).padStart(2, "0")} ${period}`);
                       toast.success("Booked for right now!", { description: "A partner will be dispatched immediately." });
+                      setTimeout(() => {
+                        locationInputRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+                        locationInputRef.current?.focus({ preventScroll: true });
+                      }, 100);
                     }}
                     className="w-full flex items-center justify-between group"
                   >
@@ -304,8 +380,27 @@ export function BookingFlow() {
                 <div>
                   <label className="text-sm font-medium text-muted-foreground mb-1.5 block">Shoot Location *</label>
                   <div className="relative">
-                    <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                    <Input value={bookingLocation} onChange={(e) => setBookingLocation(e.target.value)} placeholder="Enter shoot location" className="pl-10 bg-white/5 border-orbit-border focus:border-orbit-cyan/50" />
+                    <MapPin className="absolute left-3 top-3 w-4 h-4 text-muted-foreground" />
+                    <Textarea 
+                      ref={locationInputRef} 
+                      value={bookingLocation} 
+                      onChange={(e) => setBookingLocation(e.target.value)} 
+                      placeholder="Enter shoot location" 
+                      className="pl-10 pr-10 min-h-[44px] py-2.5 bg-white/5 border-orbit-border focus:border-orbit-cyan/50 resize-none overflow-hidden" 
+                    />
+                    <button
+                      type="button"
+                      onClick={handleGetLiveLocation}
+                      disabled={isLocating}
+                      className="absolute right-3 top-3 text-muted-foreground hover:text-orbit-cyan transition-colors"
+                      title="Use live location"
+                    >
+                      {isLocating ? (
+                        <Loader2 className="w-4 h-4 animate-spin text-orbit-cyan" />
+                      ) : (
+                        <Locate className="w-4 h-4" />
+                      )}
+                    </button>
                   </div>
                 </div>
                 <div>
@@ -333,9 +428,11 @@ export function BookingFlow() {
                       { label: "Time", value: bookingTimeSlot },
                       { label: "Location", value: bookingLocation },
                     ].map((row) => (
-                      <div key={row.label} className="flex justify-between">
-                        <span className="text-muted-foreground">{row.label}</span>
-                        <span className="font-medium max-w-[200px] truncate">{row.value}</span>
+                      <div key={row.label} className="flex justify-between items-start gap-4">
+                        <span className="text-muted-foreground shrink-0">{row.label}</span>
+                        <span className={`font-medium text-right ${row.label === "Location" ? "break-words max-w-[280px] sm:max-w-[360px]" : "max-w-[200px] truncate"}`}>
+                          {row.value}
+                        </span>
                       </div>
                     ))}
                     <Separator className="bg-orbit-border" />

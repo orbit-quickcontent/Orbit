@@ -518,8 +518,8 @@ function getStatusTitle(status: string): string {
   const map: Record<string, string> = {
     PENDING: "Booking Confirmed",
     PAID: "Payment Received",
-    PARTNER_DISPATCHED: "Editor Assigned",
-    EN_ROUTE: "Editor En Route",
+    PARTNER_DISPATCHED: "Partner Dispatched",
+    EN_ROUTE: "Partner En Route",
     SHOOTING: "Shooting in Progress",
     SYNCING: "Media Syncing",
     EDITING: "Edit in Progress",

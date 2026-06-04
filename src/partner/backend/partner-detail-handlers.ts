@@ -130,7 +130,7 @@ export async function PATCH(
       );
     }
 
-    const updateData: {
+     const updateData: {
       availability?: boolean;
       location?: string;
       latitude?: number | null;
@@ -138,6 +138,11 @@ export async function PATCH(
       deviceInfo?: string | null;
       rating?: number;
       completedProjects?: number;
+      bankName?: string | null;
+      accountNumber?: string | null;
+      ifscCode?: string | null;
+      accountHolderName?: string | null;
+      bankVerified?: boolean;
     } = {};
 
     if (typeof body.availability === "boolean") {
@@ -160,6 +165,21 @@ export async function PATCH(
     }
     if (typeof body.completedProjects === "number") {
       updateData.completedProjects = body.completedProjects;
+    }
+    if (body.bankName !== undefined) {
+      updateData.bankName = body.bankName;
+    }
+    if (body.accountNumber !== undefined) {
+      updateData.accountNumber = body.accountNumber;
+    }
+    if (body.ifscCode !== undefined) {
+      updateData.ifscCode = body.ifscCode;
+    }
+    if (body.accountHolderName !== undefined) {
+      updateData.accountHolderName = body.accountHolderName;
+    }
+    if (typeof body.bankVerified === "boolean") {
+      updateData.bankVerified = body.bankVerified;
     }
 
     const updatedPartner = await db.partner.update({

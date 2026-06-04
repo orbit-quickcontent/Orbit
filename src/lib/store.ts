@@ -107,7 +107,7 @@ interface AppState {
   // Auth
   isAuthenticated: boolean;
   userRole: UserRole;
-  login: (role: UserRole) => void;
+  login: (role: UserRole) => Promise<void>;
   logout: () => void;
 
   // Navigation
@@ -148,8 +148,9 @@ interface AppState {
 
   // Partner wallet
   creditPartnerWallet: (amount: number) => void;
-  withdrawFromWallet: (amount: number) => void;
-  linkBankAccount: (account: BankAccount) => void;
+  withdrawFromWallet: (amount: number) => Promise<void>;
+  linkBankAccount: (account: BankAccount) => Promise<void>;
+  fetchPartnerProfile: () => Promise<void>;
 
   // Partner settings
   updatePartnerSettings: (settings: Partial<PartnerSettings>) => void;
@@ -229,8 +230,78 @@ export const useAppStore = create<AppState>((set, get) => ({
   // Auth
   isAuthenticated: false,
   userRole: "USER",
-  login: (role) => {
-    const pid = get().partnerId || generatePartnerId();
+  login: async (role) => {
+    let pid = get().partnerId;
+    const email = get().user.email;
+    const name = get().user.name;
+    const phone = get().user.phone;
+
+    if (role === "PARTNER" && email) {
+      try {
+        // 1. Fetch all partners to check if partner with this email exists
+        const res = await fetch("/api/partners");
+        if (res.ok) {
+          const data = await res.json();
+          const existingPartner = data.partners?.find(
+            (p: any) => p.user?.email?.toLowerCase().trim() === email.toLowerCase().trim()
+          );
+
+          if (existingPartner) {
+            pid = existingPartner.id;
+            console.log(`[Store] Found existing partner in DB: ${pid}`);
+          } else {
+            // 2. If not found, check if a User exists or create one
+            let dbUserId = "";
+            const userRes = await fetch("/api/users");
+            if (userRes.ok) {
+              const userData = await userRes.json();
+              const existingUser = userData.users?.find(
+                (u: any) => u.email?.toLowerCase().trim() === email.toLowerCase().trim()
+              );
+              if (existingUser) {
+                dbUserId = existingUser.id;
+              }
+            }
+
+            if (!dbUserId) {
+              // Create user
+              const createUserRes = await fetch("/api/users", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ email, name, phone, role: "PARTNER" }),
+              });
+              if (createUserRes.ok) {
+                const newUserData = await createUserRes.json();
+                dbUserId = newUserData.user?.id;
+              }
+            }
+
+            if (dbUserId) {
+              // Create partner
+              const createPartnerRes = await fetch("/api/partners", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  userId: dbUserId,
+                  location: get().user.location || "Mumbai, India",
+                  deviceInfo: "iPhone 15 Pro",
+                }),
+              });
+              if (createPartnerRes.ok) {
+                const partnerData = await createPartnerRes.json();
+                pid = partnerData.partner?.id;
+                console.log(`[Store] Created new partner in DB: ${pid}`);
+              }
+            }
+          }
+        }
+      } catch (err) {
+        console.error("[Store] Error syncing partner on login:", err);
+      }
+    }
+
+    if (!pid) pid = generatePartnerId();
+
     const newState = {
       isAuthenticated: true,
       userRole: role,
@@ -240,6 +311,10 @@ export const useAppStore = create<AppState>((set, get) => ({
     };
     set(newState);
     saveToStorage({ ...get(), ...newState });
+
+    if (role === "PARTNER") {
+      await get().fetchPartnerProfile();
+    }
   },
   logout: () => {
     set({
@@ -367,7 +442,7 @@ export const useAppStore = create<AppState>((set, get) => ({
           state.currentBooking?.id === id
             ? { ...state.currentBooking, status }
             : state.currentBooking,
-        ...(status === "DELIVERED" && state.userRole === "PARTNER"
+        ...(status === "EDITING" && state.userRole === "PARTNER"
           ? {
               user: {
                 ...state.user,
@@ -426,24 +501,12 @@ export const useAppStore = create<AppState>((set, get) => ({
     }),
   completeBooking: (id) =>
     set((state) => {
-      const bookingPrice = state.bookings.find((b) => b.id === id)?.packagePrice ?? 0;
       const updatedBookings = state.bookings.map((b) =>
         b.id === id ? { ...b, status: "DELIVERED" as BookingStatus } : b
       );
       const newState = {
         bookings: updatedBookings,
         currentBooking: null as BookingInfo | null,
-        ...(state.userRole === "PARTNER"
-          ? {
-              user: {
-                ...state.user,
-                wallet: {
-                  ...state.user.wallet,
-                  balance: state.user.wallet.balance + bookingPrice,
-                },
-              },
-            }
-          : {}),
       };
       saveToStorage({ ...get(), ...newState });
       return newState;
@@ -518,34 +581,140 @@ export const useAppStore = create<AppState>((set, get) => ({
       saveToStorage({ ...get(), ...newState });
       return newState;
     }),
-  withdrawFromWallet: (amount) =>
-    set((state) => {
-      if (amount > state.user.wallet.balance) return state;
-      const newState = {
-        user: {
-          ...state.user,
-          wallet: {
-            ...state.user.wallet,
-            balance: state.user.wallet.balance - amount,
-            totalWithdrawn: state.user.wallet.totalWithdrawn + amount,
-            lastWithdrawnAt: new Date().toISOString(),
-          },
-        },
+  withdrawFromWallet: async (amount) => {
+    const state = get();
+    const pid = state.partnerId;
+    if (!pid) return;
+
+    try {
+      const res = await fetch(`/api/partners/${pid}/withdraw`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ amount }),
+      });
+      if (res.ok) {
+        await get().fetchPartnerProfile();
+      } else {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.error || "Withdrawal failed");
+      }
+    } catch (err) {
+      console.error("[Store] Error withdrawing from wallet:", err);
+      throw err;
+    }
+  },
+  linkBankAccount: async (account) => {
+    const state = get();
+    const pid = state.partnerId;
+    if (!pid) return;
+
+    try {
+      const res = await fetch(`/api/partners/${pid}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          bankName: account.bankName,
+          accountNumber: account.accountNumber,
+          ifscCode: account.ifscCode,
+          accountHolderName: account.accountHolderName,
+          bankVerified: true,
+        }),
+      });
+
+      if (res.ok) {
+        await get().fetchPartnerProfile();
+      }
+    } catch (err) {
+      console.error("[Store] Error linking bank account:", err);
+    }
+  },
+  fetchPartnerProfile: async () => {
+    const state = get();
+    const pid = state.partnerId;
+    if (!pid || state.userRole !== "PARTNER") return;
+
+    try {
+      // 1. Fetch partner detail (including bookings & user details)
+      const res = await fetch(`/api/partners/${pid}`);
+      if (!res.ok) return;
+      const data = await res.json();
+      const partner = data.partner;
+      if (!partner) return;
+
+      // 2. Fetch partner wallet detail
+      const walletRes = await fetch(`/api/partners/${pid}/wallet`);
+      let walletData = defaultWallet;
+      let bankData: BankAccount | null = null;
+      if (walletRes.ok) {
+        const wData = await walletRes.json();
+        walletData = {
+          balance: wData.balance || 0,
+          pendingClearance: wData.pendingClearance || 0,
+          totalWithdrawn: wData.totalWithdrawn || 0,
+          lastWithdrawnAt: wData.transactions?.find((t: any) => t.type === 'WITHDRAWAL')?.createdAt || null,
+        };
+        if (wData.bankVerified && wData.accountNumberMasked) {
+          bankData = {
+            id: 'bank-acc',
+            bankName: wData.bankName || "",
+            accountNumber: wData.accountNumberMasked || "",
+            ifscCode: partner.ifscCode || "",
+            accountHolderName: partner.accountHolderName || partner.user?.name || "",
+            isVerified: wData.bankVerified,
+            linkedAt: partner.updatedAt,
+          };
+        }
+      }
+
+      // 3. Map bookings list
+      const historicalBookings: BookingInfo[] = (partner.bookings || []).map((b: any) => ({
+        id: b.id,
+        packageId: b.packageId,
+        packageName: b.package?.name || "",
+        packagePrice: b.package?.price || 0,
+        status: b.status as BookingStatus,
+        paymentStatus: b.paymentStatus as PaymentStatus,
+        bookingDate: b.bookingDate,
+        timeSlot: b.timeSlot,
+        location: b.location || "",
+        syncPercentage: b.syncPercentage || 0,
+        editCountdown: b.editCountdown || null,
+        partnerName: partner.user?.name || null,
+        notes: b.notes || "",
+        deliveredAt: b.deliveredAt || null,
+        downloaded: b.downloaded || false,
+        cancelledBy: b.cancelledBy || null,
+        declinedByPartners: b.declinedBy ? JSON.parse(b.declinedBy) : [],
+      }));
+
+      // 4. Find active booking
+      const activeBooking = historicalBookings.find(
+        (b) => b.status !== "DELIVERED" && b.status !== "CANCELLED"
+      ) || null;
+
+      // Update local state
+      const updatedUser = {
+        ...state.user,
+        name: partner.user?.name || state.user.name,
+        email: partner.user?.email || state.user.email,
+        phone: partner.user?.phone || state.user.phone,
+        location: partner.location || state.user.location,
+        avatar: partner.user?.avatar || state.user.avatar,
+        wallet: walletData,
+        bankAccount: bankData,
       };
-      saveToStorage({ ...get(), ...newState });
-      return newState;
-    }),
-  linkBankAccount: (account) =>
-    set((state) => {
-      const newState = {
-        user: {
-          ...state.user,
-          bankAccount: account,
-        },
-      };
-      saveToStorage({ ...get(), ...newState });
-      return newState;
-    }),
+
+      set({
+        user: updatedUser,
+        bookings: historicalBookings,
+        partnerActiveBooking: activeBooking,
+      });
+
+      saveToStorage({ ...get(), user: updatedUser, bookings: historicalBookings, partnerActiveBooking: activeBooking });
+    } catch (err) {
+      console.error("[Store] Error fetching partner profile:", err);
+    }
+  },
 
   // Partner settings
   updatePartnerSettings: (settings) =>
