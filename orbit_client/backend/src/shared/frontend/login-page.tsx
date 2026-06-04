@@ -129,10 +129,33 @@ export default function LoginPage() {
   }, [name, email, phone, avatarMode, selectedAvatarPreset, photoPreview, setUser, user.authProvider, isSocialLogin, selectedRole, login]);
 
   // Step 3→done
-  const handleOtpVerified = useCallback(() => {
-    setUser({ authProvider: "email", isVerified: true });
-    if (selectedRole) login(selectedRole);
-  }, [selectedRole, login, setUser]);
+  const handleOtpVerified = useCallback(async () => {
+    try {
+      const { auth: firebaseAuth } = await import("@/lib/firebase");
+      const { signInWithEmailAndPassword, createUserWithEmailAndPassword } = await import("firebase/auth");
+      
+      const salt = "orbit-secure-salt-2026";
+      const password = email + salt;
+      
+      try {
+        await signInWithEmailAndPassword(firebaseAuth, email, password);
+      } catch (err: any) {
+        if (err.code === "auth/user-not-found" || err.code === "auth/invalid-credential" || err.code === "auth/invalid-email") {
+          await createUserWithEmailAndPassword(firebaseAuth, email, password);
+        } else {
+          throw err;
+        }
+      }
+      
+      setUser({ authProvider: "email", isVerified: true });
+      if (selectedRole) login(selectedRole);
+    } catch (err: any) {
+      console.error("Firebase Email OTP Auth Error:", err);
+      toast.error("Firebase Authentication failed", {
+        description: err.message || "Please try again."
+      });
+    }
+  }, [email, selectedRole, login, setUser]);
 
   const handleOtpBack = useCallback(() => {
     setStep("profile");
