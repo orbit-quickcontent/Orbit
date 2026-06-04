@@ -9,7 +9,7 @@
  * Step 3: Verify email via OTP
  */
 
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -43,27 +43,19 @@ type AvatarMode = "avatar" | "photo";
 
 export default function LoginPage() {
   const { login, setUser, user } = useAppStore();
-  const [selectedRole, setSelectedRole] = useState<UserRole | null>(() => {
-    if (typeof window !== "undefined") {
-      const params = new URLSearchParams(window.location.search);
-      const roleParam = params.get("role");
-      if (roleParam === "USER" || roleParam === "PARTNER") {
-        return roleParam as UserRole;
-      }
-    }
-    return null;
-  });
+  const [selectedRole, setSelectedRole] = useState<UserRole | null>(null);
+  const [step, setStep] = useState<LoginStep>("role");
+  const [isClient, setIsClient] = useState(false);
 
-  const [step, setStep] = useState<LoginStep>(() => {
-    if (typeof window !== "undefined") {
-      const params = new URLSearchParams(window.location.search);
-      const roleParam = params.get("role");
-      if (roleParam === "USER" || roleParam === "PARTNER") {
-        return "profile";
-      }
+  useEffect(() => {
+    setIsClient(true);
+    const params = new URLSearchParams(window.location.search);
+    const roleParam = params.get("role");
+    if (roleParam === "USER" || roleParam === "PARTNER") {
+      setSelectedRole(roleParam as UserRole);
+      setStep("profile");
     }
-    return "role";
-  });
+  }, []);
 
   const [hoveredRole, setHoveredRole] = useState<"USER" | "PARTNER" | null>(null);
   const [isAuthenticating, setIsAuthenticating] = useState(false);
@@ -301,6 +293,31 @@ export default function LoginPage() {
   };
 
   const isAccentCyan = selectedRole === "USER";
+
+  if (!isClient) {
+    return (
+      <div className="min-h-screen flex flex-col bg-background relative overflow-y-auto">
+        <div className="absolute inset-0 bg-black" />
+        <header className="relative z-10 pt-8 pb-4 px-4">
+          <div className="max-w-7xl mx-auto flex items-center justify-center">
+            <div className="flex items-center gap-3">
+              <Image
+                src="/orbit-logo.png"
+                alt="Orbit Logo"
+                width={48}
+                height={48}
+                className="rounded-full"
+              />
+              <span className="text-2xl sm:text-3xl font-black tracking-tight text-gradient-orbit">ORBIT</span>
+            </div>
+          </div>
+        </header>
+        <main className="relative z-10 flex-1 flex items-center justify-center px-4 py-8">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orbit-cyan"></div>
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex flex-col bg-background relative overflow-y-auto">
