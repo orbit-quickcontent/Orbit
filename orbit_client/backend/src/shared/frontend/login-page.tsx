@@ -14,17 +14,9 @@ import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Camera,
-  Users,
-  ArrowRight,
-  Sparkles,
-  Shield,
-  Film,
-  Zap,
-  Star,
   User,
   Mail,
   Phone,
-  ChevronLeft,
   ImagePlus,
   X,
 } from "lucide-react";
@@ -38,13 +30,13 @@ import { type UserRole } from "@/lib/types";
 import { toast } from "sonner";
 import OTPVerification from "./otp-verification";
 
-type LoginStep = "role" | "profile" | "otp";
+type LoginStep = "profile" | "otp";
 type AvatarMode = "avatar" | "photo";
 
 export default function LoginPage() {
   const { login, setUser, user } = useAppStore();
   const [selectedRole, setSelectedRole] = useState<UserRole | null>(null);
-  const [step, setStep] = useState<LoginStep>("role");
+  const [step, setStep] = useState<LoginStep>("profile");
   const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
@@ -53,11 +45,12 @@ export default function LoginPage() {
     const roleParam = params.get("role");
     if (roleParam === "USER" || roleParam === "PARTNER") {
       setSelectedRole(roleParam as UserRole);
-      setStep("profile");
+    } else {
+      setSelectedRole("USER");
     }
   }, []);
 
-  const [hoveredRole, setHoveredRole] = useState<"USER" | "PARTNER" | null>(null);
+
   const [isAuthenticating, setIsAuthenticating] = useState(false);
   const [isSocialLogin, setIsSocialLogin] = useState(false);
 
@@ -93,11 +86,7 @@ export default function LoginPage() {
     reader.readAsDataURL(file);
   }, []);
 
-  // Step 1→2
-  const handleRoleSelect = useCallback((role: UserRole) => {
-    setSelectedRole(role);
-    setStep("profile");
-  }, []);
+
 
   // Step 2→3
   const handleProfileComplete = useCallback(() => {
@@ -344,125 +333,7 @@ export default function LoginPage() {
       <main className="relative z-10 flex-1 flex items-start justify-center px-4 py-8">
         <div className="w-full max-w-4xl">
           <AnimatePresence mode="wait">
-            {step === "role" && (
-              <motion.div
-                key="role-step"
-                initial={{ opacity: 0, x: -30 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -30 }}
-                transition={{ duration: 0.3 }}
-              >
-                {/* Title */}
-                <div className="text-center mb-10 sm:mb-14">
-                  <Badge variant="outline" className="mb-5 border-orbit-cyan/30 text-orbit-cyan bg-orbit-cyan/5 px-4 py-1.5">
-                    <Sparkles className="w-3.5 h-3.5 mr-1.5" />
-                    Welcome to Orbit
-                  </Badge>
-                  <h1 className="text-4xl sm:text-5xl md:text-6xl font-black tracking-tight leading-[0.95] mb-4">
-                    <span className="text-gradient-orbit">Choose Your</span>
-                    <br />
-                    <span className="text-foreground">Experience</span>
-                  </h1>
-                  <p className="text-base sm:text-lg text-muted-foreground max-w-lg mx-auto leading-relaxed">
-                    Select how you want to use Orbit. You&apos;ll stay in your lane — no switching between modes.
-                  </p>
-                </div>
 
-                {/* Role Cards */}
-                <div className="grid sm:grid-cols-2 gap-5 sm:gap-8 max-w-3xl mx-auto">
-                  {/* Client Card */}
-                  <motion.div
-                    initial={{ opacity: 0, x: -30 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ duration: 0.6, delay: 0.2 }}
-                    onMouseEnter={() => setHoveredRole("USER")}
-                    onMouseLeave={() => setHoveredRole(null)}
-                    className="group cursor-pointer"
-                    onClick={() => handleRoleSelect("USER")}
-                  >
-                    <div className={`relative bg-white/[0.07] backdrop-blur-lg rounded-2xl p-6 sm:p-8 h-full transition-all duration-300 border ${
-                      hoveredRole === "USER" ? "border-orbit-cyan/50 scale-[1.02] shadow-lg shadow-orbit-cyan/10" : "border-white/10 hover:border-orbit-cyan/20"
-                    }`}>
-                      <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-gradient-to-br from-orbit-cyan/15 to-orbit-purple/15 flex items-center justify-center mb-6 group-hover:from-orbit-cyan/25 group-hover:to-orbit-purple/25 transition-colors">
-                        <Film className="w-8 h-8 sm:w-10 sm:h-10 text-orbit-cyan" />
-                      </div>
-                      <h2 className="text-2xl sm:text-3xl font-black mb-2">Client</h2>
-                      <p className="text-sm sm:text-base text-muted-foreground mb-6 leading-relaxed">
-                        Book professional video sessions, track your edits in real-time, and receive cinematic reels in 60 minutes.
-                      </p>
-                      <ul className="space-y-3 mb-8">
-                        {[
-                          { icon: <Zap className="w-4 h-4" />, text: "Browse & Book Packages" },
-                          { icon: <Camera className="w-4 h-4" />, text: "Real-Time Tracking" },
-                          { icon: <Shield className="w-4 h-4" />, text: "Secure Payment Gate" },
-                          { icon: <Star className="w-4 h-4" />, text: "Brand DNA Matching" },
-                        ].map((item, i) => (
-                          <li key={i} className="flex items-center gap-2.5 text-sm text-muted-foreground">
-                            <span className="text-orbit-cyan">{item.icon}</span>
-                            {item.text}
-                          </li>
-                        ))}
-                      </ul>
-                      <Button className="w-full bg-gradient-to-r from-orbit-cyan to-orbit-purple text-white hover:opacity-90 font-bold py-5 sm:py-6 text-base shadow-lg shadow-orbit-cyan/20">
-                        Enter as Client
-                        <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
-                      </Button>
-                    </div>
-                  </motion.div>
-
-                  {/* Partner Card */}
-                  <motion.div
-                    initial={{ opacity: 0, x: 30 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ duration: 0.6, delay: 0.3 }}
-                    onMouseEnter={() => setHoveredRole("PARTNER")}
-                    onMouseLeave={() => setHoveredRole(null)}
-                    className="group cursor-pointer"
-                    onClick={() => handleRoleSelect("PARTNER")}
-                  >
-                    <div className={`relative bg-white/[0.07] backdrop-blur-lg rounded-2xl p-6 sm:p-8 h-full transition-all duration-300 border ${
-                      hoveredRole === "PARTNER" ? "border-orbit-purple/50 scale-[1.02] shadow-lg shadow-orbit-purple/10" : "border-white/10 hover:border-orbit-purple/20"
-                    }`}>
-                      <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-gradient-to-br from-orbit-purple/15 to-orbit-cyan/15 flex items-center justify-center mb-6 group-hover:from-orbit-purple/25 group-hover:to-orbit-cyan/25 transition-colors">
-                        <Camera className="w-8 h-8 sm:w-10 sm:h-10 text-orbit-purple" />
-                      </div>
-                      <h2 className="text-2xl sm:text-3xl font-black mb-2">Partner</h2>
-                      <p className="text-sm sm:text-base text-muted-foreground mb-6 leading-relaxed">
-                        Accept bookings, capture footage with the Orbit Capture Module, sync to cloud, and protect client privacy.
-                      </p>
-                      <ul className="space-y-3 mb-8">
-                        {[
-                          { icon: <Users className="w-4 h-4" />, text: "Accept Bookings" },
-                          { icon: <Camera className="w-4 h-4" />, text: "Orbit Capture Module" },
-                          { icon: <Shield className="w-4 h-4" />, text: "Privacy Shield Protocol" },
-                          { icon: <Zap className="w-4 h-4" />, text: "Cloud Sync & Wipe" },
-                        ].map((item, i) => (
-                          <li key={i} className="flex items-center gap-2.5 text-sm text-muted-foreground">
-                            <span className="text-orbit-purple">{item.icon}</span>
-                            {item.text}
-                          </li>
-                        ))}
-                      </ul>
-                      <Button
-                        className="w-full bg-gradient-to-r from-orbit-purple to-orbit-cyan text-white hover:opacity-90 font-bold py-5 sm:py-6 text-base shadow-lg shadow-orbit-purple/20"
-                      >
-                        Enter as Partner
-                        <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
-                      </Button>
-                    </div>
-                  </motion.div>
-                </div>
-
-                <motion.p
-                  className="text-center text-xs text-muted-foreground/50 mt-8"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ delay: 0.8 }}
-                >
-                  Your role is locked after selection. You can log out anytime to switch.
-                </motion.p>
-              </motion.div>
-            )}
 
             {step === "profile" && (
               <motion.div
@@ -473,14 +344,7 @@ export default function LoginPage() {
                 transition={{ duration: 0.3 }}
               >
                 <div className="max-w-md mx-auto">
-                  {/* Back button */}
-                  <button
-                    onClick={() => { setStep("role"); setIsSocialLogin(false); }}
-                    className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors mb-6"
-                  >
-                    <ChevronLeft className="w-4 h-4" />
-                    Back to role selection
-                  </button>
+
 
                   {/* Title */}
                   <div className="text-center mb-6">
