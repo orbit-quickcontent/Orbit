@@ -63,6 +63,16 @@ export async function POST(
             status: 'PAID',
           },
         })
+
+        // Automatically trigger dispatch once paid
+        try {
+          await fetch(`http://localhost:3000/api/bookings/${id}/dispatch`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+          })
+        } catch (dispatchErr) {
+          console.error('Failed to trigger automatic dispatch:', dispatchErr)
+        }
       } catch (err) {
         console.error('Error processing payment:', err)
         await firestoreDb.bookings.update({

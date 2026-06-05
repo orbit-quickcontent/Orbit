@@ -55,6 +55,7 @@ export default function LoginPage() {
 
   const [isAuthenticating, setIsAuthenticating] = useState(false);
   const [isSocialLogin, setIsSocialLogin] = useState(false);
+  const isSocial = user.authProvider === "google" || user.authProvider === "apple" || isSocialLogin;
 
   // Profile form
   const [name, setName] = useState("");
@@ -554,7 +555,8 @@ export default function LoginPage() {
                           onChange={(e) => setEmail(e.target.value)}
                           placeholder="you@example.com"
                           type="email"
-                          className="bg-white/5 border-white/10 text-foreground placeholder:text-muted-foreground/40 focus:border-orbit-cyan h-11 pl-10"
+                          disabled={isSocial}
+                          className="bg-white/5 border-white/10 text-foreground placeholder:text-muted-foreground/40 focus:border-orbit-cyan h-11 pl-10 disabled:opacity-50 disabled:cursor-not-allowed"
                         />
                       </div>
                     </div>
