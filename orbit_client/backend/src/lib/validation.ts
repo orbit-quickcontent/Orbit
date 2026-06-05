@@ -16,8 +16,8 @@ export const userSchema = z.object({
 
 // 2. Booking Validation Schema
 export const bookingSchema = z.object({
-  userId: z.string().cuid("Invalid User ID format"),
-  packageId: z.string().cuid("Invalid Package ID format"),
+  userId: z.string().min(1, "Invalid User ID format"),
+  packageId: z.string().min(1, "Invalid Package ID format"),
   bookingDate: z.string().refine((val) => !isNaN(Date.parse(val)), {
     message: "Invalid booking date format",
   }),
@@ -28,7 +28,7 @@ export const bookingSchema = z.object({
 
 // 3. Partner Onboarding Validation Schema
 export const partnerSchema = z.object({
-  userId: z.string().cuid("Invalid User ID format"),
+  userId: z.string().min(1, "Invalid User ID format"),
   location: z.string().min(3, "Location is required"),
   deviceInfo: z.string().optional(),
   latitude: z.number().min(-90).max(90).optional(),

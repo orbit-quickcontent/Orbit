@@ -1,7 +1,7 @@
 /**
  * Client Backend | Tracking Handlers
  *
- * Real-time booking tracking business logic:
+ * Real-time booking tracking business logic using Firestore:
  * - GET — Get tracking data including status label,
  *   description, sync percentage, edit countdown, overall progress,
  *   estimated time remaining, and partner info.
@@ -9,7 +9,7 @@
  * Re-exported by: src/app/api/bookings/[id]/track/route.ts
  */
 
-import { db } from '@/lib/db'
+import { firestoreDb } from '@/lib/db'
 import { NextRequest, NextResponse } from 'next/server'
 
 // Human-readable status labels
@@ -54,22 +54,8 @@ export async function GET(
   try {
     const { id } = await params
 
-    const booking = await db.booking.findUnique({
+    const booking = await firestoreDb.bookings.findUnique({
       where: { id },
-      include: {
-        package: true,
-        partner: {
-          include: {
-            user: {
-              select: {
-                name: true,
-                phone: true,
-                avatar: true,
-              },
-            },
-          },
-        },
-      },
     })
 
     if (!booking) {
@@ -77,6 +63,37 @@ export async function GET(
         { error: 'Booking not found' },
         { status: 404 }
       )
+    }
+
+    const pkg = await firestoreDb.packages.findUnique({
+      where: { id: booking.packageId },
+    })
+
+    if (!pkg) {
+      return NextResponse.json(
+        { error: 'Package not found for this booking' },
+        { status: 404 }
+      )
+    }
+
+    let partner = null
+    if (booking.partnerId) {
+      const partnerData = await firestoreDb.partners.findUnique({
+        where: { id: booking.partnerId },
+      })
+      if (partnerData) {
+        const partnerUser = await firestoreDb.partnerUsers.findUnique({
+          where: { id: partnerData.userId },
+        })
+        partner = {
+          ...partnerData,
+          user: partnerUser ? {
+            name: partnerUser.name,
+            phone: partnerUser.phone,
+            avatar: partnerUser.avatar,
+          } : null,
+        }
+      }
     }
 
     // Calculate overall progress percentage based on pipeline step
@@ -89,10 +106,10 @@ export async function GET(
 
       if (booking.status === 'SYNCING') {
         // Add sync percentage proportionally within the syncing step
-        overallProgress = baseProgress + (booking.syncPercentage / 100) * stepWeight
+        overallProgress = baseProgress + ((booking.syncPercentage || 0) / 100) * stepWeight
       } else if (booking.status === 'EDITING') {
         // Editing is further along than just entering the step
-        overallProgress = baseProgress + ((booking.syncPercentage - 75) / 25) * stepWeight
+        overallProgress = baseProgress + (((booking.syncPercentage || 0) - 75) / 25) * stepWeight
       } else {
         overallProgress = baseProgress
       }
@@ -121,15 +138,15 @@ export async function GET(
       overallProgress,
       estimatedMinutesRemaining,
       package: {
-        name: booking.package.name,
-        tier: booking.package.tier,
-        deliveryTime: booking.package.deliveryTime,
+        name: pkg.name,
+        tier: pkg.tier,
+        deliveryTime: pkg.deliveryTime,
       },
-      partner: booking.partner
+      partner: partner
         ? {
-            name: booking.partner.user.name,
-            deviceInfo: booking.partner.deviceInfo,
-            rating: booking.partner.rating,
+            name: partner.user?.name || '',
+            deviceInfo: partner.deviceInfo,
+            rating: partner.rating,
           }
         : null,
       bookingDate: booking.bookingDate,

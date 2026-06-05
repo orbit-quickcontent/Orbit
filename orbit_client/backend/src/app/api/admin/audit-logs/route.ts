@@ -1,22 +1,42 @@
 import { NextResponse } from "next/server";
-import { db } from "@/lib/db";
+import { firestoreDb } from "@/lib/db";
 
 export async function GET() {
   try {
-    const logs = await db.auditLog.findMany({
-      include: {
-        user: {
-          select: {
-            name: true,
-            email: true,
-          },
-        },
-      },
-      orderBy: {
-        createdAt: "desc",
-      },
-      take: 100, // retrieve latest 100 logs
+    const [clientLogsRaw, partnerLogsRaw, clientUsers, partnerUsers] = await Promise.all([
+      firestoreDb.clientAuditLogs.findMany(),
+      firestoreDb.partnerAuditLogs.findMany(),
+      firestoreDb.clientUsers.findMany(),
+      firestoreDb.partnerUsers.findMany()
+    ]);
+
+    const userMap = new Map<string, { name: string | null; email: string }>();
+    clientUsers.forEach((u) => {
+      userMap.set(u.id, { name: u.name || null, email: u.email });
     });
+    partnerUsers.forEach((u) => {
+      userMap.set(u.id, { name: u.name || null, email: u.email });
+    });
+
+    const clientLogs = clientLogsRaw.map((log) => {
+      const user = log.userId ? userMap.get(log.userId) : null;
+      return {
+        ...log,
+        user: user || null
+      };
+    });
+
+    const partnerLogs = partnerLogsRaw.map((log) => {
+      const user = log.userId ? userMap.get(log.userId) : null;
+      return {
+        ...log,
+        user: user || null
+      };
+    });
+
+    const logs = [...clientLogs, ...partnerLogs]
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+      .slice(0, 100);
 
     return NextResponse.json({ success: true, logs });
   } catch (error) {

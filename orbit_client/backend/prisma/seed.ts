@@ -1,10 +1,10 @@
-import { db } from '../src/lib/db';
+import { firestoreDb } from '../src/lib/db';
 
 async function seed() {
   console.log('🌱 Seeding database...');
 
-  // Seed Packages
-  const personalized = await db.package.upsert({
+  // Seed Packages in Client DB
+  const personalized = await firestoreDb.packages.upsert({
     where: { tier: 'PERSONALIZED' },
     update: {},
     create: {
@@ -25,7 +25,7 @@ async function seed() {
     },
   });
 
-  const professional = await db.package.upsert({
+  const professional = await firestoreDb.packages.upsert({
     where: { tier: 'PROFESSIONAL' },
     update: {},
     create: {
@@ -49,8 +49,8 @@ async function seed() {
 
   console.log(`✓ Packages: ${personalized.tier}, ${professional.tier}`);
 
-  // Seed a demo user
-  const demoUser = await db.user.upsert({
+  // Seed a demo user in Client DB
+  const demoUser = await firestoreDb.clientUsers.upsert({
     where: { email: 'demo@orbitlogic.io' },
     update: {},
     create: {
@@ -63,8 +63,8 @@ async function seed() {
   });
   console.log(`✓ Demo user: ${demoUser.email}`);
 
-  // Seed a partner user
-  const partnerUser = await db.user.upsert({
+  // Seed a partner user in Partner DB
+  const partnerUser = await firestoreDb.partnerUsers.upsert({
     where: { email: 'partner@orbitlogic.io' },
     update: {},
     create: {
@@ -76,9 +76,13 @@ async function seed() {
     },
   });
 
-  const partner = await db.partner.upsert({
+  const partner = await firestoreDb.partners.upsert({
     where: { userId: partnerUser.id },
-    update: {},
+    update: {
+      walletBalance: 0.0,
+      pendingClearance: 0.0,
+      totalWithdrawn: 0.0,
+    },
     create: {
       userId: partnerUser.id,
       location: 'Connaught Place, New Delhi',
@@ -88,12 +92,15 @@ async function seed() {
       rating: 4.9,
       completedProjects: 47,
       deviceInfo: 'iPhone 15 Pro Max',
+      walletBalance: 0.0,
+      pendingClearance: 0.0,
+      totalWithdrawn: 0.0,
     },
   });
   console.log(`✓ Partner: ${partnerUser.name} (${partner.deviceInfo})`);
 
-  // Seed another partner
-  const partner2User = await db.user.upsert({
+  // Seed another partner in Partner DB
+  const partner2User = await firestoreDb.partnerUsers.upsert({
     where: { email: 'priya@orbitlogic.io' },
     update: {},
     create: {
@@ -105,9 +112,13 @@ async function seed() {
     },
   });
 
-  const partner2 = await db.partner.upsert({
+  const partner2 = await firestoreDb.partners.upsert({
     where: { userId: partner2User.id },
-    update: {},
+    update: {
+      walletBalance: 0.0,
+      pendingClearance: 0.0,
+      totalWithdrawn: 0.0,
+    },
     create: {
       userId: partner2User.id,
       location: 'Bandra, Mumbai',
@@ -117,6 +128,9 @@ async function seed() {
       rating: 4.8,
       completedProjects: 32,
       deviceInfo: 'Google Pixel 8 Pro',
+      walletBalance: 0.0,
+      pendingClearance: 0.0,
+      totalWithdrawn: 0.0,
     },
   });
   console.log(`✓ Partner: ${partner2User.name} (${partner2.deviceInfo})`);
@@ -128,7 +142,4 @@ seed()
   .catch((e) => {
     console.error('Seeding error:', e);
     process.exit(1);
-  })
-  .finally(async () => {
-    await db.$disconnect();
   });

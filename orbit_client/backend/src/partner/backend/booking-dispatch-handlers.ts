@@ -1,7 +1,7 @@
 /**
  * Partner Backend | Booking Dispatch Handlers
  *
- * Dispatch a booking to the 5 nearest available online partners.
+ * Dispatch a booking to the 5 nearest available online partners using Firestore.
  * Creates WorkDispatch records, increments dispatch round, and
  * notifies partners via WebSocket.
  *
@@ -9,7 +9,7 @@
  * Category: Partner Backend
  */
 
-import { db } from '@/lib/db'
+import { firestoreDb } from '@/lib/db'
 import { NextRequest, NextResponse } from 'next/server'
 
 export async function POST(
@@ -19,10 +19,9 @@ export async function POST(
   try {
     const { id: bookingId } = await params
 
-    // 1. Find booking, verify it's PAID with no partner assigned
-    const booking = await db.booking.findUnique({
+    // 1. Find booking in Firestore, verify it's PAID with no partner assigned
+    const booking = await firestoreDb.bookings.findUnique({
       where: { id: bookingId },
-      include: { package: true },
     })
 
     if (!booking) {
@@ -50,21 +49,23 @@ export async function POST(
     let declinedBy: string[] = []
     if (booking.declinedBy) {
       try {
-        declinedBy = JSON.parse(booking.declinedBy)
+        declinedBy = typeof booking.declinedBy === 'string' ? JSON.parse(booking.declinedBy) : (booking.declinedBy || [])
       } catch {
         declinedBy = []
       }
     }
 
     // 3. Find online partners who haven't declined
-    const onlinePartners = await db.partner.findMany({
+    const onlinePartners = await firestoreDb.partners.findMany({
       where: {
         availability: true,
-        id: { notIn: declinedBy },
       },
     })
 
-    if (onlinePartners.length === 0) {
+    // Exclude declined partners in-memory
+    const activePartners = onlinePartners.filter(p => !declinedBy.includes(p.id))
+
+    if (activePartners.length === 0) {
       return NextResponse.json(
         { error: 'No available partners found' },
         { status: 404 }
@@ -72,14 +73,12 @@ export async function POST(
     }
 
     // Sort by proximity if booking has location data
-    let sortedPartners = onlinePartners
-    if (booking.location && onlinePartners.some(p => p.latitude != null && p.longitude != null)) {
-      // Simple proximity sort — partners with lat/lng are prioritized
-      // For a real app, we'd geocode the booking location too
-      sortedPartners = [...onlinePartners].sort((a, b) => {
+    let sortedPartners = activePartners
+    if (booking.location && activePartners.some(p => p.latitude != null && p.longitude != null)) {
+      sortedPartners = [...activePartners].sort((a, b) => {
         const aHasCoords = a.latitude != null && a.longitude != null
         const bHasCoords = b.latitude != null && b.longitude != null
-        if (aHasCoords && bHasCoords) return 0 // Both have coords, equal priority
+        if (aHasCoords && bHasCoords) return 0
         if (aHasCoords) return -1
         if (bHasCoords) return 1
         return 0
@@ -88,46 +87,54 @@ export async function POST(
 
     // Take top 5
     const partnersToDispatch = sortedPartners.slice(0, 5)
-    const newRound = booking.dispatchRound + 1
+    const newRound = (booking.dispatchRound || 0) + 1
 
     // 4. Create WorkDispatch records for each partner
     const dispatchRecords = await Promise.all(
       partnersToDispatch.map((partner) =>
-        db.workDispatch.create({
+        firestoreDb.workDispatches.create({
           data: {
             bookingId,
             partnerId: partner.id,
             status: 'PENDING',
             round: newRound,
+            dispatchedAt: new Date().toISOString(),
           },
         })
       )
     )
 
-    // 5. Increment booking.dispatchRound
-    // 6. Update booking status to PARTNER_DISPATCHED
-    const updatedBooking = await db.booking.update({
+    // 5. Update booking status and dispatch round
+    const updatedRaw = await firestoreDb.bookings.update({
       where: { id: bookingId },
       data: {
         dispatchRound: newRound,
         status: 'PARTNER_DISPATCHED',
       },
-      include: {
-        package: true,
-        user: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            phone: true,
-            brandLogo: true,
-            brandFont: true,
-            brandColor: true,
-            editorRequirements: true,
-          },
-        },
-      },
     })
+
+    const pkg = await firestoreDb.packages.findUnique({
+      where: { id: updatedRaw.packageId }
+    })
+
+    const clientUser = await firestoreDb.clientUsers.findUnique({
+      where: { id: updatedRaw.userId }
+    })
+
+    const updatedBooking = {
+      ...updatedRaw,
+      package: pkg,
+      user: clientUser ? {
+        id: clientUser.id,
+        name: clientUser.name,
+        email: clientUser.email,
+        phone: clientUser.phone,
+        brandLogo: clientUser.brandLogo || null,
+        brandFont: clientUser.brandFont || null,
+        brandColor: clientUser.brandColor || null,
+        editorRequirements: clientUser.editorRequirements || null,
+      } : null,
+    }
 
     // 7. Notify WebSocket service to push dispatch to partners
     const partnerIds = partnersToDispatch.map((p) => p.id)
@@ -143,7 +150,6 @@ export async function POST(
         }),
       })
     } catch (wsError) {
-      // WebSocket notification failure should not block the dispatch
       console.error('Failed to notify WebSocket service:', wsError)
     }
 

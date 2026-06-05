@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db } from "@/lib/db";
+import { firestoreDb } from "@/lib/db";
 import { logAudit } from "@/lib/auth-server";
 
 export async function POST(request: NextRequest) {
@@ -10,7 +10,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "partnerId is required" }, { status: 400 });
     }
 
-    const partner = await db.partner.update({
+    const partner = await firestoreDb.partners.update({
       where: { id: partnerId },
       data: { isVerified: !!isVerified },
     });

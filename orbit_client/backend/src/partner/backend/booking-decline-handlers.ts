@@ -1,7 +1,7 @@
 /**
  * Partner Backend | Booking Decline Handlers
  *
- * Partner declines a dispatched booking:
+ * Partner declines a dispatched booking using Firestore:
  * - Updates WorkDispatch to DECLINED
  * - Adds partnerId to booking's declinedBy JSON array
  * - If all partners for this round have declined/expired, auto re-dispatch
@@ -10,7 +10,7 @@
  * Category: Partner Backend
  */
 
-import { db } from '@/lib/db'
+import { firestoreDb } from '@/lib/db'
 import { NextRequest, NextResponse } from 'next/server'
 
 interface DeclineBody {
@@ -33,8 +33,8 @@ export async function POST(
       )
     }
 
-    // 1. Find the WorkDispatch
-    const workDispatch = await db.workDispatch.findFirst({
+    // 1. Find the WorkDispatch in Firestore
+    const workDispatch = await firestoreDb.workDispatches.findFirst({
       where: {
         bookingId,
         partnerId,
@@ -50,16 +50,16 @@ export async function POST(
     }
 
     // 2. Update WorkDispatch status to DECLINED, set respondedAt
-    await db.workDispatch.update({
+    await firestoreDb.workDispatches.update({
       where: { id: workDispatch.id },
       data: {
         status: 'DECLINED',
-        respondedAt: new Date(),
+        respondedAt: new Date().toISOString(),
       },
     })
 
     // 3. Add partnerId to booking's declinedBy JSON array
-    const booking = await db.booking.findUnique({
+    const booking = await firestoreDb.bookings.findUnique({
       where: { id: bookingId },
     })
 
@@ -73,7 +73,7 @@ export async function POST(
     let declinedBy: string[] = []
     if (booking.declinedBy) {
       try {
-        declinedBy = JSON.parse(booking.declinedBy)
+        declinedBy = typeof booking.declinedBy === 'string' ? JSON.parse(booking.declinedBy) : (booking.declinedBy || [])
       } catch {
         declinedBy = []
       }
@@ -83,7 +83,7 @@ export async function POST(
       declinedBy.push(partnerId)
     }
 
-    await db.booking.update({
+    await firestoreDb.bookings.update({
       where: { id: bookingId },
       data: {
         declinedBy: JSON.stringify(declinedBy),
@@ -91,7 +91,7 @@ export async function POST(
     })
 
     // 4. Check if ALL dispatched partners for this round have declined/expired
-    const currentRoundDispatches = await db.workDispatch.findMany({
+    const currentRoundDispatches = await firestoreDb.workDispatches.findMany({
       where: {
         bookingId,
         round: booking.dispatchRound,
@@ -107,22 +107,21 @@ export async function POST(
     // 5. If all declined/expired, auto-trigger re-dispatch
     if (allResponded) {
       try {
-        // Find online partners who haven't declined
-        const availablePartners = await db.partner.findMany({
-          where: {
-            availability: true,
-            id: { notIn: declinedBy },
-          },
+        const onlinePartners = await firestoreDb.partners.findMany({
+          where: { availability: true },
         })
 
+        // Exclude already declined partners in-memory
+        const availablePartners = onlinePartners.filter(p => !declinedBy.includes(p.id))
+
         if (availablePartners.length > 0) {
-          const newRound = booking.dispatchRound + 1
+          const newRound = (booking.dispatchRound || 0) + 1
           const partnersToDispatch = availablePartners.slice(0, 5)
 
           // Create WorkDispatch records
           await Promise.all(
             partnersToDispatch.map((partner) =>
-              db.workDispatch.create({
+              firestoreDb.workDispatches.create({
                 data: {
                   bookingId,
                   partnerId: partner.id,
@@ -134,7 +133,7 @@ export async function POST(
           )
 
           // Update booking dispatch round and keep PARTNER_DISPATCHED status
-          await db.booking.update({
+          await firestoreDb.bookings.update({
             where: { id: bookingId },
             data: {
               dispatchRound: newRound,
@@ -161,7 +160,7 @@ export async function POST(
           reDispatched = true
         } else {
           // No more available partners — mark booking accordingly
-          await db.booking.update({
+          await firestoreDb.bookings.update({
             where: { id: bookingId },
             data: {
               status: 'PAID', // Reset to PAID so it can be manually re-dispatched later
@@ -174,15 +173,18 @@ export async function POST(
     }
 
     // 6. Return result
-    const updatedBooking = await db.booking.findUnique({
-      where: { id: bookingId },
-      include: {
-        package: true,
-        user: {
-          select: { id: true, name: true, email: true, phone: true },
-        },
-      },
-    })
+    const rawBooking = await firestoreDb.bookings.findUnique({ where: { id: bookingId } })
+    let updatedBooking = null
+
+    if (rawBooking) {
+      const clientUser = await firestoreDb.clientUsers.findUnique({ where: { id: rawBooking.userId } })
+      const pkg = await firestoreDb.packages.findUnique({ where: { id: rawBooking.packageId } })
+      updatedBooking = {
+        ...rawBooking,
+        package: pkg,
+        user: clientUser ? { id: clientUser.id, name: clientUser.name, email: clientUser.email, phone: clientUser.phone } : null,
+      }
+    }
 
     return NextResponse.json({
       booking: updatedBooking,

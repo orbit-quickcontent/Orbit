@@ -1,6 +1,6 @@
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
-import { db } from "./db";
+import { firestoreDb } from "./db";
 import { NextRequest } from "next/server";
 import { getToken } from "next-auth/jwt";
 
@@ -54,7 +54,17 @@ export async function logAudit(params: {
       userAgent = params.req.headers.get("user-agent");
     }
 
-    await db.auditLog.create({
+    let targetCollection = firestoreDb.clientAuditLogs;
+    if (params.userId) {
+      const userIsPartner = await firestoreDb.partnerUsers.findUnique({
+        where: { id: params.userId },
+      });
+      if (userIsPartner) {
+        targetCollection = firestoreDb.partnerAuditLogs;
+      }
+    }
+
+    await targetCollection.create({
       data: {
         userId: params.userId,
         action: params.action,

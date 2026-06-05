@@ -1,14 +1,14 @@
 /**
  * Client Backend | Package Handlers
  *
- * Package listing business logic:
+ * Package listing business logic using Firestore.
  * - GET — List all packages, seeded if none exist.
  *   Features are stored as JSON strings and parsed on read.
  *
  * Re-exported by: src/app/api/packages/route.ts
  */
 
-import { db } from '@/lib/db'
+import { firestoreDb } from '@/lib/db'
 import { NextResponse } from 'next/server'
 
 const SEED_PACKAGES = [
@@ -48,25 +48,32 @@ const SEED_PACKAGES = [
 
 export async function GET() {
   try {
-    let packages = await db.package.findMany({
-      orderBy: { price: 'asc' },
-    })
+    let packages = await firestoreDb.packages.findMany();
 
     // Seed packages if none exist
     if (packages.length === 0) {
-      await db.package.createMany({
-        data: SEED_PACKAGES,
-      })
-      packages = await db.package.findMany({
-        orderBy: { price: 'asc' },
-      })
+      for (const pkg of SEED_PACKAGES) {
+        await firestoreDb.packages.create({ data: pkg });
+      }
+      packages = await firestoreDb.packages.findMany();
     }
 
+    // Sort by price ascending
+    packages.sort((a, b) => a.price - b.price);
+
     // Parse features JSON for each package
-    const result = packages.map((pkg) => ({
-      ...pkg,
-      features: JSON.parse(pkg.features),
-    }))
+    const result = packages.map((pkg) => {
+      let parsedFeatures = [];
+      try {
+        parsedFeatures = typeof pkg.features === 'string' ? JSON.parse(pkg.features) : (pkg.features || []);
+      } catch {
+        parsedFeatures = [];
+      }
+      return {
+        ...pkg,
+        features: parsedFeatures,
+      };
+    });
 
     return NextResponse.json({ packages: result })
   } catch (error) {

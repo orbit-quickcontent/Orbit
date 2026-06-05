@@ -1,7 +1,7 @@
 /**
  * Client Backend | User Handlers
  *
- * User management business logic:
+ * User management business logic using Firestore.
  * - GET  — List all users with booking counts
  * - POST — Create a new user (email required, unique)
  *
@@ -9,51 +9,48 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { db } from "@/lib/db";
+import { firestoreDb } from "@/lib/db";
 import { validateBody, userSchema } from "@/lib/validation";
 import { logAudit } from "@/lib/auth-server";
 
 // GET — List users
 export async function GET() {
   try {
-    const users = await db.user.findMany({
-      select: {
-        id: true,
-        email: true,
-        name: true,
-        phone: true,
-        location: true,
-        role: true,
-        brandLogo: true,
-        brandFont: true,
-        brandColor: true,
-        editorRequirements: true,
-        avatar: true,
-        createdAt: true,
-        updatedAt: true,
-        _count: {
-          select: { bookings: true },
-        },
-      },
-      orderBy: { createdAt: "desc" },
-    });
+    const clientUsers = await firestoreDb.clientUsers.findMany();
+    const partnerUsers = await firestoreDb.partnerUsers.findMany();
+    const allUsers = [...clientUsers, ...partnerUsers];
 
-    const usersWithStats = users.map((user) => ({
-      id: user.id,
-      email: user.email,
-      name: user.name,
-      phone: user.phone,
-      location: user.location,
-      role: user.role,
-      brandLogo: user.brandLogo,
-      brandFont: user.brandFont,
-      brandColor: user.brandColor,
-      editorRequirements: user.editorRequirements,
-      avatar: user.avatar,
-      createdAt: user.createdAt,
-      updatedAt: user.updatedAt,
-      totalBookings: user._count.bookings,
-    }));
+    const usersWithStats = await Promise.all(
+      allUsers.map(async (user) => {
+        // Count bookings in-memory by querying bookings collection
+        const bookings = await firestoreDb.bookings.findMany({
+          where: { userId: user.id }
+        });
+        return {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          phone: user.phone,
+          location: user.location,
+          role: user.role,
+          brandLogo: user.brandLogo,
+          brandFont: user.brandFont,
+          brandColor: user.brandColor,
+          editorRequirements: user.editorRequirements,
+          avatar: user.avatar,
+          createdAt: user.createdAt,
+          updatedAt: user.updatedAt,
+          totalBookings: bookings.length,
+        };
+      })
+    );
+
+    // Sort by createdAt desc
+    usersWithStats.sort((a, b) => {
+      const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+      return dateB - dateA;
+    });
 
     return NextResponse.json({ users: usersWithStats });
   } catch (error) {
@@ -81,8 +78,12 @@ export async function POST(request: NextRequest) {
 
     const { email, name, phone, location, role, brandLogo, brandFont, brandColor, editorRequirements } = validation.data;
 
-    // 2. Check if user already exists
-    const existingUser = await db.user.findUnique({ where: { email } });
+    // 2. Check if user already exists in either client or partner DB
+    let existingUser = await firestoreDb.clientUsers.findUnique({ where: { email } });
+    if (!existingUser) {
+      existingUser = await firestoreDb.partnerUsers.findUnique({ where: { email } });
+    }
+
     if (existingUser) {
       return NextResponse.json(
         { error: "User with this email already exists" },
@@ -90,7 +91,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const user = await db.user.create({
+    const targetCol = role === "PARTNER" ? firestoreDb.partnerUsers : firestoreDb.clientUsers;
+
+    const user = await targetCol.create({
       data: {
         email,
         name: name ?? null,

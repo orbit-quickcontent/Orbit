@@ -2,7 +2,7 @@ import NextAuth, { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import GoogleProvider from "next-auth/providers/google";
 import AppleProvider from "next-auth/providers/apple";
-import { db } from "@/lib/db";
+import { firestoreDb } from "@/lib/db";
 import { verifyPassword } from "@/lib/crypto";
 
 export const authOptions: NextAuthOptions = {
@@ -35,15 +35,21 @@ export const authOptions: NextAuthOptions = {
 
         const email = credentials.email.toLowerCase().trim();
 
-        // Find or create user
-        let user = await db.user.findUnique({
+        // Find user in partner db first, then client db
+        let user = await firestoreDb.partnerUsers.findUnique({
           where: { email },
         });
+
+        if (!user) {
+          user = await firestoreDb.clientUsers.findUnique({
+            where: { email },
+          });
+        }
 
         // OTP verification bypass/shortcut flow
         if (credentials.otpVerified === "true") {
           if (!user) {
-            user = await db.user.create({
+            user = await firestoreDb.clientUsers.create({
               data: {
                 email,
                 role: "USER",

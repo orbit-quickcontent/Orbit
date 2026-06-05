@@ -1,5 +1,5 @@
 /**
- * Backend API | Booking Sync Complete Handler
+ * Backend API | Booking Sync Complete Handler using Firestore
  *
  * This endpoint is called when the partner finishes uploading all raw footage files.
  * It updates the booking status to EDITING, credits the partner's wallet, records the
@@ -9,7 +9,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { db } from "@/lib/db";
+import { firestoreDb } from "@/lib/db";
 
 export async function POST(
   request: NextRequest,
@@ -27,24 +27,9 @@ export async function POST(
       );
     }
 
-    // 1. Fetch booking with package and user details
-    const booking = await db.booking.findUnique({
+    // 1. Fetch booking from Firestore
+    const booking = await firestoreDb.bookings.findUnique({
       where: { id: bookingId },
-      include: {
-        package: true,
-        user: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            phone: true,
-            brandLogo: true,
-            brandFont: true,
-            brandColor: true,
-            editorRequirements: true,
-          },
-        },
-      },
     });
 
     if (!booking) {
@@ -61,70 +46,84 @@ export async function POST(
       );
     }
 
-    // Check if partner has already been credited (e.g., if status is already EDITING or later)
+    const pkg = await firestoreDb.packages.findUnique({
+      where: { id: booking.packageId }
+    });
+
+    if (!pkg) {
+      return NextResponse.json(
+        { error: "Package not found for this booking" },
+        { status: 404 }
+      );
+    }
+
     const alreadyCredited = booking.status === "EDITING" || booking.status === "DELIVERED";
 
-    // 2. Update booking: status to EDITING, syncPercentage to 100, save footageUrls
-    const updatedBooking = await db.booking.update({
+    // 2. Update booking: status to EDITING, syncPercentage to 100, save footageUrls in Firestore
+    const updatedRaw = await firestoreDb.bookings.update({
       where: { id: bookingId },
       data: {
         status: "EDITING",
         syncPercentage: 100,
         footageUrls: JSON.stringify(footageUrls),
       },
-      include: {
-        package: true,
-        user: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            phone: true,
-            brandLogo: true,
-            brandFont: true,
-            brandColor: true,
-            editorRequirements: true,
-          },
-        },
-        partner: {
-          include: {
-            user: {
-              select: {
-                id: true,
-                name: true,
-                phone: true,
-              },
-            },
-          },
-        },
-      },
     });
 
-    // 3. Credit Partner's Wallet in database if not already done
+    const clientUser = await firestoreDb.clientUsers.findUnique({
+      where: { id: updatedRaw.userId }
+    });
+
+    // Fetch partner details from Firestore in-memory
+    const partnerData = await firestoreDb.partners.findUnique({
+      where: { id: booking.partnerId },
+    });
+
+    let resolvedPartner = null;
+    if (partnerData) {
+      const partnerUser = await firestoreDb.partnerUsers.findUnique({
+        where: { id: partnerData.userId },
+      });
+      resolvedPartner = {
+        ...partnerData,
+        user: partnerUser ? {
+          id: partnerUser.id,
+          name: partnerUser.name,
+          phone: partnerUser.phone,
+        } : null,
+      };
+    }
+
+    const updatedBooking = {
+      ...updatedRaw,
+      user: clientUser,
+      partner: resolvedPartner,
+    };
+
+    // 3. Credit Partner's Wallet in Firestore if not already done
     if (!alreadyCredited) {
-      const packagePrice = booking.package?.price ?? 0;
-      const partner = await db.partner.findUnique({
+      const packagePrice = pkg.price ?? 0;
+      const partner = await firestoreDb.partners.findUnique({
         where: { id: booking.partnerId },
       });
 
       if (partner) {
-        await db.partner.update({
+        await firestoreDb.partners.update({
           where: { id: booking.partnerId },
           data: {
-            walletBalance: partner.walletBalance + packagePrice,
-            completedProjects: partner.completedProjects + 1,
+            walletBalance: (partner.walletBalance || 0) + packagePrice,
+            completedProjects: (partner.completedProjects || 0) + 1,
           },
         });
 
-        // Record the Earning Transaction
-        await db.transaction.create({
+        // Record the Earning Transaction in Firestore
+        await firestoreDb.transactions.create({
           data: {
             partnerId: booking.partnerId,
             bookingId: bookingId,
             type: "EARNING",
             amount: packagePrice,
             status: "COMPLETED",
-            description: `Earning for booking ${bookingId.substring(0, 8)}... (${booking.package?.name ?? "Package"})`,
+            description: `Earning for booking ${bookingId.substring(0, 8)}... (${pkg.name ?? "Package"})`,
           },
         });
       }

@@ -1,7 +1,7 @@
 /**
  * Partner Backend | Partner Wallet Handlers
  *
- * GET  — Get partner wallet details (balance, pending, withdrawn, recent transactions)
+ * GET  — Get partner wallet details using Firestore (balance, pending, withdrawn, recent transactions)
  * POST — Partner withdrawal request
  *
  * Re-exported by: src/app/api/partners/[id]/wallet/route.ts (GET)
@@ -9,7 +9,7 @@
  * Category: Partner Backend
  */
 
-import { db } from '@/lib/db'
+import { firestoreDb } from '@/lib/db'
 import { NextRequest, NextResponse } from 'next/server'
 import { validateBody, withdrawSchema } from '@/lib/validation'
 import { logAudit } from '@/lib/auth-server'
@@ -22,7 +22,7 @@ export async function GET(
   try {
     const { id: partnerId } = await params
 
-    const partner = await db.partner.findUnique({
+    const partner = await firestoreDb.partners.findUnique({
       where: { id: partnerId },
     })
 
@@ -34,11 +34,18 @@ export async function GET(
     }
 
     // Get recent transactions (last 20)
-    const transactions = await db.transaction.findMany({
+    const transactions = await firestoreDb.transactions.findMany({
       where: { partnerId },
-      orderBy: { createdAt: 'desc' },
-      take: 20,
     })
+
+    // Sort by createdAt desc in-memory
+    transactions.sort((a, b) => {
+      const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+      return dateB - dateA;
+    });
+
+    const recentTransactions = transactions.slice(0, 20);
 
     return NextResponse.json({
       balance: partner.walletBalance,
@@ -46,11 +53,10 @@ export async function GET(
       totalWithdrawn: partner.totalWithdrawn,
       bankVerified: partner.bankVerified,
       bankName: partner.bankName,
-      // Mask account number for security
       accountNumberMasked: partner.accountNumber
         ? `****${partner.accountNumber.slice(-4)}`
         : null,
-      transactions,
+      transactions: recentTransactions,
     })
   } catch (error) {
     console.error('Error fetching wallet details:', error)
@@ -81,7 +87,7 @@ export async function POST(
 
     const { amount } = validation.data;
 
-    const partner = await db.partner.findUnique({
+    const partner = await firestoreDb.partners.findUnique({
       where: { id: partnerId },
     })
 
@@ -109,7 +115,7 @@ export async function POST(
     }
 
     // Deduct from walletBalance, add to totalWithdrawn
-    const updatedPartner = await db.partner.update({
+    const updatedPartner = await firestoreDb.partners.update({
       where: { id: partnerId },
       data: {
         walletBalance: partner.walletBalance - amount,
@@ -118,7 +124,7 @@ export async function POST(
     })
 
     // Create Transaction record
-    const transaction = await db.transaction.create({
+    const transaction = await firestoreDb.transactions.create({
       data: {
         partnerId,
         type: 'WITHDRAWAL',

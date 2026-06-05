@@ -1,14 +1,14 @@
 /**
  * Client Backend | Booking List Handlers
  *
- * Booking list business logic:
+ * Booking list business logic using Firestore:
  * - GET  — List all bookings with user, package, and partner info
  * - POST — Create a new booking (userId, packageId, bookingDate, timeSlot required)
  *
  * Re-exported by: src/app/api/bookings/route.ts
  */
 
-import { db } from '@/lib/db'
+import { firestoreDb } from '@/lib/db'
 import { NextRequest, NextResponse } from 'next/server'
 import { validateBody, bookingSchema } from '@/lib/validation'
 import { logAudit } from '@/lib/auth-server'
@@ -24,33 +24,62 @@ interface CreateBookingBody {
 
 export async function GET() {
   try {
-    const bookings = await db.booking.findMany({
-      include: {
-        user: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            phone: true,
-          },
-        },
-        package: true,
-        partner: {
-          include: {
-            user: {
-              select: {
-                id: true,
-                name: true,
-                phone: true,
-              },
-            },
-          },
-        },
-      },
-      orderBy: { createdAt: 'desc' },
-    })
+    const bookings = await firestoreDb.bookings.findMany();
 
-    return NextResponse.json({ bookings })
+    // Sort by createdAt desc in-memory
+    bookings.sort((a, b) => {
+      const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+      return dateB - dateA;
+    });
+
+    // Resolve user, package, and partner details in-memory
+    const bookingsWithDetails = await Promise.all(
+      bookings.map(async (booking) => {
+        const user = await firestoreDb.clientUsers.findUnique({
+          where: { id: booking.userId },
+        });
+
+        const pkg = await firestoreDb.packages.findUnique({
+          where: { id: booking.packageId },
+        });
+
+        let partner = null;
+        if (booking.partnerId) {
+          const partnerData = await firestoreDb.partners.findUnique({
+            where: { id: booking.partnerId },
+          });
+          if (partnerData) {
+            const partnerUser = await firestoreDb.partnerUsers.findUnique({
+              where: { id: partnerData.userId },
+            });
+            partner = {
+              ...partnerData,
+              user: partnerUser ? {
+                id: partnerUser.id,
+                name: partnerUser.name,
+                phone: partnerUser.phone,
+                avatar: partnerUser.avatar,
+              } : null,
+            };
+          }
+        }
+
+        return {
+          ...booking,
+          user: user ? {
+            id: user.id,
+            name: user.name,
+            email: user.email,
+            phone: user.phone,
+          } : null,
+          package: pkg,
+          partner,
+        };
+      })
+    );
+
+    return NextResponse.json({ bookings: bookingsWithDetails })
   } catch (error) {
     console.error('Error fetching bookings:', error)
     return NextResponse.json(
@@ -75,8 +104,8 @@ export async function POST(request: NextRequest) {
 
     const { userId, packageId, bookingDate, timeSlot, location, notes } = validation.data
 
-    // 2. Verify user exists
-    const user = await db.user.findUnique({
+    // 2. Verify user exists in client DB
+    const user = await firestoreDb.clientUsers.findUnique({
       where: { id: userId },
     })
 
@@ -88,7 +117,7 @@ export async function POST(request: NextRequest) {
     }
 
     // 3. Verify package exists
-    const pkg = await db.package.findUnique({
+    const pkg = await firestoreDb.packages.findUnique({
       where: { id: packageId },
     })
 
@@ -99,11 +128,11 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const booking = await db.booking.create({
+    const booking = await firestoreDb.bookings.create({
       data: {
         userId,
         packageId,
-        bookingDate: new Date(bookingDate),
+        bookingDate: new Date(bookingDate).toISOString(),
         timeSlot,
         location: location || null,
         notes: notes || null,
@@ -111,18 +140,19 @@ export async function POST(request: NextRequest) {
         paymentStatus: 'UNPAID',
         syncPercentage: 0,
       },
-      include: {
-        user: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            phone: true,
-          },
-        },
-        package: true,
+    });
+
+    // Map relationships to match original payload
+    const bookingWithRelations = {
+      ...booking,
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        phone: user.phone,
       },
-    })
+      package: pkg,
+    };
 
     // 4. Record audit log
     await logAudit({
@@ -134,7 +164,7 @@ export async function POST(request: NextRequest) {
       req: request,
     })
 
-    return NextResponse.json({ booking }, { status: 201 })
+    return NextResponse.json({ booking: bookingWithRelations }, { status: 201 })
   } catch (error) {
     console.error('Error creating booking:', error)
     return NextResponse.json(

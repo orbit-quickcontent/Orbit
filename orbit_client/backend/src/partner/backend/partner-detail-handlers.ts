@@ -1,7 +1,7 @@
 /**
  * Partner Backend | Partner Detail Handlers
  *
- * Individual partner endpoints:
+ * Individual partner endpoints using Firestore:
  * - GET   — Get partner with bookings, active/completed counts, and earnings
  * - PATCH — Update partner (availability, location, device info, rating)
  *
@@ -10,7 +10,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { db } from "@/lib/db";
+import { firestoreDb } from "@/lib/db";
 
 // GET /api/partners/[id] — Get specific partner with their bookings
 export async function GET(
@@ -20,42 +20,8 @@ export async function GET(
   try {
     const { id } = await params;
 
-    const partner = await db.partner.findUnique({
+    const partner = await firestoreDb.partners.findUnique({
       where: { id },
-      include: {
-        user: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            phone: true,
-            location: true,
-            avatar: true,
-            brandLogo: true,
-            brandFont: true,
-            brandColor: true,
-            editorRequirements: true,
-          },
-        },
-        bookings: {
-          include: {
-            package: {
-              select: {
-                name: true,
-                tier: true,
-                price: true,
-              },
-            },
-            user: {
-              select: {
-                name: true,
-                email: true,
-              },
-            },
-          },
-          orderBy: { createdAt: "desc" },
-        },
-      },
     });
 
     if (!partner) {
@@ -65,15 +31,54 @@ export async function GET(
       );
     }
 
-    const activeBookings = partner.bookings.filter(
+    const user = await firestoreDb.partnerUsers.findUnique({
+      where: { id: partner.userId }
+    });
+
+    const rawBookings = await firestoreDb.bookings.findMany({
+      where: { partnerId: id },
+    });
+
+    // Resolve booking packages and users in-memory
+    const bookings = await Promise.all(
+      rawBookings.map(async (b) => {
+        const pkg = await firestoreDb.packages.findUnique({
+          where: { id: b.packageId }
+        });
+        const clientUser = await firestoreDb.clientUsers.findUnique({
+          where: { id: b.userId }
+        });
+        return {
+          ...b,
+          package: pkg ? {
+            name: pkg.name,
+            tier: pkg.tier,
+            price: pkg.price,
+          } : null,
+          user: clientUser ? {
+            name: clientUser.name,
+            email: clientUser.email,
+          } : null,
+        };
+      })
+    );
+
+    // Sort by createdAt desc in-memory
+    bookings.sort((a, b) => {
+      const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+      return dateB - dateA;
+    });
+
+    const activeBookings = bookings.filter(
       (b) =>
         b.status === "PARTNER_DISPATCHED" ||
         b.status === "SHOOTING" ||
         b.status === "SYNCING"
     );
 
-    const completedBookings = partner.bookings.filter(
-      (b) => b.status === "DELIVERED"
+    const completedBookings = bookings.filter(
+      (b) => b.status === "DELIVERED" || b.status === "EDITING" // EDITING means sync completed, partner finished shoot
     );
 
     return NextResponse.json({
@@ -87,13 +92,32 @@ export async function GET(
         rating: partner.rating,
         completedProjects: partner.completedProjects,
         deviceInfo: partner.deviceInfo,
+        bankName: partner.bankName || null,
+        accountNumber: partner.accountNumber || null,
+        ifscCode: partner.ifscCode || null,
+        accountHolderName: partner.accountHolderName || null,
+        bankVerified: partner.bankVerified || false,
+        walletBalance: partner.walletBalance || 0.0,
+        pendingClearance: partner.pendingClearance || 0.0,
+        totalWithdrawn: partner.totalWithdrawn || 0.0,
         createdAt: partner.createdAt,
         updatedAt: partner.updatedAt,
-        user: partner.user,
+        user: user ? {
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          phone: user.phone,
+          location: user.location,
+          avatar: user.avatar,
+          brandLogo: user.brandLogo,
+          brandFont: user.brandFont,
+          brandColor: user.brandColor,
+          editorRequirements: user.editorRequirements,
+        } : null,
         activeBookings,
         completedBookings,
         stats: {
-          totalBookings: partner.bookings.length,
+          totalBookings: bookings.length,
           activeCount: activeBookings.length,
           completedCount: completedBookings.length,
           totalEarnings: completedBookings.reduce(
@@ -122,7 +146,7 @@ export async function PATCH(
     const body = await request.json();
 
     // Check if partner exists
-    const existingPartner = await db.partner.findUnique({ where: { id } });
+    const existingPartner = await firestoreDb.partners.findUnique({ where: { id } });
     if (!existingPartner) {
       return NextResponse.json(
         { error: "Partner not found" },
@@ -130,7 +154,7 @@ export async function PATCH(
       );
     }
 
-     const updateData: {
+    const updateData: {
       availability?: boolean;
       location?: string;
       latitude?: number | null;
@@ -182,23 +206,27 @@ export async function PATCH(
       updateData.bankVerified = body.bankVerified;
     }
 
-    const updatedPartner = await db.partner.update({
+    const updatedPartner = await firestoreDb.partners.update({
       where: { id },
       data: updateData,
-      include: {
-        user: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            phone: true,
-            avatar: true,
-          },
-        },
-      },
     });
 
-    return NextResponse.json({ partner: updatedPartner });
+    const user = await firestoreDb.partnerUsers.findUnique({
+      where: { id: updatedPartner.userId }
+    });
+
+    const partnerWithUser = {
+      ...updatedPartner,
+      user: user ? {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        phone: user.phone,
+        avatar: user.avatar,
+      } : null,
+    };
+
+    return NextResponse.json({ partner: partnerWithUser });
   } catch (error) {
     console.error("Error updating partner:", error);
     return NextResponse.json(

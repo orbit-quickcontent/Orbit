@@ -1,5 +1,5 @@
 /**
- * Admin Backend | Onboarded Directory Aggregator API
+ * Admin Backend | Onboarded Directory Aggregator API using Firestore
  *
  * Aggregates onboarded partners and clients directory, showing verification status,
  * booking summaries, ratings, and system-wide statistics for admin dashboards.
@@ -8,116 +8,122 @@
  */
 
 import { NextResponse } from "next/server";
-import { db } from "@/lib/db";
+import { firestoreDb } from "@/lib/db";
 
 export async function GET() {
   try {
-    // 1. Fetch system-wide metrics
-    const totalPartners = await db.partner.count();
-    const verifiedPartners = await db.partner.count({ where: { isVerified: true } });
-    const onlinePartners = await db.partner.count({ where: { availability: true } });
-    const totalClients = await db.user.count({ where: { role: "USER" } });
-    const totalBookings = await db.booking.count();
+    // 1. Fetch directories and bookings from Firestore
+    const partners = await firestoreDb.partners.findMany();
+    const clientUsers = await firestoreDb.clientUsers.findMany();
+    const bookings = await firestoreDb.bookings.findMany();
+    const packages = await firestoreDb.packages.findMany();
 
-    // 2. Fetch partners with their user profiles and booking stats
-    const partners = await db.partner.findMany({
-      include: {
-        user: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            phone: true,
-            avatar: true,
+    // Map packages for fast lookup in-memory
+    const packageMap = new Map(packages.map((pkg) => [pkg.id, pkg]));
+
+    // System-wide metrics
+    const totalPartners = partners.length;
+    const verifiedPartners = partners.filter((p) => p.isVerified).length;
+    const onlinePartners = partners.filter((p) => p.availability).length;
+    const totalClients = clientUsers.length; // all client users have role USER/ADMIN
+    const totalBookings = bookings.length;
+
+    // Sort partners by createdAt desc
+    partners.sort((a, b) => {
+      const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+      return dateB - dateA;
+    });
+
+    const bookingsByPartner = new Map<string, typeof bookings>();
+    for (const b of bookings) {
+      if (b.partnerId) {
+        if (!bookingsByPartner.has(b.partnerId)) {
+          bookingsByPartner.set(b.partnerId, []);
+        }
+        bookingsByPartner.get(b.partnerId)!.push(b);
+      }
+    }
+
+    // 2. Fetch partners with stats
+    const partnerDirectory = await Promise.all(
+      partners.map(async (p) => {
+        const u = await firestoreDb.partnerUsers.findUnique({
+          where: { id: p.userId },
+        });
+
+        const partnerBookings = bookingsByPartner.get(p.id) || [];
+        const completed = partnerBookings.filter((b) => b.status === "DELIVERED");
+        const active = partnerBookings.filter(
+          (b) => b.status !== "DELIVERED" && b.status !== "CANCELLED" && b.status !== "PENDING"
+        );
+
+        const totalEarnings = completed.reduce((sum, b) => {
+          const pkg = packageMap.get(b.packageId);
+          return sum + (pkg?.price || 0);
+        }, 0);
+
+        return {
+          id: p.id,
+          userId: p.userId,
+          name: u?.name || "N/A",
+          email: u?.email || "N/A",
+          phone: u?.phone || "N/A",
+          avatar: u?.avatar,
+          location: p.location,
+          isVerified: p.isVerified,
+          availability: p.availability ? "ONLINE" : "OFFLINE",
+          rating: p.rating,
+          completedProjects: p.completedProjects,
+          deviceInfo: p.deviceInfo,
+          walletBalance: p.walletBalance || 0.0,
+          totalWithdrawn: p.totalWithdrawn || 0.0,
+          stats: {
+            totalBookings: partnerBookings.length,
+            completedBookings: completed.length,
+            activeBookings: active.length,
+            totalEarnings,
           },
-        },
-        bookings: {
-          select: {
-            id: true,
-            status: true,
-            package: {
-              select: {
-                price: true,
-              },
-            },
+          createdAt: p.createdAt,
+        };
+      })
+    );
+
+    // Sort clientUsers by createdAt desc
+    clientUsers.sort((a, b) => {
+      const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+      return dateB - dateA;
+    });
+
+    // 3. Fetch clients with stats
+    const clientDirectory = await Promise.all(
+      clientUsers.map(async (c) => {
+        const clientBookings = bookings.filter((b) => b.userId === c.id);
+        const completed = clientBookings.filter((b) => b.status === "DELIVERED");
+        const spent = completed.reduce((sum, b) => {
+          const pkg = packageMap.get(b.packageId);
+          return sum + (pkg?.price || 0);
+        }, 0);
+
+        return {
+          id: c.id,
+          name: c.name || "N/A",
+          email: c.email || "N/A",
+          phone: c.phone || "N/A",
+          avatar: c.avatar,
+          brandLogo: c.brandLogo,
+          brandFont: c.brandFont,
+          brandColor: c.brandColor,
+          createdAt: c.createdAt,
+          stats: {
+            totalBookings: clientBookings.length,
+            completedBookings: completed.length,
+            totalSpent: spent,
           },
-        },
-      },
-      orderBy: { createdAt: "desc" },
-    });
-
-    const partnerDirectory = partners.map((p) => {
-      const completed = p.bookings.filter((b) => b.status === "DELIVERED");
-      const active = p.bookings.filter(
-        (b) => b.status !== "DELIVERED" && b.status !== "CANCELLED" && b.status !== "PENDING"
-      );
-      const totalEarnings = completed.reduce((sum, b) => sum + (b.package?.price || 0), 0);
-
-      return {
-        id: p.id,
-        userId: p.userId,
-        name: p.user?.name || "N/A",
-        email: p.user?.email || "N/A",
-        phone: p.user?.phone || "N/A",
-        avatar: p.user?.avatar,
-        location: p.location,
-        isVerified: p.isVerified,
-        availability: p.availability ? "ONLINE" : "OFFLINE",
-        rating: p.rating,
-        completedProjects: p.completedProjects,
-        deviceInfo: p.deviceInfo,
-        walletBalance: p.walletBalance,
-        totalWithdrawn: p.totalWithdrawn,
-        stats: {
-          totalBookings: p.bookings.length,
-          completedBookings: completed.length,
-          activeBookings: active.length,
-          totalEarnings,
-        },
-        createdAt: p.createdAt,
-      };
-    });
-
-    // 3. Fetch clients with their booking stats
-    const clients = await db.user.findMany({
-      where: { role: "USER" },
-      include: {
-        bookings: {
-          select: {
-            id: true,
-            status: true,
-            package: {
-              select: {
-                price: true,
-              },
-            },
-          },
-        },
-      },
-      orderBy: { createdAt: "desc" },
-    });
-
-    const clientDirectory = clients.map((c) => {
-      const completed = c.bookings.filter((b) => b.status === "DELIVERED");
-      const spent = completed.reduce((sum, b) => sum + (b.package?.price || 0), 0);
-
-      return {
-        id: c.id,
-        name: c.name || "N/A",
-        email: c.email || "N/A",
-        phone: c.phone || "N/A",
-        avatar: c.avatar,
-        brandLogo: c.brandLogo,
-        brandFont: c.brandFont,
-        brandColor: c.brandColor,
-        createdAt: c.createdAt,
-        stats: {
-          totalBookings: c.bookings.length,
-          completedBookings: completed.length,
-          totalSpent: spent,
-        },
-      };
-    });
+        };
+      })
+    );
 
     return NextResponse.json({
       success: true,

@@ -8,7 +8,8 @@ void main() {
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+  final Widget? home;
+  const MyApp({super.key, this.home});
 
   @override
   Widget build(BuildContext context) {
@@ -26,7 +27,7 @@ class MyApp extends StatelessWidget {
         ),
         useMaterial3: true,
       ),
-      home: const WebViewContainer(),
+      home: home ?? const WebViewContainer(),
     );
   }
 }
