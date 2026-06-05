@@ -378,45 +378,29 @@ export function BookingFlow() {
                   </div>
                 </div>
                 <div>
-                  <div className="flex justify-between items-center mb-1.5">
-                    <label className="text-sm font-medium text-muted-foreground">Shoot Location *</label>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={handleGetLiveLocation}
-                      disabled={isLocating}
-                      className="h-7 px-2 text-xs font-bold text-orbit-cyan hover:text-orbit-cyan hover:bg-orbit-cyan/10 transition-colors"
-                    >
-                      {isLocating ? (
-                        <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
-                      ) : (
-                        <Locate className="w-3.5 h-3.5 mr-1.5" />
-                      )}
-                      Locate Me
-                    </Button>
-                  </div>
-                  <div className="relative">
-                    <MapPin className="absolute left-3 top-3 w-4 h-4 text-muted-foreground" />
+                  <label className="text-sm font-medium text-muted-foreground mb-1.5 block">Shoot Location *</label>
+                  <div className="flex items-start gap-2 p-2 rounded-xl bg-white/5 border border-orbit-border focus-within:border-orbit-cyan/50 focus-within:ring-1 focus-within:ring-orbit-cyan/20 transition-all">
+                    <MapPin className="w-4 h-4 text-muted-foreground mt-2.5 ml-1.5 shrink-0" />
                     <Textarea 
                       ref={locationInputRef} 
                       value={bookingLocation} 
                       onChange={(e) => setBookingLocation(e.target.value)} 
                       placeholder="Enter shoot location" 
-                      className="pl-10 pr-10 min-h-[44px] py-2.5 bg-white/5 border-orbit-border focus:border-orbit-cyan/50 resize-none overflow-hidden" 
+                      className="flex-1 bg-transparent border-none focus-visible:ring-0 focus-visible:border-none focus-visible:outline-none focus:ring-0 shadow-none min-h-[44px] py-1 px-1 text-sm outline-none resize-none overflow-hidden" 
                     />
                     <button
                       type="button"
                       onClick={handleGetLiveLocation}
                       disabled={isLocating}
-                      className="absolute right-3 top-3 text-muted-foreground hover:text-orbit-cyan transition-colors"
+                      className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-orbit-cyan/10 hover:bg-orbit-cyan/20 border border-orbit-cyan/20 text-[10px] font-black uppercase tracking-wider text-orbit-cyan transition-colors h-7 mt-1.5 mr-1 shrink-0"
                       title="Use live location"
                     >
                       {isLocating ? (
-                        <Loader2 className="w-4 h-4 animate-spin text-orbit-cyan" />
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
                       ) : (
-                        <Locate className="w-4 h-4" />
+                        <Locate className="w-3.5 h-3.5" />
                       )}
+                      Locate Me
                     </button>
                   </div>
                 </div>
