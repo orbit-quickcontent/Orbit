@@ -378,7 +378,24 @@ export function BookingFlow() {
                   </div>
                 </div>
                 <div>
-                  <label className="text-sm font-medium text-muted-foreground mb-1.5 block">Shoot Location *</label>
+                  <div className="flex justify-between items-center mb-1.5">
+                    <label className="text-sm font-medium text-muted-foreground">Shoot Location *</label>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleGetLiveLocation}
+                      disabled={isLocating}
+                      className="h-7 px-2 text-xs font-bold text-orbit-cyan hover:text-orbit-cyan hover:bg-orbit-cyan/10 transition-colors"
+                    >
+                      {isLocating ? (
+                        <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
+                      ) : (
+                        <Locate className="w-3.5 h-3.5 mr-1.5" />
+                      )}
+                      Locate Me
+                    </Button>
+                  </div>
                   <div className="relative">
                     <MapPin className="absolute left-3 top-3 w-4 h-4 text-muted-foreground" />
                     <Textarea 
