@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -128,7 +129,19 @@ class _WebViewContainerState extends State<WebViewContainer> {
               });
             }
           },
-          onNavigationRequest: (NavigationRequest request) {
+          onNavigationRequest: (NavigationRequest request) async {
+            final url = request.url;
+            if (!url.startsWith('http://') && !url.startsWith('https://')) {
+              try {
+                final uri = Uri.parse(url);
+                if (await canLaunchUrl(uri)) {
+                  await launchUrl(uri, mode: LaunchMode.externalApplication);
+                }
+              } catch (e) {
+                debugPrint('Error launching external URL: $e');
+              }
+              return NavigationDecision.prevent;
+            }
             return NavigationDecision.navigate;
           },
         ),
