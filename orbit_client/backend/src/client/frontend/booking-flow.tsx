@@ -151,18 +151,10 @@ export function BookingFlow() {
       if (!bookingRes.ok) throw new Error(bookingData.error || "Failed to create booking");
 
       const bookingId = bookingData.booking?.id || `OL-${Date.now().toString(36).toUpperCase()}`;
-      
-      // Process payment
-      await fetch(`/api/bookings/${bookingId}/payment`, { method: "POST", headers: { "Content-Type": "application/json" } });
-
-      // Dispatch booking to 5 nearest online partners
-      try {
-        await fetch(`/api/bookings/${bookingId}/dispatch`, { method: "POST", headers: { "Content-Type": "application/json" } });
-      } catch { /* dispatch may fail gracefully — booking still tracked */ }
 
       const newBooking: BookingInfo = {
         id: bookingId, packageId: selectedPackage.id, packageName: selectedPackage.name, packagePrice: selectedPackage.price,
-        status: "PAID", paymentStatus: "PROCESSING", bookingDate: bookingDate!.toISOString(), timeSlot: bookingTimeSlot,
+        status: "PAID", paymentStatus: "SUCCESS", bookingDate: bookingDate!.toISOString(), timeSlot: bookingTimeSlot,
         location: bookingLocation, syncPercentage: 0, editCountdown: 90, partnerName: null, notes: bookingNotes,
         deliveredAt: null, downloaded: false, cancelledBy: null, declinedByPartners: [],
       };
@@ -170,21 +162,11 @@ export function BookingFlow() {
       setCurrentBooking(newBooking);
       addBooking(newBooking);
       setIsProcessing(false);
-      toast.success("Payment initiated!", { description: `Booking ${bookingId} — dispatching to partners` });
+      toast.success("Booking confirmed!", { description: `Booking ${bookingId} — dispatching to partners` });
       setCurrentView("tracking");
     } catch {
       setIsProcessing(false);
-      const bookingId = `OL-${Date.now().toString(36).toUpperCase()}`;
-      const newBooking: BookingInfo = {
-        id: bookingId, packageId: selectedPackage.id, packageName: selectedPackage.name, packagePrice: selectedPackage.price,
-        status: "PENDING", paymentStatus: "FAILED", bookingDate: bookingDate!.toISOString(), timeSlot: bookingTimeSlot,
-        location: bookingLocation, syncPercentage: 0, editCountdown: 90, partnerName: null, notes: bookingNotes,
-        deliveredAt: null, downloaded: false, cancelledBy: null, declinedByPartners: [],
-      };
-      setCurrentBooking(newBooking);
-      addBooking(newBooking);
-      toast.error("Payment failed!", { description: "Your booking was created but payment could not be processed. Please retry payment." });
-      setCurrentView("tracking");
+      toast.error("Booking failed!", { description: "Your booking could not be processed. Please try again." });
     }
   };
 
@@ -418,7 +400,7 @@ export function BookingFlow() {
 
           {step === 3 && selectedPackage && (
             <motion.div key="step3" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="orbit-card rounded-2xl p-4 sm:p-6 md:p-8">
-              <h3 className="text-base sm:text-lg font-bold mb-4 sm:mb-6 flex items-center gap-2"><CreditCard className="w-5 h-5 text-orbit-cyan" />Review & Payment</h3>
+              <h3 className="text-base sm:text-lg font-bold mb-4 sm:mb-6 flex items-center gap-2"><CheckCircle2 className="w-5 h-5 text-orbit-cyan" />Review & Confirm</h3>
               <div className="space-y-4">
                 <div className="orbit-card rounded-xl p-4 sm:p-5 space-y-3">
                   <div className="text-xs sm:text-sm font-medium text-orbit-cyan">Order Summary</div>
@@ -446,29 +428,21 @@ export function BookingFlow() {
 
                 <div className="orbit-card rounded-xl p-4 sm:p-5 border-orbit-cyan/20">
                   <div className="flex items-start gap-3">
-                    <Lock className="w-5 h-5 text-orbit-cyan shrink-0 mt-0.5" />
+                    <CheckCircle2 className="w-5 h-5 text-orbit-cyan shrink-0 mt-0.5" />
                     <div>
-                      <div className="text-xs sm:text-sm font-semibold mb-1">Payment Gate</div>
+                      <div className="text-xs sm:text-sm font-semibold mb-1">Instant Booking Confirmation</div>
                       <p className="text-xs text-muted-foreground leading-relaxed">
-                        The &quot;Notify Videographer&quot; process <strong className="text-orbit-cyan">cannot start</strong> until payment is confirmed.
+                        Your booking is confirmed immediately. A videographer will be dispatched to your location right away.
                       </p>
                     </div>
                   </div>
-                </div>
-
-                <div className="flex gap-3">
-                  {["UPI", "Razorpay"].map((method) => (
-                    <div key={method} className="flex-1 orbit-card rounded-xl p-3 text-center text-xs sm:text-sm font-medium border border-orbit-cyan/20">
-                      <CreditCard className="w-4 h-4 mx-auto mb-1.5 text-orbit-cyan" />{method}
-                    </div>
-                  ))}
                 </div>
               </div>
 
               <div className="mt-8 flex justify-between">
                 <Button variant="outline" onClick={() => setStep(2)} disabled={isProcessing} className="border-orbit-border text-foreground hover:bg-white/5"><ArrowLeft className="w-4 h-4 mr-2" />Back</Button>
                 <Button onClick={handlePayment} disabled={isProcessing} className="bg-gradient-to-r from-orbit-cyan to-orbit-purple text-white hover:opacity-90 font-bold orbit-glow px-8">
-                  {isProcessing ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Processing...</> : <><Lock className="w-4 h-4 mr-2" />Pay {formatCurrency(selectedPackage.price)}</>}
+                  {isProcessing ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Confirming...</> : <><CheckCircle2 className="w-4 h-4 mr-2" />Confirm Booking</>}
                 </Button>
               </div>
             </motion.div>

@@ -3,7 +3,6 @@ import { firestoreDb } from './db';
 import { POST as bookingListPost } from '../client/backend/user-handlers'; // Wait, let's verify if user-handlers handles POST user or POST booking. Let's make sure.
 // Ah, booking list handlers are in '../client/backend/booking-list-handlers'
 import { POST as createBooking } from '../client/backend/booking-list-handlers';
-import { POST as initiatePayment } from '../client/backend/payment-handlers';
 import { POST as dispatchBooking } from '../partner/backend/booking-dispatch-handlers';
 import { POST as acceptBooking } from '../partner/backend/booking-accept-handlers';
 import { POST as completeSync } from '../app/api/bookings/[id]/sync-complete/route';
@@ -69,26 +68,13 @@ async function test() {
   const bookingId = createData.booking.id;
   console.log(`✓ Booking created successfully. ID: ${bookingId}, status: ${createData.booking.status}`);
 
-  // 3. Initiate Payment
-  console.log('\n--- Step 2: Initiate Payment ---');
-  const paymentRequest = new NextRequest(`http://localhost:3000/api/bookings/${bookingId}/payment`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' }
-  });
-
-  const paymentRes = await initiatePayment(paymentRequest, { params: Promise.resolve({ id: bookingId }) });
-  const paymentData = await paymentRes.json();
-  console.log(`✓ Payment response: ${JSON.stringify(paymentData)}`);
-
-  console.log('Waiting for payment confirmation simulation...');
-  await wait(3000); // Wait 3s for success simulation
-
-  // Verify booking status is PAID
-  const bookingAfterPayment = await firestoreDb.bookings.findUnique({
+  // 3. Verify Direct PAID/SUCCESS Status
+  console.log('\n--- Step 2: Verify Direct Booking Confirmation (PAID status) ---');
+  const bookingAfterCreation = await firestoreDb.bookings.findUnique({
     where: { id: bookingId }
   });
-  console.log(`✓ Booking status after payment: ${bookingAfterPayment?.status}, paymentStatus: ${bookingAfterPayment?.paymentStatus}`);
-  if (bookingAfterPayment?.status !== 'PAID') {
+  console.log(`✓ Booking status after creation: ${bookingAfterCreation?.status}, paymentStatus: ${bookingAfterCreation?.paymentStatus}`);
+  if (bookingAfterCreation?.status !== 'PAID') {
     throw new Error('Booking status is not PAID');
   }
 

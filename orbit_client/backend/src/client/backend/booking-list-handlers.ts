@@ -136,11 +136,23 @@ export async function POST(request: NextRequest) {
         timeSlot,
         location: location || null,
         notes: notes || null,
-        status: 'PENDING',
-        paymentStatus: 'UNPAID',
+        status: 'PAID',
+        paymentStatus: 'SUCCESS',
         syncPercentage: 0,
       },
     });
+
+    // Automatically trigger partner dispatch immediately upon creation
+    ;(async () => {
+      try {
+        await fetch(`http://localhost:3000/api/bookings/${booking.id}/dispatch`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+        })
+      } catch (dispatchErr) {
+        console.error('Failed to trigger automatic dispatch:', dispatchErr)
+      }
+    })()
 
     // Map relationships to match original payload
     const bookingWithRelations = {

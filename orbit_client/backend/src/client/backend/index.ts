@@ -6,6 +6,5 @@
 export { GET as getUsers, POST as createUser } from "./user-handlers";
 export { GET as getBookings, POST as createBooking } from "./booking-list-handlers";
 export { GET as getBooking, PATCH as updateBooking } from "./booking-detail-handlers";
-export { POST as processPayment } from "./payment-handlers";
 export { GET as getTracking } from "./tracking-handlers";
 export { GET as getPackages } from "./package-handlers";
