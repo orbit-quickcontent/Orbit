@@ -24,6 +24,15 @@ if (isS3Configured) {
   console.warn("[Storage] AWS credentials missing. Falling back to local disk storage");
 }
 
+function checkS3Config() {
+  if (!isS3Configured || !s3Client) {
+    const isProductionOrBeta = process.env.NODE_ENV === "production" || process.env.PRODUCTION_BETA === "true";
+    if (isProductionOrBeta) {
+      throw new Error("[Storage] Critical Configuration Error: AWS credentials missing in production/beta mode. S3 setup is required.");
+    }
+  }
+}
+
 /**
  * Generate a presigned PUT URL for client-side upload.
  */
@@ -37,6 +46,7 @@ export async function getPresignedUploadUrl(key: string, contentType: string): P
     return await getSignedUrl(s3Client, command, { expiresIn: 3600 }); // 1 hour expiry
   }
 
+  checkS3Config();
   // Fallback to local mock upload route
   return `/api/upload/mock-s3?key=${encodeURIComponent(key)}`;
 }
@@ -53,6 +63,7 @@ export async function getPresignedDownloadUrl(key: string): Promise<string> {
     return await getSignedUrl(s3Client, command, { expiresIn: 86400 }); // 24 hours expiry
   }
 
+  checkS3Config();
   // Fallback to public path if local upload
   return `/upload/${key}`;
 }
@@ -72,6 +83,7 @@ export async function uploadFileToStorage(key: string, buffer: Buffer, contentTy
     return await getPresignedDownloadUrl(key);
   }
 
+  checkS3Config();
   // Fallback to local file saving
   const fs = require("fs").promises;
   const path = require("path");

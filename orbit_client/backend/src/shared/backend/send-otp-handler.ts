@@ -185,8 +185,9 @@ export async function POST(req: NextRequest) {
       message: "OTP sent successfully",
     };
 
-    // Only return demoOtp if we are running in fallback mode (no SMTP configured)
-    if (emailResult.isDemo) {
+    // Only return demoOtp if we are running in fallback mode (no SMTP configured) and NOT in production or beta launch mode
+    const isProductionOrBeta = process.env.NODE_ENV === "production" || process.env.PRODUCTION_BETA === "true";
+    if (emailResult.isDemo && !isProductionOrBeta) {
       responsePayload.demoOtp = otp;
       if (emailResult.previewUrl) {
         responsePayload.previewUrl = emailResult.previewUrl;
