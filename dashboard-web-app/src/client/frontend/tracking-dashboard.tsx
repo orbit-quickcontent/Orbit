@@ -467,6 +467,8 @@ export function TrackingDashboard() {
             updateBookingStatus(currentBooking.id, data.tracking.status, {
               reelUrl: data.tracking.reelUrl,
               deliveredAt: data.tracking.deliveredAt,
+              hlsPlaylistUrl: data.tracking.hlsPlaylistUrl,
+              masterReelUrl: data.tracking.masterReelUrl,
             });
             if (data.tracking.status === "DELIVERED") {
               setSyncProgress(100);
@@ -513,13 +515,15 @@ export function TrackingDashboard() {
       loadInitialState();
     });
 
-    socket.on("booking:status-update", (data: { bookingId: string; status: BookingStatus; reelUrl?: string; deliveredAt?: string }) => {
+    socket.on("booking:status-update", (data: { bookingId: string; status: BookingStatus; reelUrl?: string; hlsPlaylistUrl?: string; masterReelUrl?: string; deliveredAt?: string }) => {
       // Normalise READY_TO_EDIT → EDITING so the client pipeline step is correct
       const normStatus = (data.status as string) === "READY_TO_EDIT" ? "EDITING" as BookingStatus : data.status;
       console.log("[WS Client] Status update:", normStatus);
       updateBookingStatus(currentBooking.id, normStatus, {
         reelUrl: data.reelUrl,
         deliveredAt: data.deliveredAt,
+        hlsPlaylistUrl: data.hlsPlaylistUrl,
+        masterReelUrl: data.masterReelUrl,
       });
       
       if (normStatus === "EDITING") {
@@ -565,6 +569,8 @@ export function TrackingDashboard() {
             updateBookingStatus(currentBooking.id, data.tracking.status, {
               reelUrl: data.tracking.reelUrl,
               deliveredAt: data.tracking.deliveredAt,
+              hlsPlaylistUrl: data.tracking.hlsPlaylistUrl,
+              masterReelUrl: data.tracking.masterReelUrl,
             });
             if (data.tracking.status === "DELIVERED") {
               clearInterval(pollTimer);
