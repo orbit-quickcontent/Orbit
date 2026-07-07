@@ -2,7 +2,6 @@
 
 import React, { useEffect, useState, use } from "react";
 import { useRouter } from "next/navigation";
-import { motion } from "framer-motion";
 import { ArrowLeft, Download, FileVideo, CheckCircle, UploadCloud, Link as LinkIcon, Info } from "lucide-react";
 
 export default function BookingStudio({ params }: { params: Promise<{ id: string }> }) {
@@ -13,6 +12,7 @@ export default function BookingStudio({ params }: { params: Promise<{ id: string
   const [isLoading, setIsLoading] = useState(true);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [isUploading, setIsUploading] = useState(false);
+  const [isDelivering, setIsDelivering] = useState(false);
   const [reelUrl, setReelUrl] = useState("");
   const [dragActive, setDragActive] = useState(false);
 
@@ -24,10 +24,17 @@ export default function BookingStudio({ params }: { params: Promise<{ id: string
     }
 
     // Fetch booking details
-    fetch(`http://localhost:3000/api/editor/bookings/${bookingId}`)
+    fetch(`http://localhost:5000/api/editor/bookings/${bookingId}`)
       .then((res) => res.json())
       .then((data) => {
         if (data.booking) {
+          // Normalize footageUrls: Firestore stores it as a JSON string
+          const raw = data.booking.footageUrls;
+          data.booking.footageUrls = Array.isArray(raw)
+            ? raw
+            : typeof raw === "string"
+            ? (() => { try { return JSON.parse(raw); } catch { return raw ? [raw] : []; } })()
+            : [];
           setBooking(data.booking);
           if (data.booking.reelUrl) {
             setReelUrl(data.booking.reelUrl);
@@ -69,74 +76,99 @@ export default function BookingStudio({ params }: { params: Promise<{ id: string
 
   const uploadFile = (file: File) => {
     setIsUploading(true);
-    setUploadProgress(10);
+    setUploadProgress(0);
 
     const storageKey = `reels/${bookingId}_${Date.now()}_${file.name}`;
-    
-    // Simulate upload progress
-    const progressInterval = setInterval(() => {
-      setUploadProgress((prev) => {
-        if (prev >= 90) {
-          clearInterval(progressInterval);
-          return 90;
-        }
-        return prev + 10;
-      });
-    }, 150);
+    const uploadUrl = `http://localhost:5000/api/upload/mock-s3?key=${encodeURIComponent(storageKey)}`;
 
-    // Call S3 Mock upload route
-    fetch(`http://localhost:3000/api/upload/mock-s3?key=${encodeURIComponent(storageKey)}`, {
-      method: "PUT",
-      body: file,
-    })
-      .then((res) => {
-        clearInterval(progressInterval);
-        if (res.ok) {
-          setUploadProgress(100);
-          setTimeout(() => {
-            const finalUrl = `http://localhost:3000/upload/${storageKey}`;
-            setReelUrl(finalUrl);
-            setIsUploading(false);
-          }, 500);
-        } else {
-          throw new Error("Upload failed");
-        }
-      })
-      .catch((err) => {
-        clearInterval(progressInterval);
-        console.error(err);
-        alert("Upload failed. Try again.");
+    const xhr = new XMLHttpRequest();
+    xhr.open("PUT", uploadUrl);
+    xhr.setRequestHeader("Content-Type", file.type || "video/mp4");
+
+    xhr.upload.onprogress = (event) => {
+      if (event.lengthComputable) {
+        const pct = Math.round((event.loaded / event.total) * 100);
+        setUploadProgress(pct);
+      }
+    };
+
+    xhr.onload = () => {
+      if (xhr.status === 200 || xhr.status === 204) {
+        setUploadProgress(100);
+        setTimeout(() => {
+          const finalUrl = `http://localhost:5000/upload/${storageKey}`;
+          setReelUrl(finalUrl);
+          setIsUploading(false);
+        }, 400);
+      } else {
+        alert("Upload failed (status " + xhr.status + "). Try again.");
         setIsUploading(false);
         setUploadProgress(0);
-      });
+      }
+    };
+
+    xhr.onerror = () => {
+      alert("Network error during upload. Try again.");
+      setIsUploading(false);
+      setUploadProgress(0);
+    };
+
+    xhr.send(file);
   };
 
-  const handleDeliver = () => {
-    if (!reelUrl) return;
-
-    fetch("http://localhost:3000/api/editor/deliver", {
-      method: "POST",
+  const handleAcceptAssignment = () => {
+    setIsLoading(true);
+    fetch(`http://localhost:5000/api/bookings/${bookingId}`, {
+      method: "PATCH",
       headers: {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        bookingId: booking.id,
-        reelUrl: reelUrl,
-        editorId: localStorage.getItem("orbit_editor_id") || "editor_1",
+        status: "EDITING",
       }),
     })
       .then((res) => res.json())
       .then((data) => {
-        if (data.success) {
-          router.push("/dashboard");
-        } else {
-          alert("Delivery failed: " + data.error);
+        if (data.booking) {
+          setBooking(data.booking);
         }
+        setIsLoading(false);
       })
       .catch((err) => {
         console.error(err);
-        alert("Network error delivering reel.");
+        alert("Failed to accept project.");
+        setIsLoading(false);
       });
+  };
+
+  const handleDeliver = async () => {
+    if (!reelUrl || isDelivering) return;
+    setIsDelivering(true);
+
+    try {
+      const res = await fetch("http://localhost:5000/api/editor/deliver", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          bookingId: booking.id,
+          reelUrl: reelUrl,
+          editorId: localStorage.getItem("orbit_editor_id") || "editor_1",
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setBooking((prev: any) => ({ ...prev, status: "DELIVERED", reelUrl }));
+        alert("✅ Video delivered to client successfully!");
+        router.push("/dashboard");
+      } else {
+        alert("Delivery failed: " + (data.error || "Unknown error"));
+        setIsDelivering(false);
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Network error delivering reel. Please try again.");
+      setIsDelivering(false);
+    }
   };
 
   if (isLoading) {
@@ -266,16 +298,16 @@ export default function BookingStudio({ params }: { params: Promise<{ id: string
           <div className="orbit-card p-6 rounded-2xl">
             <h2 className="text-lg font-bold mb-4 flex items-center space-x-2">
               <FileVideo size={18} className="text-orbit-cyan" />
-              <span>Raw Footage ({booking.footageUrls?.length || 0} Files)</span>
+              <span>Raw Footage ({Array.isArray(booking.footageUrls) ? booking.footageUrls.length : 0} Files)</span>
             </h2>
 
-            {(!booking.footageUrls || booking.footageUrls.length === 0) ? (
+            {(!booking.footageUrls || !Array.isArray(booking.footageUrls) || booking.footageUrls.length === 0) ? (
               <div className="p-8 text-center text-gray-500 text-sm">
                 No raw footage synced yet. Wait for partner upload completion.
               </div>
             ) : (
               <div className="space-y-3">
-                {booking.footageUrls.map((url: string, index: number) => {
+                {(booking.footageUrls as string[]).map((url: string, index: number) => {
                   const filename = url.split("/").pop() || `Footage_${index + 1}.mp4`;
                   return (
                     <div
@@ -286,7 +318,7 @@ export default function BookingStudio({ params }: { params: Promise<{ id: string
                         <FileVideo size={20} className="text-gray-400" />
                         <div>
                           <p className="text-sm font-semibold truncate max-w-xs md:max-w-md">
-                            {filename}
+                             {filename}
                           </p>
                           <p className="text-xs text-gray-600">Raw Media Asset</p>
                         </div>
@@ -317,91 +349,177 @@ export default function BookingStudio({ params }: { params: Promise<{ id: string
               <span>Deliver Final Edit</span>
             </h2>
 
-            {/* Drag Drop File Area */}
-            {booking.status === "EDITING" ? (
-              <div
-                onDragEnter={handleDrag}
-                onDragOver={handleDrag}
-                onDragLeave={handleDrag}
-                onDrop={handleDrop}
-                className={`border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-all ${
-                  dragActive
-                    ? "border-orbit-cyan bg-orbit-cyan/5"
-                    : "border-orbit-border hover:border-orbit-purple/50 bg-[#050505]"
-                } ${isUploading ? "pointer-events-none" : ""}`}
-              >
-                <input
-                  type="file"
-                  id="reel-file-upload"
-                  className="hidden"
-                  accept="video/*"
-                  onChange={handleFileChange}
-                  disabled={isUploading}
-                />
-                
-                {isUploading ? (
-                  <div className="space-y-3">
-                    <div className="w-8 h-8 border-4 border-orbit-purple border-t-transparent rounded-full animate-spin mx-auto" />
-                    <p className="text-sm font-semibold">Uploading video... {uploadProgress}%</p>
-                    <div className="w-full bg-gray-900 rounded-full h-1.5 overflow-hidden">
-                      <div className="bg-orbit-purple h-full transition-all duration-150" style={{ width: `${uploadProgress}%` }} />
+            {/* Drag Drop File Area / Accept Action */}
+            {booking.status === "READY_TO_EDIT" ? (
+              <div className="bg-[#050505] border border-orbit-border p-6 rounded-xl space-y-4 text-center">
+                <p className="text-sm text-gray-400">
+                  This project has synced footage and is ready for editing.
+                </p>
+                <button
+                  onClick={handleAcceptAssignment}
+                  className="w-full bg-gradient-to-r from-orbit-cyan to-orbit-purple text-black font-bold py-3.5 rounded-xl text-sm transition-all hover:opacity-90 active:scale-[0.98]"
+                >
+                  Accept Assignment
+                </button>
+              </div>
+            ) : booking.status === "EDITING" ? (
+              <>
+                <div
+                  onDragEnter={handleDrag}
+                  onDragOver={handleDrag}
+                  onDragLeave={handleDrag}
+                  onDrop={handleDrop}
+                  className={`border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-all ${
+                    dragActive
+                      ? "border-orbit-cyan bg-orbit-cyan/5"
+                      : "border-orbit-border hover:border-orbit-purple/50 bg-[#050505]"
+                  } ${isUploading ? "pointer-events-none" : ""}`}
+                >
+                  <input
+                    type="file"
+                    id="reel-file-upload"
+                    className="hidden"
+                    accept="video/*"
+                    onChange={handleFileChange}
+                    disabled={isUploading}
+                  />
+                  
+                  {isUploading ? (
+                    <div className="space-y-3">
+                      <div className="w-8 h-8 border-4 border-orbit-purple border-t-transparent rounded-full animate-spin mx-auto" />
+                      <p className="text-sm font-semibold">Uploading video... {uploadProgress}%</p>
+                      <div className="w-full bg-gray-900 rounded-full h-1.5 overflow-hidden">
+                        <div className="bg-orbit-purple h-full transition-all duration-150" style={{ width: `${uploadProgress}%` }} />
+                      </div>
                     </div>
-                  </div>
-                ) : reelUrl ? (
-                  <div className="space-y-4">
+                  ) : reelUrl ? (
+                    <div className="space-y-4">
+                      <div className="w-10 h-10 rounded-full bg-emerald-500/10 text-emerald-400 flex items-center justify-center mx-auto">
+                        <CheckCircle size={24} />
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold text-white">Video Ready</p>
+                        <p className="text-xs text-gray-500 truncate mt-1">URL: {reelUrl}</p>
+                      </div>
+                      <label
+                        htmlFor="reel-file-upload"
+                        className="inline-block text-xs text-orbit-cyan hover:underline cursor-pointer"
+                      >
+                        Replace File
+                      </label>
+                    </div>
+                  ) : (
+                    <label htmlFor="reel-file-upload" className="cursor-pointer space-y-3 block">
+                      <UploadCloud size={32} className="text-gray-600 mx-auto" />
+                      <div>
+                        <p className="text-sm font-semibold">Drag & Drop edited video</p>
+                        <p className="text-xs text-gray-600 mt-1">or click to browse local files</p>
+                      </div>
+                    </label>
+                  )}
+                </div>
+
+                <button
+                  onClick={handleDeliver}
+                  disabled={!reelUrl || isUploading || isDelivering}
+                  className="w-full bg-gradient-to-r from-orbit-cyan to-orbit-purple text-black font-bold py-3 mt-6 rounded-xl text-sm transition-all hover:opacity-90 active:scale-[0.98] disabled:opacity-50 disabled:scale-100 flex items-center justify-center gap-2"
+                >
+                  {isDelivering ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin" />
+                      Sending to Client...
+                    </>
+                  ) : (
+                    "📤 Send to Client"
+                  )}
+                </button>
+              </>
+            ) : (
+              <div className="bg-[#050505] border border-orbit-border p-4 rounded-xl space-y-4 text-center">
+                {reelUrl ? (
+                  <>
                     <div className="w-10 h-10 rounded-full bg-emerald-500/10 text-emerald-400 flex items-center justify-center mx-auto">
                       <CheckCircle size={24} />
                     </div>
                     <div>
-                      <p className="text-sm font-semibold text-white">Video Ready</p>
+                      <p className="text-sm font-semibold">Reel Delivered</p>
                       <p className="text-xs text-gray-500 truncate mt-1">URL: {reelUrl}</p>
                     </div>
-                    <label
-                      htmlFor="reel-file-upload"
-                      className="inline-block text-xs text-orbit-cyan hover:underline cursor-pointer"
-                    >
-                      Replace File
-                    </label>
-                  </div>
-                ) : (
-                  <label htmlFor="reel-file-upload" className="cursor-pointer space-y-3 block">
-                    <UploadCloud size={32} className="text-gray-600 mx-auto" />
-                    <div>
-                      <p className="text-sm font-semibold">Drag & Drop edited video</p>
-                      <p className="text-xs text-gray-600 mt-1">or click to browse local files</p>
+                    <div className="flex gap-2 justify-center">
+                      <a
+                        href={reelUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-block text-xs bg-gray-900 border border-orbit-border hover:bg-gray-800 text-orbit-cyan px-3 py-1.5 rounded-lg font-bold"
+                      >
+                        Preview Reel
+                      </a>
+                      <button
+                        onClick={() => setReelUrl("")}
+                        className="inline-block text-xs bg-gray-900 border border-orbit-border hover:bg-gray-800 text-red-400 px-3 py-1.5 rounded-lg font-bold"
+                      >
+                        Re-upload Edit
+                      </button>
                     </div>
-                  </label>
+                  </>
+                ) : (
+                  <>
+                    <div
+                      onDragEnter={handleDrag}
+                      onDragOver={handleDrag}
+                      onDragLeave={handleDrag}
+                      onDrop={handleDrop}
+                      className={`border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-all ${
+                        dragActive
+                          ? "border-orbit-cyan bg-orbit-cyan/5"
+                          : "border-orbit-border hover:border-orbit-purple/50 bg-[#050505]"
+                      } ${isUploading ? "pointer-events-none" : ""}`}
+                    >
+                      <input
+                        type="file"
+                        id="reel-file-upload"
+                        className="hidden"
+                        accept="video/*"
+                        onChange={handleFileChange}
+                        disabled={isUploading}
+                      />
+                      
+                      {isUploading ? (
+                        <div className="space-y-3">
+                          <div className="w-8 h-8 border-4 border-orbit-purple border-t-transparent rounded-full animate-spin mx-auto" />
+                          <p className="text-sm font-semibold">Uploading video... {uploadProgress}%</p>
+                          <div className="w-full bg-gray-900 rounded-full h-1.5 overflow-hidden">
+                            <div className="bg-orbit-purple h-full transition-all duration-150" style={{ width: `${uploadProgress}%` }} />
+                          </div>
+                        </div>
+                      ) : (
+                        <label htmlFor="reel-file-upload" className="cursor-pointer space-y-3 block">
+                          <UploadCloud size={32} className="text-gray-600 mx-auto" />
+                          <div>
+                            <p className="text-sm font-semibold">Drag & Drop edited video</p>
+                            <p className="text-xs text-gray-600 mt-1">or click to browse local files</p>
+                          </div>
+                        </label>
+                      )}
+                    </div>
+
+                    <button
+                      onClick={handleDeliver}
+                      disabled={isUploading || isDelivering}
+                      className="w-full bg-gradient-to-r from-orbit-cyan to-orbit-purple text-black font-bold py-3 mt-4 rounded-xl text-sm transition-all hover:opacity-90 active:scale-[0.98] disabled:opacity-50 flex items-center justify-center gap-2"
+                    >
+                      {isDelivering ? (
+                        <>
+                          <div className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin" />
+                          Sending to Client...
+                        </>
+                      ) : (
+                        "📤 Send to Client"
+                      )}
+                    </button>
+                  </>
                 )}
               </div>
-            ) : (
-              <div className="bg-[#050505] border border-orbit-border p-4 rounded-xl space-y-4 text-center">
-                <div className="w-10 h-10 rounded-full bg-emerald-500/10 text-emerald-400 flex items-center justify-center mx-auto">
-                  <CheckCircle size={24} />
-                </div>
-                <div>
-                  <p className="text-sm font-semibold">Reel Delivered</p>
-                  <p className="text-xs text-gray-500 truncate mt-1">URL: {reelUrl}</p>
-                </div>
-                <a
-                  href={reelUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-block text-xs bg-gray-900 border border-orbit-border hover:bg-gray-800 text-orbit-cyan px-3 py-1.5 rounded-lg"
-                >
-                  Preview Reel
-                </a>
-              </div>
-            )}
-
-            {/* Deliver Trigger Button */}
-            {booking.status === "EDITING" && (
-              <button
-                onClick={handleDeliver}
-                disabled={!reelUrl || isUploading}
-                className="w-full bg-gradient-to-r from-orbit-cyan to-orbit-purple text-black font-bold py-3 mt-6 rounded-xl text-sm transition-all hover:opacity-90 active:scale-[0.98] disabled:opacity-50 disabled:scale-100"
-              >
-                Deliver to Client
-              </button>
             )}
           </div>
         </div>

@@ -24,7 +24,7 @@ export default function EditorDashboard() {
     setEditorName(savedName || "Alex Mercer");
 
     // Fetch assigned bookings
-    fetch(`http://localhost:3000/api/editor/bookings?editorId=${savedId}`)
+    fetch(`http://localhost:5000/api/editor/bookings?editorId=${savedId}`)
       .then((res) => res.json())
       .then((data) => {
         if (data.bookings) {
@@ -44,7 +44,7 @@ export default function EditorDashboard() {
     router.push("/");
   };
 
-  const activeAssignments = bookings.filter((b) => b.status === "EDITING").length;
+  const activeAssignments = bookings.filter((b) => b.status === "EDITING" || b.status === "READY_TO_EDIT").length;
   const completedAssignments = bookings.filter((b) => b.status === "DELIVERED").length;
 
   return (
@@ -153,12 +153,14 @@ export default function EditorDashboard() {
                       </div>
                       <span
                         className={`text-xs font-bold px-2.5 py-1 rounded-full uppercase ${
-                          booking.status === "EDITING"
+                          booking.status === "READY_TO_EDIT"
+                            ? "bg-yellow-500/15 text-yellow-400"
+                            : booking.status === "EDITING"
                             ? "bg-orbit-cyan/15 text-orbit-cyan"
                             : "bg-emerald-500/15 text-emerald-400"
                         }`}
                       >
-                        {booking.status === "EDITING" ? "Editing" : "Delivered"}
+                        {booking.status === "READY_TO_EDIT" ? "Ready to Edit" : booking.status === "EDITING" ? "Editing" : "Delivered"}
                       </span>
                     </div>
 
@@ -191,7 +193,7 @@ export default function EditorDashboard() {
                       onClick={() => router.push(`/bookings/${booking.id}`)}
                       className="px-4 py-2 bg-gradient-to-r from-orbit-cyan to-orbit-purple text-black font-semibold rounded-lg text-sm hover:opacity-90 active:scale-[0.98] transition-all"
                     >
-                      {booking.status === "EDITING" ? "Open Studio" : "View Delivery"}
+                      {booking.status === "READY_TO_EDIT" ? "Accept & Edit" : booking.status === "EDITING" ? "Open Studio" : "View Delivery"}
                     </button>
                   </div>
                 </motion.div>

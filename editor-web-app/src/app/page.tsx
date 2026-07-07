@@ -18,13 +18,21 @@ export default function EditorLogin() {
 
     // Simulate login for editor_1
     setTimeout(() => {
-      if (email.toLowerCase().includes("editor") || email === "admin@orbit.com" || email === "") {
+      const isAllowed = 
+        (email.toLowerCase() === "orbit.quickcontent@gmail.com" && password === "MAU.editor.amg") ||
+        (email.toLowerCase().includes("editor") && password !== "") || 
+        (email === "admin@orbit.com" && password !== "");
+
+      if (isAllowed) {
         // Save mock editorId to localStorage for session
         localStorage.setItem("orbit_editor_id", "editor_1");
-        localStorage.setItem("orbit_editor_name", "Alex Mercer");
+        const displayName = email.toLowerCase() === "orbit.quickcontent@gmail.com" 
+          ? "Orbit QuickContent Editor" 
+          : "Alex Mercer";
+        localStorage.setItem("orbit_editor_name", displayName);
         router.push("/dashboard");
       } else {
-        setError("Invalid credentials. Try logging in with any editor email.");
+        setError("Invalid credentials. Please verify your email and password.");
         setIsLoading(false);
       }
     }, 1000);
