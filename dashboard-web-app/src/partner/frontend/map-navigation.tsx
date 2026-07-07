@@ -27,6 +27,16 @@ export function MapNavigation({ booking, onArrived }: MapNavigationProps) {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const [mapError, setMapError] = useState<string | null>(null);
 
+  const handleNavigate = () => {
+    if (!booking.location) {
+      toast.error("No location specified for this booking.");
+      return;
+    }
+    toast.success("Opening Google Maps...");
+    const url = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(booking.location)}`;
+    window.open(url, "_blank", "noopener,noreferrer");
+  };
+
   useEffect(() => {
     let active = true;
     let mapInstance: any = null;
@@ -260,7 +270,7 @@ export function MapNavigation({ booking, onArrived }: MapNavigationProps) {
 
       {/* Action Buttons */}
       <div className="flex flex-col sm:flex-row gap-3">
-        <Button onClick={() => toast.success("Navigation started!", { description: "Follow the route to the shoot location" })} className="flex-1 bg-gradient-to-r from-orbit-cyan to-orbit-purple text-white hover:opacity-90 font-bold orbit-glow">
+        <Button onClick={handleNavigate} className="flex-1 bg-gradient-to-r from-orbit-cyan to-orbit-purple text-white hover:opacity-90 font-bold orbit-glow">
           <Navigation2 className="w-4 h-4 mr-2" />Navigate
         </Button>
         <Button onClick={onArrived} className="flex-1 border border-green-500/30 text-green-400 hover:bg-green-500/10 font-bold bg-green-500/5">
