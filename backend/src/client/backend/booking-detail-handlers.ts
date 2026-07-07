@@ -11,6 +11,7 @@
 
 import { firestoreDb } from '@/lib/db'
 import { NextRequest, NextResponse } from 'next/server'
+import { generatePresignedUrl } from '@/lib/security'
 
 interface UpdateBookingBody {
   status?: string
@@ -77,6 +78,9 @@ export async function GET(
 
     const bookingWithDetails = {
       ...booking,
+      reelUrl: booking.reelUrl ? generatePresignedUrl(booking.reelUrl) : null,
+      masterReelUrl: booking.masterReelUrl ? generatePresignedUrl(booking.masterReelUrl) : null,
+      hlsPlaylistUrl: booking.hlsPlaylistUrl ? generatePresignedUrl(booking.hlsPlaylistUrl) : null,
       user: user ? {
         id: user.id,
         name: user.name,

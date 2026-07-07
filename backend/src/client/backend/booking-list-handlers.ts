@@ -12,6 +12,7 @@ import { firestoreDb } from '@/lib/db'
 import { NextRequest, NextResponse } from 'next/server'
 import { validateBody, bookingSchema } from '@/lib/validation'
 import { logAudit } from '@/lib/auth-server'
+import { generatePresignedUrl } from '@/lib/security'
 
 interface CreateBookingBody {
   userId: string
@@ -84,6 +85,9 @@ export async function GET(request: NextRequest) {
 
         return {
           ...booking,
+          reelUrl: booking.reelUrl ? generatePresignedUrl(booking.reelUrl) : null,
+          masterReelUrl: booking.masterReelUrl ? generatePresignedUrl(booking.masterReelUrl) : null,
+          hlsPlaylistUrl: booking.hlsPlaylistUrl ? generatePresignedUrl(booking.hlsPlaylistUrl) : null,
           user: user ? {
             id: user.id,
             name: user.name,
