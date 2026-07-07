@@ -62,33 +62,77 @@ export function PartnerSettings() {
   const [showBankForm, setShowBankForm] = useState(false);
   const [bankName, setBankName] = useState("");
   const [accountNumber, setAccountNumber] = useState("");
+  const [confirmAccountNumber, setConfirmAccountNumber] = useState("");
   const [ifscCode, setIfscCode] = useState("");
+  const [pan, setPan] = useState("");
   const [accountHolderName, setAccountHolderName] = useState("");
+  const [bankLinkLoading, setBankLinkLoading] = useState(false);
+  const [bankLinkError, setBankLinkError] = useState<string | null>(null);
 
   // Withdrawal state
   const [withdrawAmount, setWithdrawAmount] = useState("");
   const [showWithdrawInput, setShowWithdrawInput] = useState(false);
 
-  const handleLinkBank = () => {
-    if (!bankName.trim() || !accountNumber.trim() || !ifscCode.trim() || !accountHolderName.trim()) {
-      toast.error("Please fill in all bank details");
-      return;
-    }
-    linkBankAccount({
-      id: `bank-${Date.now()}`,
-      bankName: bankName.trim(),
-      accountNumber: accountNumber.trim(),
-      ifscCode: ifscCode.trim(),
-      accountHolderName: accountHolderName.trim(),
-      isVerified: false,
-      linkedAt: new Date().toISOString(),
-    });
-    setShowBankForm(false);
+  const resetBankForm = () => {
     setBankName("");
     setAccountNumber("");
+    setConfirmAccountNumber("");
     setIfscCode("");
+    setPan("");
     setAccountHolderName("");
-    toast.success("Bank account linked successfully");
+    setBankLinkError(null);
+    setBankLinkLoading(false);
+  };
+
+  const bankFormValid =
+    accountHolderName.trim().length > 2 &&
+    accountNumber.trim().length >= 9 &&
+    accountNumber.trim() === confirmAccountNumber.trim() &&
+    /^[A-Z]{4}0[A-Z0-9]{6}$/.test(ifscCode.trim().toUpperCase()) &&
+    /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(pan.trim().toUpperCase());
+
+  const handleLinkBank = async () => {
+    if (!bankFormValid) {
+      toast.error("Please fill in all bank details correctly");
+      return;
+    }
+    setBankLinkLoading(true);
+    setBankLinkError(null);
+    try {
+      const res = await fetch("/api/partners/link-bank", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          accountHolderName: accountHolderName.trim(),
+          accountNumber: accountNumber.trim(),
+          ifsc: ifscCode.trim().toUpperCase(),
+          pan: pan.trim().toUpperCase(),
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setBankLinkError(data.error || "Verification failed. Check your details.");
+        return;
+      }
+      // Sync verified bank info into store from API response
+      const { bankAccount: apiBankAccount } = data as { bankAccount?: { bankName: string; ifscCode: string; accountHolderName: string } };
+      linkBankAccount({
+        id: `bank-${Date.now()}`,
+        bankName: apiBankAccount?.bankName || bankName.trim(),
+        accountNumber: "•••• " + accountNumber.slice(-4),
+        ifscCode: apiBankAccount?.ifscCode || ifscCode.trim().toUpperCase(),
+        accountHolderName: apiBankAccount?.accountHolderName || accountHolderName.trim(),
+        isVerified: true,
+        linkedAt: new Date().toISOString(),
+      });
+      setShowBankForm(false);
+      resetBankForm();
+      toast.success("Bank account verified and linked successfully ✓");
+    } catch {
+      setBankLinkError("Network error. Please check your connection and retry.");
+    } finally {
+      setBankLinkLoading(false);
+    }
   };
 
   const handleWithdraw = () => {
@@ -350,70 +394,125 @@ export function PartnerSettings() {
               exit={{ opacity: 0, height: 0 }}
               className="space-y-2.5 mt-2"
             >
-              <div className="space-y-1.5">
-                <label className="text-[10px] text-muted-foreground flex items-center gap-1">
-                  <Building2 className="w-3 h-3" /> Bank Name
-                </label>
-                <Input
-                  value={bankName}
-                  onChange={(e) => setBankName(e.target.value)}
-                  placeholder="e.g. HDFC Bank"
-                  className="bg-white/5 border-orbit-border text-foreground h-9 text-xs"
-                />
+              {/* Security notice */}
+              <div className="flex items-start gap-2 p-2 rounded-lg bg-orbit-purple/5 border border-orbit-purple/20">
+                <Shield className="w-3.5 h-3.5 text-orbit-purple shrink-0 mt-0.5" />
+                <p className="text-[9px] text-muted-foreground/80">Details are verified via Penny Drop. Account number is encrypted with AES-256 before storage.</p>
               </div>
+
+              {/* Account Holder Name */}
               <div className="space-y-1.5">
                 <label className="text-[10px] text-muted-foreground flex items-center gap-1">
-                  <Lock className="w-3 h-3" /> Account Number
-                </label>
-                <Input
-                  value={accountNumber}
-                  onChange={(e) => setAccountNumber(e.target.value)}
-                  placeholder="Enter account number"
-                  className="bg-white/5 border-orbit-border text-foreground h-9 text-xs"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-[10px] text-muted-foreground flex items-center gap-1">
-                  <FileText className="w-3 h-3" /> IFSC Code
-                </label>
-                <Input
-                  value={ifscCode}
-                  onChange={(e) => setIfscCode(e.target.value)}
-                  placeholder="e.g. HDFC0001234"
-                  className="bg-white/5 border-orbit-border text-foreground h-9 text-xs"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-[10px] text-muted-foreground flex items-center gap-1">
-                  Account Holder Name
+                  <Lock className="w-3 h-3" /> Account Holder Name
                 </label>
                 <Input
                   value={accountHolderName}
                   onChange={(e) => setAccountHolderName(e.target.value)}
                   placeholder="Name as per bank records"
                   className="bg-white/5 border-orbit-border text-foreground h-9 text-xs"
+                  disabled={bankLinkLoading}
                 />
               </div>
+
+              {/* Account Number */}
+              <div className="space-y-1.5">
+                <label className="text-[10px] text-muted-foreground flex items-center gap-1">
+                  <Lock className="w-3 h-3" /> Account Number
+                </label>
+                <Input
+                  type="password"
+                  value={accountNumber}
+                  onChange={(e) => setAccountNumber(e.target.value)}
+                  placeholder="Enter account number"
+                  className="bg-white/5 border-orbit-border text-foreground h-9 text-xs"
+                  disabled={bankLinkLoading}
+                />
+              </div>
+
+              {/* Confirm Account Number */}
+              <div className="space-y-1.5">
+                <label className="text-[10px] text-muted-foreground flex items-center gap-1">
+                  <Lock className="w-3 h-3" /> Confirm Account Number
+                  {confirmAccountNumber && accountNumber !== confirmAccountNumber && (
+                    <span className="text-red-400 text-[9px]">— Numbers don't match</span>
+                  )}
+                </label>
+                <Input
+                  value={confirmAccountNumber}
+                  onChange={(e) => setConfirmAccountNumber(e.target.value)}
+                  placeholder="Re-enter account number"
+                  className={`bg-white/5 border-orbit-border text-foreground h-9 text-xs ${confirmAccountNumber && accountNumber !== confirmAccountNumber ? "border-red-500/50" : ""}`}
+                  disabled={bankLinkLoading}
+                />
+              </div>
+
+              {/* IFSC Code */}
+              <div className="space-y-1.5">
+                <label className="text-[10px] text-muted-foreground flex items-center gap-1">
+                  <FileText className="w-3 h-3" /> IFSC Code
+                  {ifscCode && !/^[A-Z]{4}0[A-Z0-9]{6}$/.test(ifscCode.toUpperCase()) && (
+                    <span className="text-red-400 text-[9px]">— Invalid format</span>
+                  )}
+                </label>
+                <Input
+                  value={ifscCode}
+                  onChange={(e) => setIfscCode(e.target.value.toUpperCase())}
+                  placeholder="e.g. HDFC0001234"
+                  className="bg-white/5 border-orbit-border text-foreground h-9 text-xs font-mono tracking-wider"
+                  disabled={bankLinkLoading}
+                />
+              </div>
+
+              {/* PAN Number */}
+              <div className="space-y-1.5">
+                <label className="text-[10px] text-muted-foreground flex items-center gap-1">
+                  <FileText className="w-3 h-3" /> PAN Number
+                  {pan && !/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(pan.toUpperCase()) && (
+                    <span className="text-red-400 text-[9px]">— Invalid (e.g. ABCDE1234F)</span>
+                  )}
+                </label>
+                <Input
+                  value={pan}
+                  onChange={(e) => setPan(e.target.value.toUpperCase())}
+                  placeholder="e.g. ABCDE1234F"
+                  className="bg-white/5 border-orbit-border text-foreground h-9 text-xs font-mono tracking-wider"
+                  disabled={bankLinkLoading}
+                />
+              </div>
+
+              {/* API Error Banner */}
+              {bankLinkError && (
+                <div className="flex items-start gap-2 p-2.5 rounded-lg bg-red-500/10 border border-red-500/30">
+                  <AlertTriangle className="w-3.5 h-3.5 text-red-400 shrink-0 mt-0.5" />
+                  <p className="text-[10px] text-red-400">{bankLinkError}</p>
+                </div>
+              )}
+
               <div className="flex gap-2 pt-1">
                 <Button
                   variant="outline"
                   onClick={() => {
                     setShowBankForm(false);
-                    setBankName("");
-                    setAccountNumber("");
-                    setIfscCode("");
-                    setAccountHolderName("");
+                    resetBankForm();
                   }}
+                  disabled={bankLinkLoading}
                   className="flex-1 border-orbit-border text-muted-foreground h-8 text-[11px]"
                 >
                   Cancel
                 </Button>
                 <Button
                   onClick={handleLinkBank}
-                  disabled={!bankName.trim() || !accountNumber.trim() || !ifscCode.trim() || !accountHolderName.trim()}
-                  className="flex-1 bg-gradient-to-r from-green-500 to-green-600 text-white hover:opacity-90 h-8 text-[11px]"
+                  disabled={!bankFormValid || bankLinkLoading}
+                  className="flex-1 bg-gradient-to-r from-green-500 to-green-600 text-white hover:opacity-90 h-8 text-[11px] disabled:opacity-50"
                 >
-                  <Check className="w-3 h-3 mr-1" /> Link Account
+                  {bankLinkLoading ? (
+                    <span className="flex items-center gap-1">
+                      <span className="inline-block w-3 h-3 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                      Verifying...
+                    </span>
+                  ) : (
+                    <><Check className="w-3 h-3 mr-1" /> Verify & Link</>
+                  )}
                 </Button>
               </div>
             </motion.div>

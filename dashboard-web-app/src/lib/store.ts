@@ -681,28 +681,33 @@ export const useAppStore = create<AppState>((set, get) => ({
     }
   },
   linkBankAccount: async (account) => {
-    const state = get();
-    const pid = state.partnerId;
-    if (!pid) return;
-
+    // NOTE: The linkBankAccount store action is intentionally kept for legacy
+    // compatibility (e.g. types). The real bank-linking call is made directly
+    // from the UI forms via fetch("/api/partners/link-bank") so that the form
+    // can surface per-field validation errors and PAN/penny-drop status to the
+    // user in real-time. After the API call succeeds, fetchPartnerProfile() is
+    // called to sync the verified bank state back to the store.
     try {
-      const res = await fetch(`/api/partners/${pid}`, {
-        method: "PATCH",
+      const res = await fetch("/api/partners/link-bank", {
+        method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          bankName: account.bankName,
-          accountNumber: account.accountNumber,
-          ifscCode: account.ifscCode,
           accountHolderName: account.accountHolderName,
-          bankVerified: true,
+          accountNumber: account.accountNumber,
+          ifsc: account.ifscCode,
+          pan: (account as any).pan || "",
         }),
       });
 
       if (res.ok) {
         await get().fetchPartnerProfile();
+      } else {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.error || "Bank linking failed");
       }
     } catch (err) {
       console.error("[Store] Error linking bank account:", err);
+      throw err;
     }
   },
   fetchPartnerProfile: async () => {
