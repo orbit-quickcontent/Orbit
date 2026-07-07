@@ -52,9 +52,10 @@ export function MapNavigation({ booking, onArrived }: MapNavigationProps) {
         const partnerCoords: [number, number] = [77.5800, 12.9650];
         const destCoords: [number, number] = [77.5946, 12.9716];
 
+        const apiKey = process.env.NEXT_PUBLIC_MAPTILER_API_KEY || "a731ad7ed2444d32a8a63d147ac013ed";
         const map = new maplibregl.Map({
           container: mapContainerRef.current,
-          style: "https://demotiles.maplibre.org/globe.json",
+          style: `https://api.maptiler.com/maps/dark-matter/style.json?key=${apiKey}`,
           center: [77.5873, 12.9683], // center point
           zoom: 13,
           attributionControl: false,
