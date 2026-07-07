@@ -324,7 +324,7 @@ export default function BookingStudio({ params }: { params: Promise<{ id: string
                         </div>
                       </div>
                       <a
-                        href={url}
+                        href={url.startsWith("http") ? url : `http://localhost:5000${url}`}
                         download
                         target="_blank"
                         rel="noopener noreferrer"
