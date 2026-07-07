@@ -44,6 +44,7 @@ import {
   Download,
   CircleCheckBig,
   X,
+  Loader2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -54,6 +55,123 @@ import { formatCurrency } from "@/lib/constants";
 import { type BookingStatus } from "@/lib/types";
 import { toast } from "sonner";
 import { io } from "socket.io-client";
+
+// ─── HLS Player with Adaptive Bitrate (ABR) and dynamic token parameters ───
+interface HlsPlayerProps {
+  src: string;
+  poster?: string;
+}
+
+function HlsPlayer({ src, poster }: HlsPlayerProps) {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const [currentQuality, setCurrentQuality] = useState<string>("Auto");
+  const [availableQualities, setAvailableQualities] = useState<string[]>([]);
+  const hlsRef = useRef<any>(null);
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    let hls: any = null;
+
+    if (src.includes(".m3u8")) {
+      if (video.canPlayType("application/vnd.apple.mpegurl")) {
+        // Native ABR playing (Safari/iOS)
+        video.src = src;
+        setAvailableQualities(["Auto (Native)"]);
+      } else {
+        const Hls = (window as any).Hls;
+        if (Hls && Hls.isSupported()) {
+          hls = new Hls({
+            xhrSetup: (xhr: XMLHttpRequest, url: string) => {
+              // Append security token and expiry timestamp to all chunk segment requests
+              const playlistUrl = new URL(src, window.location.href);
+              const token = playlistUrl.searchParams.get("token");
+              const expires = playlistUrl.searchParams.get("expires");
+              if (token && expires && !url.includes("token=")) {
+                const separator = url.includes("?") ? "&" : "?";
+                xhr.open("GET", `${url}${separator}token=${token}&expires=${expires}`, true);
+              }
+            }
+          });
+
+          hls.loadSource(src);
+          hls.attachMedia(video);
+          hlsRef.current = hls;
+
+          hls.on(Hls.Events.MANIFEST_PARSED, () => {
+            const levels = hls.levels;
+            const qualities = ["Auto", ...levels.map((l: any) => `${l.height}p`)];
+            setAvailableQualities(qualities);
+          });
+
+          hls.on(Hls.Events.LEVEL_SWITCHED, (event: any, data: any) => {
+            const level = hls.levels[data.level];
+            if (level) {
+              console.log(`[ABR Stream] Switched quality level to: ${level.height}p`);
+            }
+          });
+        } else {
+          // Absolute fallback
+          video.src = src;
+        }
+      }
+    } else {
+      // Non-HLS fallback (e.g. raw MP4)
+      video.src = src;
+      setAvailableQualities(["Original MP4"]);
+    }
+
+    return () => {
+      if (hls) {
+        hls.destroy();
+      }
+    };
+  }, [src]);
+
+  const handleQualityChange = (quality: string) => {
+    setCurrentQuality(quality);
+    const hls = hlsRef.current;
+    if (!hls) return;
+
+    if (quality === "Auto") {
+      hls.currentLevel = -1;
+    } else {
+      const height = parseInt(quality, 10);
+      const levelIndex = hls.levels.findIndex((l: any) => l.height === height);
+      if (levelIndex !== -1) {
+        hls.currentLevel = levelIndex;
+      }
+    }
+  };
+
+  return (
+    <div className="relative rounded-xl overflow-hidden bg-black border border-orbit-cyan/20 orbit-glow mb-6 max-w-lg mx-auto">
+      <video
+        ref={videoRef}
+        controls
+        playsInline
+        className="w-full aspect-video rounded-xl"
+        poster={poster}
+      />
+      {availableQualities.length > 1 && (
+        <div className="absolute top-3 right-3 z-20 flex gap-1">
+          <select
+            value={currentQuality}
+            onChange={(e) => handleQualityChange(e.target.value)}
+            className="bg-black/80 text-white text-[10px] font-bold border border-orbit-cyan/30 rounded px-2 py-1 select-none focus:outline-none focus:border-orbit-cyan cursor-pointer transition-all hover:bg-black"
+          >
+            {availableQualities.map((q) => (
+              <option key={q} value={q} className="bg-black text-white">
+                {q}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
+    </div>
+  );
+}
 
 // ─── Status Pipeline ────────────────────────────────────────────────────────────
 export const STATUS_PIPELINE: { status: BookingStatus; label: string; icon: React.ReactNode; description: string }[] = [
@@ -281,6 +399,24 @@ export function TrackingDashboard() {
   // ─── Local-only animated values (cosmetic, not persisted) ───────────
   const [syncProgress, setSyncProgress] = useState(0);
   const [countdown, setCountdown] = useState(90);
+  const [hlsLoaded, setHlsLoaded] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      if ((window as any).Hls) {
+        setHlsLoaded(true);
+        return;
+      }
+      const script = document.createElement("script");
+      script.src = "https://cdn.jsdelivr.net/npm/hls.js@1.5.8/dist/hls.min.js";
+      script.async = true;
+      script.onload = () => {
+        setHlsLoaded(true);
+      };
+      document.body.appendChild(script);
+    }
+  }, []);
+
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const pollRef = useRef<NodeJS.Timeout | null>(null);
   const pollCountRef = useRef(0);
@@ -777,14 +913,34 @@ export function TrackingDashboard() {
               <p className="text-sm sm:text-base text-muted-foreground mb-5">
                 Professional cinematic edit delivered in record time.
               </p>
-              <div className="flex items-center justify-center gap-3">
+
+              {/* Adaptive Bitrate Stream Preview */}
+              {currentBooking.hlsPlaylistUrl || currentBooking.reelUrl ? (
+                hlsLoaded ? (
+                  <div className="mb-6">
+                    <p className="text-xs text-muted-foreground mb-2 flex items-center justify-center gap-1.5">
+                      <span className="w-1.5 h-1.5 rounded-full bg-orbit-cyan animate-pulse" />
+                      Adaptive ABR Stream Preview
+                    </p>
+                    <HlsPlayer src={currentBooking.hlsPlaylistUrl || currentBooking.reelUrl || ""} />
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center justify-center aspect-video rounded-xl bg-black border border-orbit-cyan/15 mb-6 max-w-lg mx-auto">
+                    <Loader2 className="w-6 h-6 text-orbit-cyan animate-spin mb-2" />
+                    <p className="text-xs text-muted-foreground">Initializing stream...</p>
+                  </div>
+                )
+              ) : null}
+
+              <div className="flex flex-col items-center justify-center gap-3">
                 <Button
                   onClick={handleDownload}
-                  className="bg-gradient-to-r from-orbit-cyan to-orbit-purple text-white hover:opacity-90 font-bold orbit-glow px-6 sm:px-8"
+                  className="bg-gradient-to-r from-orbit-cyan to-orbit-purple text-white hover:opacity-90 font-bold orbit-glow px-6 sm:px-8 flex items-center justify-center gap-2"
                 >
-                  <Download className="w-4 h-4 mr-2" />
-                  Download Reel
+                  <Download className="w-4 h-4" />
+                  Download Master 4K File (Pristine Original)
                 </Button>
+                <p className="text-[10px] text-muted-foreground">Bypasses adaptive streaming chunks to download the full-resolution edit directly.</p>
               </div>
             </motion.div>
           )}

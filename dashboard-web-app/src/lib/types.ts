@@ -58,6 +58,9 @@ export interface BookingInfo {
   /** Partner IDs that declined this booking (for reassignment) */
   declinedByPartners: string[];
   reelUrl?: string;
+  masterReelUrl?: string;
+  hlsPlaylistUrl?: string;
+  proxyFootageUrl?: string;
 }
 
 export interface BankAccount {

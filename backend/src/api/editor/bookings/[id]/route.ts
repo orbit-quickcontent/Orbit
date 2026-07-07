@@ -35,11 +35,23 @@ export async function GET(
       }
     }
 
+    let proxyFootageUrls: any[] = [];
+    if (booking.proxyFootageUrl) {
+      try {
+        proxyFootageUrls = JSON.parse(booking.proxyFootageUrl);
+      } catch (_) {
+        if (typeof booking.proxyFootageUrl === "string") {
+          proxyFootageUrls = [booking.proxyFootageUrl];
+        }
+      }
+    }
+
     return NextResponse.json({
       success: true,
       booking: {
         ...booking,
         footageUrls,
+        proxyFootageUrls,
         client: client ? {
           id: client.id,
           name: client.name || "Client",

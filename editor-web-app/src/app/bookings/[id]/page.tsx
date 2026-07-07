@@ -35,6 +35,15 @@ export default function BookingStudio({ params }: { params: Promise<{ id: string
             : typeof raw === "string"
             ? (() => { try { return JSON.parse(raw); } catch { return raw ? [raw] : []; } })()
             : [];
+
+          // Normalize proxyFootageUrls
+          const rawProxy = data.booking.proxyFootageUrl || data.booking.proxyFootageUrls;
+          data.booking.proxyFootageUrls = Array.isArray(rawProxy)
+            ? rawProxy
+            : typeof rawProxy === "string"
+            ? (() => { try { return JSON.parse(rawProxy); } catch { return rawProxy ? [rawProxy] : []; } })()
+            : [];
+
           setBooking(data.booking);
           if (data.booking.reelUrl) {
             setReelUrl(data.booking.reelUrl);
@@ -298,44 +307,90 @@ export default function BookingStudio({ params }: { params: Promise<{ id: string
           <div className="orbit-card p-6 rounded-2xl">
             <h2 className="text-lg font-bold mb-4 flex items-center space-x-2">
               <FileVideo size={18} className="text-orbit-cyan" />
-              <span>Raw Footage ({Array.isArray(booking.footageUrls) ? booking.footageUrls.length : 0} Files)</span>
+              <span>Synced Project Footage Assets</span>
             </h2>
+            <p className="text-xs text-gray-500 mb-4">
+              Lightweight proxies are available for instant editing handoffs. Uncompressed 4K master files sync quietly in the background.
+            </p>
 
-            {(!booking.footageUrls || !Array.isArray(booking.footageUrls) || booking.footageUrls.length === 0) ? (
+            {(!booking.footageUrls || !Array.isArray(booking.footageUrls) || booking.footageUrls.length === 0) &&
+             (!booking.proxyFootageUrls || !Array.isArray(booking.proxyFootageUrls) || booking.proxyFootageUrls.length === 0) ? (
               <div className="p-8 text-center text-gray-500 text-sm">
-                No raw footage synced yet. Wait for partner upload completion.
+                No footage synced yet. Wait for partner upload completion.
               </div>
             ) : (
-              <div className="space-y-3">
-                {(booking.footageUrls as string[]).map((url: string, index: number) => {
-                  const filename = url.split("/").pop() || `Footage_${index + 1}.mp4`;
-                  return (
-                    <div
-                      key={index}
-                      className="flex items-center justify-between p-4 bg-[#050505] border border-orbit-border rounded-xl"
-                    >
-                      <div className="flex items-center space-x-3">
-                        <FileVideo size={20} className="text-gray-400" />
-                        <div>
-                          <p className="text-sm font-semibold truncate max-w-xs md:max-w-md">
-                             {filename}
-                          </p>
-                          <p className="text-xs text-gray-600">Raw Media Asset</p>
+              <div className="space-y-6">
+                {/* Proxy Footage List */}
+                {Array.isArray(booking.proxyFootageUrls) && booking.proxyFootageUrls.length > 0 && (
+                  <div className="space-y-2">
+                    <h3 className="text-xs font-bold text-orbit-cyan uppercase tracking-wider">⚡ Instant Proxy Files (Stream & Edit)</h3>
+                    {booking.proxyFootageUrls.map((url: string, index: number) => {
+                      const filename = url.split("/").pop() || `Proxy_Footage_${index + 1}.mov`;
+                      return (
+                        <div
+                          key={`proxy-${index}`}
+                          className="flex items-center justify-between p-3.5 bg-[#050505] border border-orbit-cyan/20 rounded-xl"
+                        >
+                          <div className="flex items-center space-x-3">
+                            <FileVideo size={18} className="text-orbit-cyan" />
+                            <div>
+                              <p className="text-sm font-semibold truncate max-w-xs md:max-w-md">
+                                 {filename}
+                              </p>
+                              <p className="text-[10px] text-gray-500">Low-Resolution Fast Draft</p>
+                            </div>
+                          </div>
+                          <a
+                            href={url.startsWith("http") ? url : `http://localhost:5000${url}`}
+                            download
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="p-2 bg-gray-900 border border-orbit-cyan/30 hover:bg-orbit-cyan/10 rounded-lg transition-colors text-orbit-cyan flex items-center space-x-1 text-xs font-semibold"
+                          >
+                            <Download size={12} />
+                            <span>Download Proxy</span>
+                          </a>
                         </div>
-                      </div>
-                      <a
-                        href={url.startsWith("http") ? url : `http://localhost:5000${url}`}
-                        download
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="p-2.5 bg-gray-900 border border-orbit-border hover:bg-gray-800 rounded-xl transition-colors text-orbit-cyan flex items-center space-x-1 text-xs font-semibold"
-                      >
-                        <Download size={14} />
-                        <span className="hidden md:inline">Download</span>
-                      </a>
-                    </div>
-                  );
-                })}
+                      );
+                    })}
+                  </div>
+                )}
+
+                {/* Master Footage List */}
+                {Array.isArray(booking.footageUrls) && booking.footageUrls.length > 0 && (
+                  <div className="space-y-2">
+                    <h3 className="text-xs font-bold text-orbit-purple uppercase tracking-wider">💿 Uncompressed 4K Master Tracks</h3>
+                    {booking.footageUrls.map((url: string, index: number) => {
+                      const filename = url.split("/").pop() || `Master_Footage_${index + 1}.mov`;
+                      return (
+                        <div
+                          key={`master-${index}`}
+                          className="flex items-center justify-between p-3.5 bg-[#050505] border border-orbit-purple/20 rounded-xl"
+                        >
+                          <div className="flex items-center space-x-3">
+                            <FileVideo size={18} className="text-orbit-purple" />
+                            <div>
+                              <p className="text-sm font-semibold truncate max-w-xs md:max-w-md">
+                                 {filename}
+                              </p>
+                              <p className="text-[10px] text-gray-500">Pristine original resolution</p>
+                            </div>
+                          </div>
+                          <a
+                            href={url.startsWith("http") ? url : `http://localhost:5000${url}`}
+                            download
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="p-2 bg-gray-900 border border-orbit-purple/30 hover:bg-orbit-purple/10 rounded-lg transition-colors text-orbit-purple flex items-center space-x-1 text-xs font-semibold"
+                          >
+                            <Download size={12} />
+                            <span>Download 4K Raw</span>
+                          </a>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             )}
           </div>

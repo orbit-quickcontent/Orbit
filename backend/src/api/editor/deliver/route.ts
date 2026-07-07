@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { firestoreDb } from "@/lib/db";
 import { logAudit } from "@/lib/auth-server";
+import { startTranscoding } from "@/services/transcoding.service";
 
 export async function POST(request: NextRequest) {
   try {
@@ -20,6 +21,7 @@ export async function POST(request: NextRequest) {
       data: {
         status: "DELIVERED",
         reelUrl: reelUrl,
+        masterReelUrl: reelUrl,
         deliveredAt: now,
         reelUploadedAt: now
       }
@@ -35,6 +37,11 @@ export async function POST(request: NextRequest) {
       req: request
     });
 
+    // Trigger background transcoding asynchronously (do not await to let response return immediately)
+    startTranscoding(bookingId, reelUrl).catch((transcodeErr) => {
+      console.error("Transcoding failed:", transcodeErr);
+    });
+
     // Trigger WebSocket status change to DELIVERED
     try {
       await fetch("http://localhost:3003/internal/notify-client", {
@@ -47,6 +54,7 @@ export async function POST(request: NextRequest) {
             bookingId,
             status: "DELIVERED",
             reelUrl: reelUrl,
+            masterReelUrl: reelUrl,
             deliveredAt: now
           }
         })

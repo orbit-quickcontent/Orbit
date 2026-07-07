@@ -17,7 +17,7 @@ export async function POST(
 ) {
   try {
     const { id: bookingId } = await params;
-    const { footageUrls, fileName, fileSize } = (await request.json()) as any;
+    const { footageUrls, proxyFootageUrl, fileName, fileSize } = (await request.json()) as any;
 
     if (!Array.isArray(footageUrls) || footageUrls.length === 0) {
       return NextResponse.json(
@@ -58,7 +58,7 @@ export async function POST(
 
     const alreadyCredited = ["READY_TO_EDIT", "EDITING", "DELIVERED"].includes(booking.status);
 
-    // 2. Update booking: set status, syncPercentage to 100, save footageUrls in Firestore
+    // 2. Update booking: set status, syncPercentage to 100, save footageUrls and proxyFootageUrl in Firestore
     //    We store READY_TO_EDIT so the editor dashboard can filter on it,
     //    but we will emit EDITING to the client WebSocket below so the
     //    client pipeline advances to the Editing step.
@@ -68,6 +68,7 @@ export async function POST(
         status: "READY_TO_EDIT",
         syncPercentage: 100,
         footageUrls: JSON.stringify(footageUrls),
+        proxyFootageUrl: proxyFootageUrl ? (typeof proxyFootageUrl === 'string' ? proxyFootageUrl : JSON.stringify(proxyFootageUrl)) : null,
       },
     });
 

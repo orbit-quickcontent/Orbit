@@ -611,6 +611,9 @@ export const useAppStore = create<AppState>((set, get) => ({
               cancelledBy: b.cancelledBy || null,
               declinedByPartners: b.declinedBy ? (typeof b.declinedBy === 'string' ? JSON.parse(b.declinedBy) : b.declinedBy) : [],
               reelUrl: b.reelUrl,
+              masterReelUrl: b.masterReelUrl || null,
+              hlsPlaylistUrl: b.hlsPlaylistUrl || null,
+              proxyFootageUrl: b.proxyFootageUrl || null,
             };
           });
 
@@ -770,6 +773,10 @@ export const useAppStore = create<AppState>((set, get) => ({
           }
           return Array.isArray(b.declinedBy) ? b.declinedBy : [];
         })(),
+        reelUrl: b.reelUrl,
+        masterReelUrl: b.masterReelUrl || null,
+        hlsPlaylistUrl: b.hlsPlaylistUrl || null,
+        proxyFootageUrl: b.proxyFootageUrl || null,
       }));
 
       // 4. Find active booking

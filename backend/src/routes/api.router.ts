@@ -81,6 +81,7 @@ router.post('/partners/:id/withdraw', jsonParser, nextToExpress(partnerWalletHan
 router.get('/editor/bookings', jsonParser, nextToExpress(editorBookingsRoute.GET));
 router.get('/editor/bookings/:id', jsonParser, nextToExpress(editorBookingDetailRoute.GET));
 router.post('/editor/deliver', jsonParser, nextToExpress(editorDeliverRoute.POST));
+router.post('/upload-reel', jsonParser, nextToExpress(editorDeliverRoute.POST));
 
 // Upload routes
 router.post('/upload/presigned-url', jsonParser, nextToExpress(uploadPresignedUrlRoute.POST));

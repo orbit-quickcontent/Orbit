@@ -23,6 +23,9 @@ interface UpdateBookingBody {
   timeSlot?: string
   bookingDate?: string
   cancelledBy?: string // CLIENT or PARTNER
+  masterReelUrl?: string
+  hlsPlaylistUrl?: string
+  proxyFootageUrl?: string
 }
 
 export async function GET(
@@ -254,6 +257,9 @@ export async function PATCH(
     if (body.timeSlot !== undefined) updateData.timeSlot = body.timeSlot
     if (body.bookingDate !== undefined) updateData.bookingDate = new Date(body.bookingDate).toISOString()
     if (body.cancelledBy !== undefined) updateData.cancelledBy = body.cancelledBy
+    if (body.masterReelUrl !== undefined) updateData.masterReelUrl = body.masterReelUrl
+    if (body.hlsPlaylistUrl !== undefined) updateData.hlsPlaylistUrl = body.hlsPlaylistUrl
+    if (body.proxyFootageUrl !== undefined) updateData.proxyFootageUrl = body.proxyFootageUrl
 
     if (body.status === 'DELIVERED') {
       updateData.deliveredAt = new Date().toISOString()

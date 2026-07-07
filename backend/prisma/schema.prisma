@@ -109,6 +109,9 @@ model Booking {
 
   notes          String?  // Additional notes from user
   footageUrls    String?  // Serialized JSON array of uploaded footage URLs
+  masterReelUrl  String?
+  hlsPlaylistUrl String?
+  proxyFootageUrl String?
   
   // Dispatch tracking
   dispatchRound  Int      @default(0) // How many rounds of dispatch attempted

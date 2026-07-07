@@ -11,6 +11,7 @@
 
 import { firestoreDb } from '@/lib/db'
 import { NextRequest, NextResponse } from 'next/server'
+import { generatePresignedUrl } from '@/lib/security'
 
 // Human-readable status labels
 const STATUS_LABELS: Record<string, string> = {
@@ -154,7 +155,9 @@ export async function GET(
       timeSlot: booking.timeSlot,
       location: booking.location,
       deliveredAt: booking.deliveredAt,
-      reelUrl: booking.reelUrl,
+      reelUrl: booking.reelUrl ? generatePresignedUrl(booking.reelUrl) : null,
+      masterReelUrl: booking.masterReelUrl ? generatePresignedUrl(booking.masterReelUrl) : null,
+      hlsPlaylistUrl: booking.hlsPlaylistUrl ? generatePresignedUrl(booking.hlsPlaylistUrl) : null,
     }
 
     return NextResponse.json({ tracking })

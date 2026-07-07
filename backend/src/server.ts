@@ -18,6 +18,8 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization', 'api-key', 'accept']
 }));
 
+import { validatePresignedToken } from './lib/security';
+
 // Request logger middleware
 app.use((req, res, next) => {
   console.log(`[API-Request] ${req.method} ${req.url}`);
@@ -29,7 +31,22 @@ app.use((req, res, next) => {
   next();
 });
 
-// Serves client static uploads directly if accessed via backend
+// Secure uploads middleware enforcing 15-minute presigned tokens for video streams/downloads
+const secureUploadsMiddleware = (req: express.Request, res: express.Response, next: express.NextFunction) => {
+  const token = (req.query.token as string) || null;
+  const expires = (req.query.expires as string) || null;
+  
+  // Clean url path (remove query params) and build canonical path relative to /upload/reels
+  const cleanPath = req.path;
+  const fullUrlPath = `/upload/reels${cleanPath}`;
+
+  if (!validatePresignedToken(fullUrlPath, token, expires)) {
+    return res.status(403).json({ error: "Access Denied: Invalid or Expired Presigned URL Token." });
+  }
+  next();
+};
+
+app.use('/upload/reels', secureUploadsMiddleware, express.static(path.join(__dirname, '../../dashboard-web-app/public/upload/reels')));
 app.use('/upload', express.static(path.join(__dirname, '../../dashboard-web-app/public/upload')));
 
 // Mount main unified API routes
