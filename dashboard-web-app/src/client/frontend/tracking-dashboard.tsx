@@ -45,6 +45,7 @@ import {
   CircleCheckBig,
   X,
   Loader2,
+  Play,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -400,6 +401,7 @@ export function TrackingDashboard() {
   const [syncProgress, setSyncProgress] = useState(0);
   const [countdown, setCountdown] = useState(90);
   const [hlsLoaded, setHlsLoaded] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -914,34 +916,93 @@ export function TrackingDashboard() {
                 Professional cinematic edit delivered in record time.
               </p>
 
-              {/* Adaptive Bitrate Stream Preview */}
-              {currentBooking.hlsPlaylistUrl || currentBooking.reelUrl ? (
-                hlsLoaded ? (
-                  <div className="mb-6">
-                    <p className="text-xs text-muted-foreground mb-2 flex items-center justify-center gap-1.5">
-                      <span className="w-1.5 h-1.5 rounded-full bg-orbit-cyan animate-pulse" />
-                      Adaptive ABR Stream Preview
-                    </p>
-                    <HlsPlayer src={currentBooking.hlsPlaylistUrl || currentBooking.reelUrl || ""} />
-                  </div>
-                ) : (
-                  <div className="flex flex-col items-center justify-center aspect-video rounded-xl bg-black border border-orbit-cyan/15 mb-6 max-w-lg mx-auto">
-                    <Loader2 className="w-6 h-6 text-orbit-cyan animate-spin mb-2" />
-                    <p className="text-xs text-muted-foreground">Initializing stream...</p>
-                  </div>
-                )
-              ) : null}
-
-              <div className="flex flex-col items-center justify-center gap-3">
+              <div className="flex flex-col sm:flex-row items-center justify-center gap-3.5 max-w-md mx-auto">
                 <Button
                   onClick={handleDownload}
-                  className="bg-gradient-to-r from-orbit-cyan to-orbit-purple text-white hover:opacity-90 font-bold orbit-glow px-6 sm:px-8 flex items-center justify-center gap-2"
+                  className="w-full bg-gradient-to-r from-orbit-cyan to-orbit-purple text-white hover:opacity-90 font-bold orbit-glow py-6 flex items-center justify-center gap-2"
                 >
                   <Download className="w-4 h-4" />
-                  Download Master 4K File (Pristine Original)
+                  Download Reel
                 </Button>
-                <p className="text-[10px] text-muted-foreground">Bypasses adaptive streaming chunks to download the full-resolution edit directly.</p>
+
+                {(currentBooking.hlsPlaylistUrl || currentBooking.reelUrl) && (
+                  <Button
+                    onClick={() => setShowPreview(true)}
+                    className="w-full bg-white/5 border border-white/10 hover:bg-white/10 text-white font-bold py-6 flex items-center justify-center gap-2"
+                  >
+                    <Play className="w-4 h-4 fill-white text-white" />
+                    Watch Reel
+                  </Button>
+                )}
               </div>
+
+              {/* Glassmorphic Overlay Video Player Modal */}
+              <AnimatePresence>
+                {showPreview && (currentBooking.hlsPlaylistUrl || currentBooking.reelUrl) && (
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-md p-4"
+                  >
+                    {/* Backdrop Click Closes Modal */}
+                    <div className="absolute inset-0 cursor-pointer" onClick={() => setShowPreview(false)} />
+
+                    <motion.div
+                      initial={{ scale: 0.95, y: 20 }}
+                      animate={{ scale: 1, y: 0 }}
+                      exit={{ scale: 0.95, y: 20 }}
+                      className="relative w-full max-w-xl bg-zinc-950 border border-orbit-cyan/25 rounded-2xl p-5 orbit-glow z-10"
+                    >
+                      {/* Close Header Button */}
+                      <button
+                        onClick={() => setShowPreview(false)}
+                        className="absolute top-4 right-4 p-2 rounded-full bg-white/5 hover:bg-white/10 text-muted-foreground hover:text-foreground transition-all active:scale-95"
+                        title="Close preview"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+
+                      <h4 className="text-sm font-bold text-foreground mb-4 pr-10 truncate text-left flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-orbit-cyan animate-pulse" />
+                        Cinematic Edit Preview · {currentBooking.packageName}
+                      </h4>
+
+                      <div className="w-full">
+                        {hlsLoaded ? (
+                          <HlsPlayer src={currentBooking.hlsPlaylistUrl || currentBooking.reelUrl || ""} />
+                        ) : (
+                          <div className="flex flex-col items-center justify-center aspect-video rounded-xl bg-black border border-orbit-cyan/15 max-w-lg mx-auto">
+                            <Loader2 className="w-8 h-8 text-orbit-cyan animate-spin mb-2" />
+                            <p className="text-xs text-muted-foreground">Initializing player...</p>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Modal Footer Controls */}
+                      <div className="flex items-center justify-end gap-2.5 mt-2">
+                        <Button
+                          onClick={() => setShowPreview(false)}
+                          variant="outline"
+                          className="border-white/15 hover:bg-white/5 text-white py-5 px-5 font-bold"
+                        >
+                          Close
+                        </Button>
+                        <Button
+                          onClick={() => {
+                            setShowPreview(false);
+                            handleDownload();
+                          }}
+                          className="bg-gradient-to-r from-orbit-cyan to-orbit-purple text-white hover:opacity-90 font-bold py-5 px-6 flex items-center gap-1.5"
+                        >
+                          <Download className="w-3.5 h-3.5" />
+                          Download 4K Master
+                        </Button>
+                      </div>
+                    </motion.div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </motion.div>
           )}
         </AnimatePresence>
