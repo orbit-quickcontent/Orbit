@@ -24,27 +24,23 @@ export async function GET(
       where: { id: booking.packageId }
     });
 
-    let footageUrls: any[] = [];
-    if (booking.footageUrls) {
-      try {
-        footageUrls = JSON.parse(booking.footageUrls);
-      } catch (_) {
-        if (typeof booking.footageUrls === "string") {
-          footageUrls = [booking.footageUrls];
+    const parseArrayField = (field: any): any[] => {
+      if (!field) return [];
+      if (Array.isArray(field)) return field;
+      if (typeof field === "string") {
+        try {
+          const parsed = JSON.parse(field);
+          if (Array.isArray(parsed)) return parsed;
+          return [parsed];
+        } catch (_) {
+          return [field];
         }
       }
-    }
+      return [];
+    };
 
-    let proxyFootageUrls: any[] = [];
-    if (booking.proxyFootageUrl) {
-      try {
-        proxyFootageUrls = JSON.parse(booking.proxyFootageUrl);
-      } catch (_) {
-        if (typeof booking.proxyFootageUrl === "string") {
-          proxyFootageUrls = [booking.proxyFootageUrl];
-        }
-      }
-    }
+    const footageUrls = parseArrayField(booking.footageUrls);
+    const proxyFootageUrls = parseArrayField(booking.proxyFootageUrl);
 
     return NextResponse.json({
       success: true,
