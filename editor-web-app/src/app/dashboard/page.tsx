@@ -28,7 +28,23 @@ export default function EditorDashboard() {
       .then((res) => res.json())
       .then((data) => {
         if (data.bookings) {
-          setBookings(data.bookings);
+          // Sort: active assignments first, then newest bookingDate at top
+          const statusOrder: Record<string, number> = {
+            READY_TO_EDIT: 0,
+            EDITING: 1,
+            DELIVERED: 2,
+          };
+          const sorted = [...data.bookings].sort((a: any, b: any) => {
+            const sDiff =
+              (statusOrder[a.status] ?? 99) - (statusOrder[b.status] ?? 99);
+            if (sDiff !== 0) return sDiff;
+            // Within same status group — newest booking date first
+            return (
+              new Date(b.bookingDate).getTime() -
+              new Date(a.bookingDate).getTime()
+            );
+          });
+          setBookings(sorted);
         }
         setIsLoading(false);
       })
