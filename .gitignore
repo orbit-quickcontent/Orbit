@@ -32,6 +32,10 @@ Thumbs.db
 .vscode/
 .idea/
 
+# ── Local Databases ───────────────────────────────────────────
+*.db
+*.sqlite*
+
 # ── Logs ──────────────────────────────────────────────────────
 *.log
 npm-debug.log*
@@ -45,6 +49,8 @@ firebase-debug.log
 
 # ── Uploads / tmp storage (local dev only) ────────────────────
 backend/uploads/
+dashboard-web-app/public/upload/
+editor-web-app/public/upload/
 scratch/
 
 # ── Flutter / Android build ───────────────────────────────────
