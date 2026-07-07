@@ -124,7 +124,7 @@ export function PartnerDashboard() {
     socket.on("booking:dispatched", (data: { booking: BookingInfo; dispatchId: string; round: number }) => {
       addAvailableBooking(data.booking);
       toast.success("New work available!", {
-        description: `${data.booking.packageName} — ${data.booking.location}`,
+        description: `${data.booking.packageName} — ${data.booking.location ? data.booking.location.split(" @")[0] : ""}`,
         duration: 6000,
       });
     });
@@ -195,7 +195,7 @@ export function PartnerDashboard() {
       setPartnerPhase("navigating");
       setCompletedShots(new Set());
       setShotUploads(new Map());
-      toast.success("Booking accepted!", { description: `Navigate to ${booking.location}` });
+      toast.success("Booking accepted!", { description: `Navigate to ${booking.location ? booking.location.split(" @")[0] : ""}` });
 
       // Notify WebSocket that we accepted
       socketRef.current?.emit("booking:accept", { bookingId: booking.id, partnerId });
@@ -481,7 +481,7 @@ export function PartnerDashboard() {
               )}
             </h2>
             <p className="text-muted-foreground text-xs sm:text-sm">
-              {partnerActiveBooking.packageName} · {partnerActiveBooking.location}
+              {partnerActiveBooking.packageName} · {partnerActiveBooking.location ? partnerActiveBooking.location.split(" @")[0] : ""}
             </p>
             {/* Cancel Booking Button - Only show before arriving at location */}
             {partnerPhase === "navigating" && (
@@ -575,7 +575,7 @@ export function PartnerDashboard() {
               <div className="min-w-0 flex-1">
                 <h3 className="text-sm font-bold text-foreground truncate">Active Booking Found</h3>
                 <p className="text-[10px] text-muted-foreground/60 truncate">
-                  {partnerActiveBooking.packageName} · {partnerActiveBooking.location}
+                  {partnerActiveBooking.packageName} · {partnerActiveBooking.location ? partnerActiveBooking.location.split(" @")[0] : ""}
                 </p>
               </div>
             </div>
@@ -705,7 +705,7 @@ export function PartnerDashboard() {
                   </div>
                   <div className="flex items-center gap-1">
                     <MapPin className="w-2.5 h-2.5 text-orbit-cyan/70" />
-                    <span className="truncate">{booking.location}</span>
+                    <span className="truncate">{booking.location ? booking.location.split(" @")[0] : ""}</span>
                   </div>
                 </div>
 

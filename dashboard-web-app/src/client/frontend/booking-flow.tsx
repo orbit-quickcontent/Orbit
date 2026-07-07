@@ -82,11 +82,23 @@ export function BookingFlow() {
         .then((res) => res.json())
         .then((data) => {
           setIsLocating(false);
-          if (data && data.display_name) {
-            setBookingLocation(data.display_name);
+          if (data && data.address) {
+            const addr = data.address;
+            const parts = [
+              addr.road || addr.street || addr.suburb || addr.neighbourhood || addr.quarter,
+              addr.city || addr.town || addr.village || addr.municipality,
+              addr.postcode,
+              addr.country
+            ].filter(Boolean);
+            
+            const cleanAddr = parts.length > 0 ? parts.join(", ") : data.display_name;
+            setBookingLocation(`${cleanAddr} @${latitude},${longitude}`);
+            toast.success("Location updated successfully!");
+          } else if (data && data.display_name) {
+            setBookingLocation(`${data.display_name} @${latitude},${longitude}`);
             toast.success("Location updated successfully!");
           } else {
-            setBookingLocation(`Shoot Location (${latitude.toFixed(4)}, ${longitude.toFixed(4)})`);
+            setBookingLocation(`Shoot Location (${latitude.toFixed(4)}, ${longitude.toFixed(4)}) @${latitude},${longitude}`);
             toast.success("Location coordinates fetched!");
           }
         })
@@ -577,7 +589,7 @@ export function BookingFlow() {
                           { label: "Package", value: selectedPackage.name },
                           { label: "Date", value: bookingDate?.toLocaleDateString("en-IN", { weekday: "short", month: "short", day: "numeric" }) },
                           { label: "Time", value: bookingTimeSlot },
-                          { label: "Location", value: bookingLocation },
+                          { label: "Location", value: bookingLocation ? bookingLocation.split(" @")[0] : "" },
                         ].map((row) => (
                           <div key={row.label} className="flex justify-between items-start gap-4">
                             <span className="text-muted-foreground shrink-0">{row.label}</span>

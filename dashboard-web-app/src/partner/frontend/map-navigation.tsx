@@ -27,13 +27,35 @@ export function MapNavigation({ booking, onArrived }: MapNavigationProps) {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const [mapError, setMapError] = useState<string | null>(null);
 
+  // Parse coordinates suffix (format: "Address text @latitude,longitude")
+  let cleanAddress = booking.location || "";
+  let initialDestCoords: [number, number] = [77.5946, 12.9716]; // Default: Bangalore
+  if (booking.location && booking.location.includes(" @")) {
+    const parts = booking.location.split(" @");
+    cleanAddress = parts[0];
+    const coordParts = parts[1].split(",");
+    const lat = parseFloat(coordParts[0]);
+    const lng = parseFloat(coordParts[1]);
+    if (!isNaN(lat) && !isNaN(lng)) {
+      initialDestCoords = [lng, lat];
+    }
+  }
+
   const handleNavigate = () => {
     if (!booking.location) {
       toast.error("No location specified for this booking.");
       return;
     }
     toast.success("Opening Google Maps...");
-    const url = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(booking.location)}`;
+    
+    // If coordinates suffix exists, navigate directly to coordinates for absolute precision
+    let destination = booking.location;
+    if (booking.location.includes(" @")) {
+      const parts = booking.location.split(" @");
+      destination = parts[1]; // Use exact "latitude,longitude"
+    }
+    
+    const url = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(destination)}`;
     window.open(url, "_blank", "noopener,noreferrer");
   };
 
@@ -58,15 +80,19 @@ export function MapNavigation({ booking, onArrived }: MapNavigationProps) {
 
         if (!mapContainerRef.current) return;
 
-        // Bangalore default coordinates (Partner: [77.5800, 12.9650], Destination: [77.5946, 12.9716])
-        const partnerCoords: [number, number] = [77.5800, 12.9650];
-        const destCoords: [number, number] = [77.5946, 12.9716];
+        // Parse coordinates
+        let destCoords = initialDestCoords;
+        const partnerCoords: [number, number] = [destCoords[0] - 0.0146, destCoords[1] - 0.0066];
+        const centerCoords: [number, number] = [
+          (partnerCoords[0] + destCoords[0]) / 2,
+          (partnerCoords[1] + destCoords[1]) / 2,
+        ];
 
         const apiKey = process.env.NEXT_PUBLIC_MAPTILER_API_KEY || "a731ad7ed2444d32a8a63d147ac013ed";
         const map = new maplibregl.Map({
           container: mapContainerRef.current,
           style: `https://api.maptiler.com/maps/dark-matter/style.json?key=${apiKey}`,
-          center: [77.5873, 12.9683], // center point
+          center: centerCoords,
           zoom: 13,
           attributionControl: false,
         });
@@ -117,14 +143,14 @@ export function MapNavigation({ booking, onArrived }: MapNavigationProps) {
           bounds.extend(destCoords);
           map.fitBounds(bounds, { padding: 50, duration: 1500 });
 
-          // Route coordinates simulating turns on roads
+          // Route coordinates dynamically interpolated between partner and destination
+          const dx = destCoords[0] - partnerCoords[0];
+          const dy = destCoords[1] - partnerCoords[1];
           const routeCoords = [
             partnerCoords,
-            [77.5820, 12.9638],
-            [77.5835, 12.9658],
-            [77.5865, 12.9642],
-            [77.5895, 12.9682],
-            [77.5915, 12.9698],
+            [partnerCoords[0] + dx * 0.25 + dy * 0.05, partnerCoords[1] + dy * 0.25 - dx * 0.05],
+            [partnerCoords[0] + dx * 0.50 - dy * 0.05, partnerCoords[1] + dy * 0.50 + dx * 0.05],
+            [partnerCoords[0] + dx * 0.75 + dy * 0.03, partnerCoords[1] + dy * 0.75 - dx * 0.03],
             destCoords,
           ];
 
@@ -260,7 +286,7 @@ export function MapNavigation({ booking, onArrived }: MapNavigationProps) {
         </div>
         <div className="orbit-card rounded-xl p-3 text-center border border-orbit-cyan/20">
           <div className="text-xs text-muted-foreground mb-1">Location</div>
-          <div className="text-sm font-bold text-foreground truncate">{booking.location}</div>
+          <div className="text-sm font-bold text-foreground truncate">{cleanAddress}</div>
         </div>
         <div className="orbit-card rounded-xl p-3 text-center border border-orbit-cyan/20">
           <div className="text-xs text-muted-foreground mb-1">Time Slot</div>

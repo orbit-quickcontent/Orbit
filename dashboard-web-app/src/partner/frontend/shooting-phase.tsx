@@ -45,7 +45,7 @@ export function ShootingPhase({
 
       <div className="orbit-card rounded-xl p-3 sm:p-4 mb-4 sm:mb-6 grid grid-cols-2 gap-2 sm:gap-3 text-xs sm:text-sm">
         {[
-          { label: "Location", value: booking.location },
+          { label: "Location", value: booking.location ? booking.location.split(" @")[0] : "" },
           { label: "Package", value: booking.packageName },
           { label: "Time", value: booking.timeSlot },
           { label: "Notes", value: booking.notes || "None" },

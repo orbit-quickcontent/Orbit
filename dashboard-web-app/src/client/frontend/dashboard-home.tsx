@@ -191,7 +191,7 @@ export function DashboardHome() {
                       {currentBooking.packageName}
                     </h4>
                     <p className="text-[9px] text-muted-foreground truncate">
-                      #{currentBooking.id} · {currentBooking.location}
+                      #{currentBooking.id} · {currentBooking.location ? currentBooking.location.split(" @")[0] : ""}
                     </p>
                   </div>
                   <Badge
