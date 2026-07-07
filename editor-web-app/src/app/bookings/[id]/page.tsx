@@ -200,6 +200,9 @@ export default function BookingStudio({ params }: { params: Promise<{ id: string
     );
   }
 
+  const noFootage = (!booking.footageUrls || !Array.isArray(booking.footageUrls) || booking.footageUrls.length === 0) &&
+                    (!booking.proxyFootageUrls || !Array.isArray(booking.proxyFootageUrls) || booking.proxyFootageUrls.length === 0);
+
   return (
     <div className="min-h-screen bg-black text-white px-4 md:px-8 py-6">
       {/* Header */}
@@ -313,8 +316,7 @@ export default function BookingStudio({ params }: { params: Promise<{ id: string
               Lightweight proxies are available for instant editing handoffs. Uncompressed 4K master files sync quietly in the background.
             </p>
 
-            {(!booking.footageUrls || !Array.isArray(booking.footageUrls) || booking.footageUrls.length === 0) &&
-             (!booking.proxyFootageUrls || !Array.isArray(booking.proxyFootageUrls) || booking.proxyFootageUrls.length === 0) ? (
+            {noFootage ? (
               <div className="p-8 text-center text-gray-500 text-sm">
                 No footage synced yet. Wait for partner upload completion.
               </div>
