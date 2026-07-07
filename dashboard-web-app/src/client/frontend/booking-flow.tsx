@@ -284,7 +284,8 @@ export function BookingFlow() {
       prefill: {
         name: user.name || "",
         email: user.email || "",
-        contact: user.phone || ""
+        contact: user.phone || "",
+        ...(paymentMethod === "upi" ? { method: "upi" } : {})
       },
       theme: {
         color: "#00F0FF"
@@ -593,29 +594,66 @@ export function BookingFlow() {
                       </div>
                     </div>
 
-                    {/* Payment Selector - Razorpay Only */}
+                    {/* Payment Selector - UPI & Razorpay Options */}
                     <div className="space-y-3">
                       <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider block">Payment Method</label>
-                      <div className="p-4 rounded-xl border border-orbit-cyan/30 bg-orbit-cyan/[0.02] flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-lg bg-orbit-cyan/10 flex items-center justify-center text-orbit-cyan font-black text-sm">
-                            RZP
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        {/* UPI Option */}
+                        <div 
+                          onClick={() => setPaymentMethod("upi")}
+                          className={`p-4 rounded-xl border cursor-pointer transition-all flex flex-col justify-between relative ${
+                            paymentMethod === "upi" 
+                              ? "border-orbit-cyan bg-orbit-cyan/[0.03] orbit-glow" 
+                              : "border-orbit-border bg-white/[0.01] hover:border-orbit-cyan/50 hover:bg-white/[0.02]"
+                          }`}
+                        >
+                          <div className="flex items-start justify-between">
+                            <div className="w-9 h-9 rounded-lg bg-orbit-cyan/10 flex items-center justify-center text-orbit-cyan font-bold text-xs">
+                              UPI
+                            </div>
+                            <span className="text-[9px] font-black text-orbit-cyan bg-orbit-cyan/15 px-2 py-0.5 rounded uppercase tracking-wider">
+                              Popular
+                            </span>
                           </div>
-                          <div>
-                            <span className="font-bold text-sm block">Razorpay Checkout</span>
-                            <span className="text-xs text-muted-foreground">UPI, Cards, Netbanking & Wallets</span>
+                          <div className="mt-4">
+                            <span className="font-bold text-xs sm:text-sm block text-white">UPI / QR Payment</span>
+                            <span className="text-[10px] sm:text-xs text-muted-foreground block mt-0.5">Google Pay, PhonePe, Paytm, QR</span>
+                          </div>
+                          {paymentMethod === "upi" && (
+                            <div className="absolute top-2 right-2 w-1.5 h-1.5 rounded-full bg-orbit-cyan animate-ping" />
+                          )}
+                        </div>
+
+                        {/* Standard Checkout */}
+                        <div 
+                          onClick={() => setPaymentMethod("card")}
+                          className={`p-4 rounded-xl border cursor-pointer transition-all flex flex-col justify-between ${
+                            paymentMethod === "card" 
+                              ? "border-orbit-purple bg-orbit-purple/[0.03] orbit-glow-purple" 
+                              : "border-orbit-border bg-white/[0.01] hover:border-orbit-purple/50 hover:bg-white/[0.02]"
+                          }`}
+                        >
+                          <div className="flex items-start justify-between">
+                            <div className="w-9 h-9 rounded-lg bg-orbit-purple/10 flex items-center justify-center text-orbit-purple font-bold text-xs">
+                              CARD
+                            </div>
+                          </div>
+                          <div className="mt-4">
+                            <span className="font-bold text-xs sm:text-sm block text-white">Cards & Netbanking</span>
+                            <span className="text-[10px] sm:text-xs text-muted-foreground block mt-0.5">Credit/Debit Card, Netbanking, Wallets</span>
                           </div>
                         </div>
-                        <span className="text-[10px] font-bold text-orbit-cyan bg-orbit-cyan/15 px-2.5 py-1 rounded-full uppercase tracking-wider">
-                          Active
-                        </span>
                       </div>
                     </div>
 
                     <div className="p-4 rounded-xl border border-orbit-border/50 bg-white/[0.01] flex items-start gap-2.5">
                       <Lock className="w-4 h-4 text-orbit-cyan shrink-0 mt-0.5" />
                       <p className="text-[11px] text-muted-foreground leading-relaxed">
-                        By clicking "Pay & Confirm", you will be redirected to Razorpay's secure checkout page to complete your payment with UPI, cards, net banking, or digital wallets safely.
+                        {paymentMethod === "upi" ? (
+                          "By clicking \"Pay & Confirm\", Razorpay will directly launch your UPI application selection (Google Pay, PhonePe, Paytm, etc.) or QR scanner page to complete the transaction instantly."
+                        ) : (
+                          "By clicking \"Pay & Confirm\", you will be redirected to Razorpay's secure checkout page to complete your payment with credit/debit cards, net banking, or digital wallets safely."
+                        )}
                       </p>
                     </div>
                   </div>
