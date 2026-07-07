@@ -164,10 +164,26 @@ export function MapNavigation({ booking, onArrived }: MapNavigationProps) {
           });
         });
 
-        map.on("error", (e) => {
+        let hasFalledBack = false;
+        map.on("error", (e: any) => {
           console.error("MapLibre GL error:", e);
-          if (active) {
-            setMapError("Failed to render map. Style or server may be offline.");
+          
+          // Check if style failed to load (e.g. invalid MapTiler key, 403 Forbidden, 401, etc.)
+          const errorMsg = e.error?.message || e.message || "";
+          const isStyleError = errorMsg.toLowerCase().includes("style") || 
+                               errorMsg.toLowerCase().includes("metadata") ||
+                               (e.error?.status === 403 || e.error?.status === 401);
+                               
+          if (isStyleError && !hasFalledBack) {
+            hasFalledBack = true;
+            console.warn("Style loading failed. Falling back to public CartoDB dark-matter style...");
+            map.setStyle("https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json");
+            return;
+          }
+          
+          // Only trigger fatal visual error on actual library or repeated failures
+          if (isStyleError && hasFalledBack && active) {
+            setMapError("Failed to render map style. Please check your map styling endpoints.");
           }
         });
       })
