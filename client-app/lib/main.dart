@@ -188,10 +188,8 @@ class _OrbitWebViewState extends State<OrbitWebView> {
         await Geolocator.requestPermission();
       }
       final position = await Geolocator.getCurrentPosition(
-        locationSettings: const LocationSettings(
-          accuracy: LocationAccuracy.high,
-          timeLimit: Duration(seconds: 10),
-        ),
+        desiredAccuracy: LocationAccuracy.high,
+        timeLimit: const Duration(seconds: 10),
       );
       await _webViewController?.evaluateJavascript(source: '''
         window.dispatchEvent(new CustomEvent("orbit_gps", {
