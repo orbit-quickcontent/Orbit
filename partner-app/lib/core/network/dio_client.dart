@@ -6,13 +6,13 @@ class DioClient {
   final SecureStorageService _secureStorage;
   late final Dio _dio;
 
-  static const String defaultBaseUrl = 'https://orbit-quickcontent.vercel.app';
-  static const String keyCustomUrl = 'custom_api_url';
+  static const String defaultBaseUrl = 'https://orbit-qgpock90x-orbit-quickcontents-projects.vercel.app';
 
   DioClient({SecureStorageService? secureStorage})
       : _secureStorage = secureStorage ?? SecureStorageService() {
     _dio = Dio(
       BaseOptions(
+        baseUrl: defaultBaseUrl,
         connectTimeout: const Duration(seconds: 15),
         receiveTimeout: const Duration(seconds: 15),
         headers: {
@@ -25,11 +25,6 @@ class DioClient {
     _dio.interceptors.add(
       InterceptorsWrapper(
         onRequest: (options, handler) async {
-          // Dynamic base URL check
-          final prefs = await SharedPreferences.getInstance();
-          final customUrl = prefs.getString(keyCustomUrl);
-          options.baseUrl = customUrl ?? defaultBaseUrl;
-
           // Auth token injection
           final token = await _secureStorage.getToken();
           if (token != null && token.isNotEmpty) {
@@ -56,17 +51,6 @@ class DioClient {
 
   Dio get instance => _dio;
 
-  Future<void> updateBaseUrl(String newUrl) async {
-    final prefs = await SharedPreferences.getInstance();
-    if (newUrl.trim().isEmpty) {
-      await prefs.remove(keyCustomUrl);
-    } else {
-      await prefs.setString(keyCustomUrl, newUrl.trim());
-    }
-  }
-
-  Future<String> getBaseUrl() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getString(keyCustomUrl) ?? defaultBaseUrl;
-  }
+  Future<void> updateBaseUrl(String newUrl) async {}
+  Future<String> getBaseUrl() async => defaultBaseUrl;
 }

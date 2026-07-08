@@ -187,29 +187,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 ),
 
                 const SizedBox(height: 32),
-                // Toggle Developer Settings
-                TextButton.icon(
-                  onPressed: () => setState(() => _showUrlSettings = !_showUrlSettings),
-                  icon: const Icon(Icons.settings, size: 16, color: Colors.grey),
-                  label: const Text(
-                    'Developer Settings',
-                    style: TextStyle(color: Colors.grey, fontSize: 13),
-                  ),
-                ),
-
-                if (_showUrlSettings) ...[
-                  const SizedBox(height: 12),
-                  TextFormField(
-                    controller: _urlController,
-                    style: const TextStyle(color: Colors.white, fontSize: 13),
-                    decoration: _inputDecoration('API Base URL', Icons.link).copyWith(
-                      suffixIcon: IconButton(
-                        icon: const Icon(Icons.restore, color: Colors.grey),
-                        onPressed: () => _urlController.text = DioClient.defaultBaseUrl,
-                      ),
-                    ),
-                  ),
-                ],
               ],
             ),
           ),
