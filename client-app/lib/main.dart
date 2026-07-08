@@ -414,8 +414,8 @@ class _OrbitWebViewState extends State<OrbitWebView> {
         backgroundColor: Colors.black,
         body: Stack(
           children: [
-            // ── WebView ──────────────────────────────────────────────────────
-            if (!_hasError && !_isOffline) _buildWebView(),
+            // ── WebView (Always in tree to keep controller alive) ────────────
+            _buildWebView(),
 
             // ── Offline Banner ───────────────────────────────────────────────
             if (_isOffline) _buildOfflineView(),

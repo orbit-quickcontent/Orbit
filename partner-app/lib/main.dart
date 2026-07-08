@@ -453,7 +453,8 @@ class _OrbitPartnerWebViewState extends State<OrbitPartnerWebView> {
         backgroundColor: Colors.black,
         body: Stack(
           children: [
-            if (!_hasError && !_isOffline) _buildWebView(),
+            // ── WebView (Always in tree to keep controller alive) ────────────
+            _buildWebView(),
             if (_isOffline) _buildOfflineView(),
             if (_hasError && !_isOffline) _buildErrorView(),
 
