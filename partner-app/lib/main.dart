@@ -26,7 +26,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 // ─── Production URL ──────────────────────────────────────────────────────────
 // Replace with your deployed domain before releasing to stores.
-const String _kProductionUrl = 'https://orbit-quickcontent.vercel.app';
+const String _kProductionUrl = 'https://two-impalas-sniff.loca.lt';
 const String _kRoleParam = '?role=PARTNER';
 
 void main() async {
@@ -175,7 +175,12 @@ class _OrbitPartnerWebViewState extends State<OrbitPartnerWebView> {
       _isLoading = true;
     });
     _webViewController?.loadUrl(
-      urlRequest: URLRequest(url: WebUri(url)),
+      urlRequest: URLRequest(
+        url: WebUri(url),
+        headers: {
+          'Bypass-Tunnel-Reminder': 'true',
+        },
+      ),
     );
   }
 
@@ -528,7 +533,12 @@ class _OrbitPartnerWebViewState extends State<OrbitPartnerWebView> {
 
   Widget _buildWebView() {
     return InAppWebView(
-      initialUrlRequest: URLRequest(url: WebUri(_currentUrl)),
+      initialUrlRequest: URLRequest(
+        url: WebUri(_currentUrl),
+        headers: {
+          'Bypass-Tunnel-Reminder': 'true',
+        },
+      ),
       pullToRefreshController: _pullToRefreshController,
       initialSettings: InAppWebViewSettings(
         javaScriptEnabled: true,

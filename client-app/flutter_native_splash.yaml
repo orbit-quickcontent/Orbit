@@ -7,15 +7,14 @@ flutter_native_splash:
   color: "#000000"
   color_dark: "#000000"
 
-  # Optional: place orbit_splash.png (512x512) in assets/splash/
-  # image: assets/splash/orbit_splash.png
-  # image_dark: assets/splash/orbit_splash.png
+  image: assets/splash/orbit_splash.png
+  image_dark: assets/splash/orbit_splash.png
 
   # Android 12+ splash settings
   android_12:
     color: "#000000"
     color_dark: "#000000"
-    # image: assets/splash/orbit_splash.png
+    image: assets/splash/orbit_splash.png
 
   # Keep fullscreen during splash
   fullscreen: true
