@@ -523,6 +523,9 @@ class _OrbitWebViewState extends State<OrbitWebView> {
         _webViewController = controller;
         _registerJavascriptHandlers(controller);
       },
+      onReceivedServerTrustAuthRequest: (controller, challenge) async {
+        return ServerTrustAuthResponse(action: ServerTrustAuthResponseAction.PROCEED);
+      },
       onLoadStart: (controller, url) {
         setState(() {
           _isLoading = true;
