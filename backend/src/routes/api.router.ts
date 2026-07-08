@@ -17,6 +17,7 @@ import * as bookingAvailableHandlers from '../partner/backend/booking-available-
 import * as partnerListHandlers from '../partner/backend/partner-list-handlers';
 import * as partnerDetailHandlers from '../partner/backend/partner-detail-handlers';
 import * as partnerWalletHandlers from '../partner/backend/partner-wallet-handlers';
+import * as partnerBankHandlers from '../partner/backend/partner-bank-handlers';
 import * as bookingAcceptHandlers from '../partner/backend/booking-accept-handlers';
 import * as bookingDeclineHandlers from '../partner/backend/booking-decline-handlers';
 import * as bookingDispatchHandlers from '../partner/backend/booking-dispatch-handlers';
@@ -76,6 +77,7 @@ router.get('/partners/:id', jsonParser, nextToExpress(partnerDetailHandlers.GET)
 router.patch('/partners/:id', jsonParser, nextToExpress(partnerDetailHandlers.PATCH));
 router.get('/partners/:id/wallet', jsonParser, nextToExpress(partnerWalletHandlers.GET));
 router.post('/partners/:id/withdraw', jsonParser, nextToExpress(partnerWalletHandlers.POST));
+router.post('/partners/link-bank', jsonParser, nextToExpress(partnerBankHandlers.POST));
 
 // Editor routes
 router.get('/editor/bookings', jsonParser, nextToExpress(editorBookingsRoute.GET));

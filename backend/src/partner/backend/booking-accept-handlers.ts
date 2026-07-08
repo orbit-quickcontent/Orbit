@@ -34,6 +34,25 @@ export async function POST(
       )
     }
 
+    // Fetch and verify partner bank details status
+    const partner = await firestoreDb.partners.findUnique({
+      where: { id: partnerId },
+    });
+
+    if (!partner) {
+      return NextResponse.json(
+        { error: 'Partner profile not found' },
+        { status: 404 }
+      )
+    }
+
+    if (partner.verificationStatus !== "VERIFIED") {
+      return NextResponse.json(
+        { error: 'Accepting bookings requires a connected and verified bank account. Link your bank details in Profile settings.' },
+        { status: 403 }
+      )
+    }
+
     // 1. Find the booking, verify it's in PARTNER_DISPATCHED status
     const booking = await firestoreDb.bookings.findUnique({
       where: { id: bookingId },

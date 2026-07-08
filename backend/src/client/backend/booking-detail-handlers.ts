@@ -12,6 +12,9 @@
 import { firestoreDb } from '@/lib/db'
 import { NextRequest, NextResponse } from 'next/server'
 import { generatePresignedUrl } from '@/lib/security'
+import { decryptAccountNumber } from '@/services/security.service'
+import { executePayout } from '@/services/payout.service'
+import { logBankAudit } from '@/services/audit.service'
 
 interface UpdateBookingBody {
   status?: string
@@ -273,6 +276,86 @@ export async function PATCH(
       where: { id },
       data: updateData,
     })
+
+    // Execute automatic bank transfer payout when booking is completed/delivered (Step 8)
+    if (body.status === 'DELIVERED' && existing.status !== 'DELIVERED' && updatedRaw.partnerId) {
+      try {
+        const partnerData = await firestoreDb.partners.findUnique({
+          where: { id: updatedRaw.partnerId }
+        });
+
+        if (partnerData && partnerData.verificationStatus === "VERIFIED" && partnerData.encryptedAccountNumber) {
+          const decryptedAccountNumber = decryptAccountNumber(partnerData.encryptedAccountNumber);
+          const partnerUser = await firestoreDb.partnerUsers.findUnique({
+            where: { id: partnerData.userId }
+          });
+          const partnerName = partnerUser?.name || "Orbit Partner";
+
+          // Log payout initiation to Audits
+          await logBankAudit({
+            userId: partnerData.userId,
+            partnerId: partnerData.id,
+            action: "PAYOUT_INITIATED",
+            details: { amount: 700, bookingId: id },
+          });
+
+          // Run payout execution
+          const payoutResult = await executePayout(
+            partnerData.id,
+            700, // Partner payout flat ₹700
+            decryptedAccountNumber,
+            partnerData.ifscCode || "",
+            partnerName,
+            id //bookingId is the idempotency key!
+          );
+
+          if (payoutResult.success) {
+            // Log success to Audits
+            await logBankAudit({
+              userId: partnerData.userId,
+              partnerId: partnerData.id,
+              action: "PAYOUT_COMPLETED",
+              details: { payoutId: payoutResult.payoutId, transactionId: payoutResult.transactionId, amount: 700, bookingId: id },
+            });
+
+            // Create Transaction record in DB
+            await firestoreDb.transactions.create({
+              data: {
+                partnerId: partnerData.id,
+                bookingId: id,
+                amount: 700,
+                type: "WITHDRAWAL",
+                status: "SUCCESS",
+                payoutId: payoutResult.payoutId,
+                transactionId: payoutResult.transactionId,
+                description: `Auto-payout earnings for booking ${id}`,
+              }
+            });
+          } else {
+            // Log failure to Audits
+            await logBankAudit({
+              userId: partnerData.userId,
+              partnerId: partnerData.id,
+              action: "PAYOUT_FAILED",
+              details: { error: payoutResult.error || "Gateway payout failed", amount: 700, bookingId: id },
+            });
+
+            await firestoreDb.transactions.create({
+              data: {
+                partnerId: partnerData.id,
+                bookingId: id,
+                amount: 700,
+                type: "WITHDRAWAL",
+                status: "FAILED",
+                description: `Auto-payout failed: ${payoutResult.error || "Gateway issue"}`,
+              }
+            });
+          }
+        }
+      } catch (payoutErr) {
+        console.error("[Auto-Payout] Error processing automatic bank transfer:", payoutErr);
+      }
+    }
 
     const clientUser = await firestoreDb.clientUsers.findUnique({
       where: { id: updatedRaw.userId },

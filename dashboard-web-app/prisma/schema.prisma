@@ -80,12 +80,18 @@ model Partner {
   completedProjects Int      @default(0)
   deviceInfo        String?  // iPhone 15 Pro, Pixel 8, etc.
   
-  // Bank account fields
-  bankName          String?
-  accountNumber     String?
-  ifscCode          String?
-  accountHolderName String?
-  bankVerified      Boolean  @default(false)
+  // Secure Bank account fields
+  accountHolderName      String?
+  encryptedAccountNumber String?
+  ifscCode               String?
+  bankName               String?
+  branchName             String?
+  panNumber              String?
+  verificationStatus     String    @default("UNVERIFIED") // UNVERIFIED, PENDING, VERIFIED, FAILED
+  verificationMethod     String?   // PENNY_DROP
+  verificationReference  String?
+  verifiedAt             DateTime?
+  payoutEnabled          Boolean   @default(false)
   
   // Wallet
   walletBalance     Float    @default(0.0)

@@ -97,8 +97,8 @@ export async function POST(
       )
     }
 
-    // Verify bank account is linked
-    if (!partner.bankVerified || !partner.accountNumber) {
+    // Verify bank account is linked and verified
+    if (partner.verificationStatus !== "VERIFIED" || !partner.encryptedAccountNumber) {
       return NextResponse.json(
         { error: 'Bank account must be linked and verified before withdrawal' },
         { status: 400 }
