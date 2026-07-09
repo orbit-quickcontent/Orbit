@@ -1,26 +1,29 @@
 import os
 import json
+import sqlite3
 import pandas as pd
+import numpy as np
+from datetime import datetime, timedelta
 import streamlit as st
 import plotly.express as px
 import plotly.graph_objects as go
 
 # Set page configuration
 st.set_page_config(
-    page_title="FinScope - Budget Analytics Dashboard",
-    page_icon="📈",
+    page_title="ORBIT - Platform Analytics & Operations",
+    page_icon="🚀",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
-# Custom CSS for Premium Glassmorphic Theme matching style.css
+# Custom CSS for Premium Glassmorphic Theme matching ORBIT Branding (Cyan/Purple/Dark)
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap');
     
     /* Global Background and Typography */
     .stApp {
-        background: radial-gradient(circle at 80% 20%, #1e133a, #0b071a, #04030a) !important;
+        background: radial-gradient(circle at 80% 20%, #17122a, #0b0714, #05040a) !important;
         color: #f5f4fc !important;
         font-family: 'Inter', sans-serif !important;
     }
@@ -34,8 +37,8 @@ st.markdown("""
     
     /* Sidebar styling */
     section[data-testid="stSidebar"] {
-        background-color: rgba(8, 6, 17, 0.7) !important;
-        border-right: 1px solid rgba(255, 255, 255, 0.06) !important;
+        background-color: rgba(8, 6, 15, 0.8) !important;
+        border-right: 1px solid rgba(255, 255, 255, 0.05) !important;
     }
     
     section[data-testid="stSidebar"] h1, section[data-testid="stSidebar"] h2, section[data-testid="stSidebar"] h3 {
@@ -57,22 +60,22 @@ st.markdown("""
     /* Custom Stats Metric Container */
     .stat-container {
         background: rgba(255, 255, 255, 0.02);
-        border: 1px solid rgba(255, 255, 255, 0.06);
+        border: 1px solid rgba(255, 255, 255, 0.05);
         border-radius: 16px;
         padding: 20px;
         box-shadow: 0 8px 24px 0 rgba(0, 0, 0, 0.4);
         margin-bottom: 16px;
         backdrop-filter: blur(10px);
-        border-left: 4px solid #8f7efc; /* Default purple neon indicator */
+        border-left: 4px solid #00F0FF; /* Default ORBIT Cyan indicator */
     }
     
-    .stat-container.blue { border-left-color: #00a8ff; }
-    .stat-container.purple { border-left-color: #8f7efc; }
+    .stat-container.cyan { border-left-color: #00F0FF; }
+    .stat-container.purple { border-left-color: #9d4edd; }
     .stat-container.green { border-left-color: #00d2d3; }
     .stat-container.yellow { border-left-color: #ff9f43; }
     
     .stat-title {
-        font-size: 12px;
+        font-size: 11px;
         color: #958eb6;
         text-transform: uppercase;
         letter-spacing: 1.5px;
@@ -88,35 +91,25 @@ st.markdown("""
     }
     
     .stat-delta {
-        font-size: 12px;
+        font-size: 11px;
         margin-top: 6px;
         font-weight: 500;
+        color: #00F0FF;
     }
     
-    .stat-delta.positive { color: #00d2d3; }
-    .stat-delta.neutral { color: #958eb6; }
-    
-    /* Styled Lists */
-    ol.top-list {
-        color: #f5f4fc;
-        padding-left: 20px;
-    }
-    ol.top-list li {
-        margin-bottom: 8px;
-        font-size: 14px;
-    }
-    
-    /* Custom spacing and selectors */
-    .stSelectbox label {
-        color: #958eb6 !important;
-        font-weight: 500 !important;
-        font-size: 13px !important;
+    .demo-banner {
+        background: linear-gradient(90deg, rgba(0, 240, 255, 0.1), rgba(157, 78, 221, 0.1));
+        border: 1px solid rgba(0, 240, 255, 0.2);
+        border-radius: 12px;
+        padding: 12px 20px;
+        margin-bottom: 24px;
+        font-size: 13px;
+        color: #00F0FF;
     }
 </style>
 """, unsafe_allow_html=True)
 
-# Colors matching style.css theme
-CHART_COLORS = ['#8f7efc', '#00a8ff', '#00d2d3', '#ff9f43', '#ff7675', '#fd79a8', '#fdcb6e', '#00cec9', '#a55eea', '#26de81']
+CHART_COLORS = ['#00F0FF', '#9d4edd', '#00d2d3', '#ff9f43', '#ff7675', '#fd79a8', '#fdcb6e', '#00cec9', '#a55eea', '#26de81']
 
 # Custom Plotly helper
 def customize_plotly_chart(fig):
@@ -128,14 +121,14 @@ def customize_plotly_chart(fig):
         margin=dict(l=40, r=40, t=50, b=40),
         xaxis=dict(
             showgrid=True,
-            gridcolor='rgba(255,255,255,0.04)',
-            linecolor='rgba(255,255,255,0.08)',
+            gridcolor='rgba(255,255,255,0.03)',
+            linecolor='rgba(255,255,255,0.06)',
             tickfont=dict(color="#958eb6")
         ),
         yaxis=dict(
             showgrid=True,
-            gridcolor='rgba(255,255,255,0.04)',
-            linecolor='rgba(255,255,255,0.08)',
+            gridcolor='rgba(255,255,255,0.03)',
+            linecolor='rgba(255,255,255,0.06)',
             tickfont=dict(color="#958eb6")
         ),
         legend=dict(
@@ -145,484 +138,450 @@ def customize_plotly_chart(fig):
     )
     return fig
 
-# Load JSON budget data
-@st.cache_data
-def load_data():
+# Resolve SQLite path
+def get_db_connection():
     base_dir = os.path.dirname(os.path.abspath(__file__))
-    json_path = os.path.join(base_dir, 'budget_data.json')
-    
-    if not os.path.exists(json_path):
-        st.error(f"Required budget data file not found at: {json_path}")
-        st.stop()
-        
-    with open(json_path, 'r', encoding='utf-8') as f:
-        data = json.load(f)
-        
-    years = data['years']
-    ministries_list = data['ministries']
-    
-    flat_records = []
-    for m in ministries_list:
-        key = m['key']
-        name = m['name']
-        for yr, val in m['history'].items():
-            flat_records.append({
-                'MinistryKey': key,
-                'MinistryName': name,
-                'Year': yr,
-                'Outlay (₹ Cr)': val
-            })
-            
-    df = pd.DataFrame(flat_records)
-    
-    # Calculate yearly aggregates
-    df_totals = df.groupby('Year')['Outlay (₹ Cr)'].sum().reset_index()
-    df_totals.rename(columns={'Outlay (₹ Cr)': 'TotalOutlay'}, inplace=True)
-    
-    # Combine back to get share percentage
-    df = df.merge(df_totals, on='Year')
-    df['Share (%)'] = (df['Outlay (₹ Cr)'] / df['TotalOutlay'] * 100).round(2)
-    
-    return df, years, ministries_list, df_totals
+    db_path = os.path.join(base_dir, 'dashboard-web-app', 'db', 'client.db')
+    if not os.path.exists(db_path):
+        # Fallback search
+        db_path = os.path.join(base_dir, 'db', 'client.db')
+    return sqlite3.connect(db_path) if os.path.exists(db_path) else None
 
-# Load core datasets
-df, years, ministries_list, df_totals = load_data()
+# Load raw SQLite tables into dataframes
+@st.cache_data(ttl=60)
+def load_db_data():
+    conn = get_db_connection()
+    if conn is None:
+        return None, None, None, None, None
+    try:
+        users = pd.read_sql_query("SELECT * FROM User", conn)
+        packages = pd.read_sql_query("SELECT * FROM Package", conn)
+        partners = pd.read_sql_query("SELECT * FROM Partner", conn)
+        bookings = pd.read_sql_query("SELECT * FROM Booking", conn)
+        audit_logs = pd.read_sql_query("SELECT * FROM AuditLog", conn)
+        conn.close()
+        return users, packages, partners, bookings, audit_logs
+    except Exception:
+        return None, None, None, None, None
 
-# Layout Side Header / branding
+# Load SQLite Data
+sqlite_users, sqlite_packages, sqlite_partners, sqlite_bookings, sqlite_logs = load_db_data()
+
+# Check if database has bookings/users, if not set Demo Data to true
+db_is_empty = sqlite_bookings is None or len(sqlite_bookings) == 0
+
+# Sidebar header / branding
 st.sidebar.markdown("""
 <div style='display: flex; align-items: center; gap: 12px; margin-bottom: 24px;'>
-    <div style='background: linear-gradient(135deg, #8f7efc, #5f27cd); width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 15px rgba(143, 126, 252, 0.4);'>
-        <span style='color: white; font-weight: 800; font-size: 18px;'>F</span>
+    <div style='background: linear-gradient(135deg, #00F0FF, #9d4edd); width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 15px rgba(0, 240, 255, 0.4);'>
+        <span style='color: black; font-weight: 800; font-size: 20px;'>O</span>
     </div>
     <div style='line-height: 1.1;'>
-        <h3 style='margin: 0; font-size: 20px; font-weight: 700;'>FinScope</h3>
-        <span style='color: #958eb6; font-size: 11px;'>Budget Analytics (2013-26)</span>
+        <h3 style='margin: 0; font-size: 20px; font-weight: 700;'>ORBIT</h3>
+        <span style='color: #958eb6; font-size: 11px;'>Operations Control (v1.0.8)</span>
     </div>
 </div>
 """, unsafe_allow_html=True)
 
-# Navigation Menu
-st.sidebar.subheader("Navigation")
+# Toggle for Demo Data simulation
+st.sidebar.subheader("Dashboard Mode")
+use_demo = st.sidebar.toggle(
+    "Simulate Operational Data", 
+    value=db_is_empty,
+    help="Fills dashboard charts with realistic simulated orders and performance data if your local SQLite database is currently empty."
+)
+
+st.sidebar.markdown("---")
+st.sidebar.subheader("Operations Menu")
 menu_selection = st.sidebar.radio(
-    label="Go to:",
+    label="Menu Select",
     options=[
-        "Overview Dashboard",
-        "Ministry Analyzer",
-        "Yearly Breakdown",
-        "Share Comparison",
-        "Data Table"
+        "Platform Overview",
+        "Client Bookings",
+        "Partner Network",
+        "Admin Audit Logs"
     ],
     index=0,
     label_visibility="collapsed"
 )
 
-st.sidebar.markdown("---")
-st.sidebar.markdown("""
-<div style='color: #958eb6; font-size: 11px; display: flex; align-items: center; gap: 6px;'>
-    <span>ℹ️ Data source: Union Budget of India official reports</span>
-</div>
-""", unsafe_allow_html=True)
+# Generate Demo/Simulated Data if needed
+def get_simulated_data():
+    np.random.seed(42)
+    now = datetime.now()
+    
+    # 1. Packages
+    pkgs = [
+        {"id": "pkg-personalized", "name": "Personalized Reel", "price": 1999, "focus": "Events / Individual shoots"},
+        {"id": "pkg-professional", "name": "Professional UGC Pack", "price": 4999, "focus": "Brand Ads / Creators"}
+    ]
+    df_pkgs = pd.DataFrame(pkgs)
+    
+    # 2. Users
+    user_names = ["Ananya Sharma", "Rahul Verma", "Karan Malhotra", "Sneha Rao", "Pooja Patel", "Amit Singh", "Vijay Iyer"]
+    users_data = []
+    for i, name in enumerate(user_names):
+        users_data.append({
+            "id": f"usr-{i}",
+            "email": f"{name.lower().replace(' ', '')}@gmail.com",
+            "name": name,
+            "phone": f"+91 98765 {43210 + i}",
+            "location": "Mumbai, India",
+            "role": "USER"
+        })
+    df_users = pd.DataFrame(users_data)
+    
+    # 3. Partners
+    partner_names = ["Rohan Roy", "Vikram Rathore", "Divya Pillai", "Arjun Kapoor"]
+    partners_data = []
+    # Mock coordinates in Mumbai
+    lats = [19.0760, 19.1278, 19.0330, 19.2183]
+    lngs = [72.8777, 72.8258, 72.8550, 72.9781]
+    
+    for i, name in enumerate(partner_names):
+        partners_data.append({
+            "id": f"ptn-{i}",
+            "name": name,
+            "location": "Mumbai, India",
+            "latitude": lats[i],
+            "longitude": lngs[i],
+            "availability": True if i < 3 else False,
+            "isVerified": True if i < 3 else False,
+            "rating": 4.5 + (i * 0.15),
+            "completedProjects": 12 + (i * 5),
+            "walletBalance": 15000.0 + (i * 3500.0),
+            "deviceInfo": "iPhone 15 Pro" if i%2==0 else "Sony FX30"
+        })
+    df_partners = pd.DataFrame(partners_data)
+    
+    # 4. Bookings
+    statuses = ["PENDING", "PAID", "EN_ROUTE", "SHOOTING", "SYNCING", "EDITING", "DELIVERED", "CANCELLED"]
+    status_probs = [0.05, 0.10, 0.05, 0.05, 0.05, 0.10, 0.55, 0.05]
+    
+    bookings_data = []
+    for i in range(120):
+        # random date in last 30 days
+        days_ago = np.random.randint(0, 30)
+        b_date = now - timedelta(days=days_ago)
+        
+        status = np.random.choice(statuses, p=status_probs)
+        pkg = np.random.choice(pkgs)
+        usr = np.random.choice(users_data)
+        ptn = np.random.choice(partners_data) if status != "PENDING" else None
+        
+        bookings_data.append({
+            "id": f"orb-{1000 + i}",
+            "userId": usr["id"],
+            "userName": usr["name"],
+            "packageId": pkg["id"],
+            "packageName": pkg["name"],
+            "packagePrice": pkg["price"],
+            "partnerId": ptn["id"] if ptn else None,
+            "partnerName": ptn["name"] if ptn else "Unassigned",
+            "status": status,
+            "paymentStatus": "SUCCESS" if status != "PENDING" else "UNPAID",
+            "bookingDate": b_date.strftime("%Y-%m-%d"),
+            "timeSlot": "12:00 PM",
+            "location": "Bandra, Mumbai",
+            "syncPercentage": 100 if status == "DELIVERED" else (np.random.randint(20, 95) if status == "SYNCING" else 0),
+            "deliveredAt": (b_date + timedelta(hours=3)).strftime("%Y-%m-%d %H:%M") if status == "DELIVERED" else None
+        })
+    df_bookings = pd.DataFrame(bookings_data)
+    
+    # 5. Audit Logs
+    actions = ["USER_LOGIN", "CREATE_BOOKING", "UPDATE_WALLET", "PARTNER_DISPATCHED", "SYNC_COMPLETE", "REEL_DELIVERED"]
+    logs_data = []
+    for i in range(50):
+        days_ago = np.random.randint(0, 5)
+        log_date = now - timedelta(days=days_ago)
+        usr = np.random.choice(users_data)
+        action = np.random.choice(actions)
+        
+        logs_data.append({
+            "id": f"log-{200 + i}",
+            "userId": usr["id"],
+            "userName": usr["name"],
+            "action": action,
+            "entity": "Booking" if "BOOKING" in action or "REEL" in action else "User",
+            "createdAt": log_date.strftime("%Y-%m-%d %H:%M:%S")
+        })
+    df_logs = pd.DataFrame(logs_data)
+    
+    return df_users, df_pkgs, df_partners, df_bookings, df_logs
 
-# Helper to format currency
-def format_cr(val):
-    return f"₹{val:,.2f} Cr" if val % 1 != 0 else f"₹{val:,.0f} Cr"
+# Apply Datasets based on toggle
+if use_demo:
+    df_users, df_pkgs, df_partners, df_bookings, df_logs = get_simulated_data()
+else:
+    # Use real SQLite data (if populated)
+    if sqlite_bookings is not None:
+        df_users = sqlite_users
+        df_pkgs = sqlite_packages
+        df_partners = sqlite_partners
+        df_bookings = sqlite_bookings
+        df_logs = sqlite_logs
+        
+        # Format names inside dataframe from DB links
+        df_bookings = df_bookings.merge(df_users[['id', 'name']], left_on='userId', right_on='id', suffixes=('', '_user'))
+        df_bookings.rename(columns={'name': 'userName'}, inplace=True)
+        df_bookings = df_bookings.merge(df_pkgs[['id', 'name', 'price']], left_on='packageId', right_on='id', suffixes=('', '_pkg'))
+        df_bookings.rename(columns={'name': 'packageName', 'price': 'packagePrice'}, inplace=True)
+        
+        if 'partnerId' in df_bookings.columns:
+            # merge partner name
+            df_partners_joined = df_partners.merge(df_users[['id', 'name']], left_on='userId', right_on='id')
+            df_bookings = df_bookings.merge(df_partners_joined[['id', 'name']], left_on='partnerId', right_on='id', how='left')
+            df_bookings.rename(columns={'name': 'partnerName'}, inplace=True)
+            df_bookings['partnerName'] = df_bookings['partnerName'].fillna('Unassigned')
+        else:
+            df_bookings['partnerName'] = 'Unassigned'
+            df_bookings['partnerId'] = None
+    else:
+        st.warning("Could not connect to database. Defaulting to Simulated Demo Data.")
+        df_users, df_pkgs, df_partners, df_bookings, df_logs = get_simulated_data()
+
+# Check layout totals
+total_bookings = len(df_bookings)
+delivered_bookings = len(df_bookings[df_bookings['status'] == "DELIVERED"])
+active_bookings = len(df_bookings[~df_bookings['status'].isin(["DELIVERED", "CANCELLED", "PENDING"])])
+total_revenue = df_bookings[df_bookings['status'] != "PENDING"]['packagePrice'].sum()
+
+# Display banner if using Demo Data
+if use_demo:
+    st.markdown("""
+    <div class="demo-banner">
+        ⚡ <strong>Simulation Mode Active:</strong> Displaying generated real-time platform data for preview purposes. Turn off in the sidebar to view raw SQLite data.
+    </div>
+    """, unsafe_allow_html=True)
 
 # ==========================================
-# 📊 OVERVIEW VIEW
+# 📊 PLATFORM OVERVIEW VIEW
 # ==========================================
-if menu_selection == "Overview Dashboard":
-    st.markdown("## Overview Dashboard")
-    st.markdown("<p style='color:#958eb6; margin-top:-15px; margin-bottom: 25px;'>Key fiscal statistics and trends of the last decade</p>", unsafe_allow_html=True)
+if menu_selection == "Platform Overview":
+    st.markdown("## Platform Operations Overview")
+    st.markdown("<p style='color:#958eb6; margin-top:-15px; margin-bottom: 25px;'>Key fiscal statistics, delivery KPIs, and active pipeline monitoring</p>", unsafe_allow_html=True)
     
-    # Calculate global overview stats
-    latest_year = years[-1]
-    prev_year = years[-2]
-    
-    # Outlays
-    latest_outlay = df_totals[df_totals['Year'] == latest_year]['TotalOutlay'].values[0]
-    prev_outlay = df_totals[df_totals['Year'] == prev_year]['TotalOutlay'].values[0]
-    outlay_yoy_growth = ((latest_outlay - prev_outlay) / prev_outlay * 100).round(2)
-    
-    # Average outlay
-    avg_outlay = df_totals['TotalOutlay'].mean().round(2)
-    
-    # Top ministry in latest year
-    df_latest = df[df['Year'] == latest_year]
-    top_row = df_latest.loc[df_latest['Outlay (₹ Cr)'].idxmax()]
-    top_name = top_row['MinistryName']
-    top_share = top_row['Share (%)']
-    
-    # CAGR calculation
-    first_year = years[0]
-    first_outlay = df_totals[df_totals['Year'] == first_year]['TotalOutlay'].values[0]
-    n_years = len(years)
-    cagr = (((latest_outlay / first_outlay) ** (1 / (n_years - 1))) - 1) * 100
-    
-    # Metrics Cards Grid
+    # KPI Grid
     col1, col2, col3, col4 = st.columns(4)
     with col1:
         st.markdown(f"""
-        <div class="stat-container blue">
-            <div class="stat-title">Latest Total Outlay ({latest_year})</div>
-            <div class="stat-value">{format_cr(latest_outlay)}</div>
-            <div class="stat-delta positive">📈 +{outlay_yoy_growth}% (YoY)</div>
+        <div class="stat-container cyan">
+            <div class="stat-title">Platform Revenue (Gross)</div>
+            <div class="stat-value">₹{total_revenue:,.2f}</div>
+            <div class="stat-delta">Paid & Delivered Bookings</div>
         </div>
         """, unsafe_allow_html=True)
     with col2:
         st.markdown(f"""
         <div class="stat-container purple">
-            <div class="stat-title">13-Year Average Outlay</div>
-            <div class="stat-value">{format_cr(avg_outlay)}</div>
-            <div class="stat-delta neutral">Combined Major Sectors</div>
+            <div class="stat-title">Total Orders Placed</div>
+            <div class="stat-value">{total_bookings}</div>
+            <div class="stat-delta">{delivered_bookings} Delivered successfully</div>
         </div>
         """, unsafe_allow_html=True)
     with col3:
         st.markdown(f"""
         <div class="stat-container green">
-            <div class="stat-title">Highest Funded Sector ({latest_year})</div>
-            <div class="stat-value" style="font-size:18px; margin-top: 10px; margin-bottom: 2px;">{top_name}</div>
-            <div class="stat-delta positive">⭐ {top_share}% share of outlay</div>
+            <div class="stat-title">Active Shoots / Edits</div>
+            <div class="stat-value">{active_bookings}</div>
+            <div class="stat-delta">Currently in the delivery pipeline</div>
         </div>
         """, unsafe_allow_html=True)
     with col4:
+        # Verified Partners count
+        verified_partners = len(df_partners[df_partners['isVerified'] == True]) if 'isVerified' in df_partners.columns else len(df_partners)
         st.markdown(f"""
         <div class="stat-container yellow">
-            <div class="stat-title">Overall CAGR</div>
-            <div class="stat-value">{cagr.round(2)}%</div>
-            <div class="stat-delta neutral">Growth Rate (2013 - 2026)</div>
+            <div class="stat-title">Active Partner Pool</div>
+            <div class="stat-value">{len(df_partners)}</div>
+            <div class="stat-delta">{verified_partners} KYC Verified videographers</div>
         </div>
         """, unsafe_allow_html=True)
         
-    # Chart Row
     st.markdown("<br>", unsafe_allow_html=True)
     left_col, right_col = st.columns([3, 2])
     
     with left_col:
         st.markdown("<div class='glass-card'>", unsafe_allow_html=True)
-        fig_line = px.line(
-            df_totals, 
-            x='Year', 
-            y='TotalOutlay', 
-            markers=True,
-            title="Total Outlay Trend (10 Ministries Aggregated)",
-            labels={'TotalOutlay': 'Outlay (₹ Crores)', 'Year': 'Fiscal Year'}
+        # Daily Booking Volumes Line Chart
+        df_bookings['Date'] = pd.to_datetime(df_bookings['bookingDate'])
+        df_daily = df_bookings.groupby('Date').size().reset_index(name='Volume')
+        df_daily = df_daily.sort_values('Date')
+        
+        fig_trend = px.line(
+            df_daily, x='Date', y='Volume', markers=True,
+            title="Daily Booking Volume Trend (30 Days)",
+            labels={'Volume': 'Shoots Booked', 'Date': 'Date'}
         )
-        fig_line.update_traces(
-            line_color='#8f7efc',
-            line_width=3,
-            marker=dict(size=8, color='#00d2d3', symbol='circle')
-        )
-        # Add area under line
-        fig_line.update_traces(fill='tozeroy', fillcolor='rgba(143, 126, 252, 0.05)')
-        st.plotly_chart(customize_plotly_chart(fig_line), use_container_width=True)
+        fig_trend.update_traces(line_color='#00F0FF', line_width=3, fill='tozeroy', fillcolor='rgba(0, 240, 255, 0.04)')
+        st.plotly_chart(customize_plotly_chart(fig_trend), use_container_width=True)
         st.markdown("</div>", unsafe_allow_html=True)
         
     with right_col:
         st.markdown("<div class='glass-card'>", unsafe_allow_html=True)
+        # Booking Status share Pie chart
+        df_status = df_bookings.groupby('status').size().reset_index(name='Count')
         fig_pie = px.pie(
-            df_latest, 
-            values='Outlay (₹ Cr)', 
-            names='MinistryName',
-            title=f"Budget Share ({latest_year})",
-            hole=0.4,
+            df_status, values='Count', names='status',
+            title="Reel Delivery Status Distribution",
+            hole=0.45,
             color_discrete_sequence=CHART_COLORS
         )
         st.plotly_chart(customize_plotly_chart(fig_pie), use_container_width=True)
         st.markdown("</div>", unsafe_allow_html=True)
 
 # ==========================================
-# 🏛️ MINISTRY ANALYZER VIEW
+# 🏛️ CLIENT BOOKINGS VIEW
 # ==========================================
-elif menu_selection == "Ministry Analyzer":
-    st.markdown("## Ministry Analyzer")
-    st.markdown("<p style='color:#958eb6; margin-top:-15px; margin-bottom: 25px;'>Drill down into allocation history and growth parameters of individual ministries</p>", unsafe_allow_html=True)
+elif menu_selection == "Client Bookings":
+    st.markdown("## Client Shoot Bookings")
+    st.markdown("<p style='color:#958eb6; margin-top:-15px; margin-bottom: 25px;'>Monitor live statuses, sync progress, and edit delivery timelines</p>", unsafe_allow_html=True)
     
-    # Ministry Selector Dropdown
-    selected_name = st.selectbox(
-        "Select Ministry to Analyze",
-        options=[m['name'] for m in ministries_list]
+    # Filter controls
+    f_col1, f_col2 = st.columns(2)
+    with f_col1:
+        status_filter = st.multiselect(
+            "Filter by Delivery Status",
+            options=df_bookings['status'].unique().tolist(),
+            default=df_bookings['status'].unique().tolist()
+        )
+    with f_col2:
+        pkg_filter = st.multiselect(
+            "Filter by Package Type",
+            options=df_bookings['packageName'].unique().tolist(),
+            default=df_bookings['packageName'].unique().tolist()
+        )
+        
+    df_filtered = df_bookings[
+        df_bookings['status'].isin(status_filter) &
+        df_bookings['packageName'].isin(pkg_filter)
+    ]
+    
+    st.markdown(f"<p style='color:#00F0FF; font-weight:600; font-size:13px;'>Showing {len(df_filtered)} bookings</p>", unsafe_allow_html=True)
+    
+    st.markdown("<div class='glass-card'>", unsafe_allow_html=True)
+    # Booking Table
+    df_display = df_filtered[[
+        'id', 'userName', 'packageName', 'packagePrice', 
+        'partnerName', 'status', 'bookingDate', 'syncPercentage'
+    ]].copy()
+    
+    df_display.rename(columns={
+        'id': 'Order ID',
+        'userName': 'Client Name',
+        'packageName': 'Package',
+        'packagePrice': 'Outlay (INR)',
+        'partnerName': 'Assigned Partner',
+        'status': 'Status',
+        'bookingDate': 'Date',
+        'syncPercentage': 'Upload Sync %'
+    }, inplace=True)
+    
+    st.dataframe(df_display, hide_index=True, use_container_width=True)
+    
+    # Export CSV
+    csv = df_display.to_csv(index=False).encode('utf-8')
+    st.download_button(
+        label="📥 Export Booking Grid as CSV",
+        data=csv,
+        file_name="orbit_bookings_report.csv",
+        mime="text/csv"
     )
+    st.markdown("</div>", unsafe_allow_html=True)
+
+# ==========================================
+# 🎥 PARTNER NETWORK VIEW
+# ==========================================
+elif menu_selection == "Partner Network":
+    st.markdown("## Partner Videographer Pool")
+    st.markdown("<p style='color:#958eb6; margin-top:-15px; margin-bottom: 25px;'>Track partner availability, ratings, and physical distribution</p>", unsafe_allow_html=True)
     
-    # Selected Ministry Data
-    df_m = df[df['MinistryName'] == selected_name].sort_values('Year')
-    first_val = df_m.iloc[0]['Outlay (₹ Cr)']
-    latest_val = df_m.iloc[-1]['Outlay (₹ Cr)']
-    
-    # Calculation Metrics
-    m_avg = df_m['Outlay (₹ Cr)'].mean().round(2)
-    
-    peak_row = df_m.loc[df_m['Outlay (₹ Cr)'].idxmax()]
-    peak_val = peak_row['Outlay (₹ Cr)']
-    peak_year = peak_row['Year']
-    
-    total_growth = ((latest_val - first_val) / first_val * 100).round(2)
-    m_avg_share = df_m['Share (%)'].mean().round(2)
-    
-    # Stats cards
-    col1, col2, col3, col4 = st.columns(4)
+    # Partner Stats Cards
+    col1, col2, col3 = st.columns(3)
     with col1:
         st.markdown(f"""
-        <div class="stat-container blue">
-            <div class="stat-title">Average Annual Outlay</div>
-            <div class="stat-value">{format_cr(m_avg)}</div>
-            <div class="stat-delta neutral">13-Year Period Mean</div>
+        <div class="stat-container cyan">
+            <div class="stat-title">Average Partner Rating</div>
+            <div class="stat-value">⭐ {df_partners['rating'].mean().round(2)} / 5.0</div>
+            <div class="stat-delta">Based on client feedback metrics</div>
         </div>
         """, unsafe_allow_html=True)
     with col2:
+        # Availability
+        online_partners = len(df_partners[df_partners['availability'] == True])
         st.markdown(f"""
         <div class="stat-container purple">
-            <div class="stat-title">Peak Outlay Year</div>
-            <div class="stat-value">{peak_year}</div>
-            <div class="stat-delta positive">⭐ Outlay of {format_cr(peak_val)}</div>
+            <div class="stat-title">Active / Online Partners</div>
+            <div class="stat-value">{online_partners} / {len(df_partners)}</div>
+            <div class="stat-delta">Ready to receive instant dispatches</div>
         </div>
         """, unsafe_allow_html=True)
     with col3:
         st.markdown(f"""
         <div class="stat-container green">
-            <div class="stat-title">Growth Since 2013-14</div>
-            <div class="stat-value">+{total_growth}%</div>
-            <div class="stat-delta positive">📈 Cumulative expansion</div>
-        </div>
-        """, unsafe_allow_html=True)
-    with col4:
-        st.markdown(f"""
-        <div class="stat-container yellow">
-            <div class="stat-title">Avg Share of Outlay</div>
-            <div class="stat-value">{m_avg_share}%</div>
-            <div class="stat-delta neutral">Relative to 10 ministries</div>
+            <div class="stat-title">Completed Partner Projects</div>
+            <div class="stat-value">{df_partners['completedProjects'].sum()} shoots</div>
+            <div class="stat-delta">Delivered cinematic reels</div>
         </div>
         """, unsafe_allow_html=True)
         
-    st.markdown("<br>", unsafe_allow_html=True)
     left_col, right_col = st.columns([3, 2])
     
     with left_col:
         st.markdown("<div class='glass-card'>", unsafe_allow_html=True)
-        fig_m_trend = px.line(
-            df_m,
-            x='Year',
-            y='Outlay (₹ Cr)',
-            markers=True,
-            title=f"Outlay Trend — {selected_name}",
-            labels={'Outlay (₹ Cr)': 'Outlay (₹ Crores)', 'Year': 'Fiscal Year'}
-        )
-        fig_m_trend.update_traces(
-            line_color='#00a8ff',
-            line_width=3,
-            marker=dict(size=8, color='#ff9f43')
-        )
-        fig_m_trend.update_traces(fill='tozeroy', fillcolor='rgba(0, 168, 255, 0.05)')
-        st.plotly_chart(customize_plotly_chart(fig_m_trend), use_container_width=True)
+        st.markdown("<h4>Videographer Geolocation Map</h4>", unsafe_allow_html=True)
+        st.markdown("<span style='color:#958eb6; font-size:11px;'>Real-time physical tracking of active partner locations in Mumbai</span><br/><br/>", unsafe_allow_html=True)
+        
+        # Plot map using partner lat/lng
+        df_map = df_partners[['latitude', 'longitude']].dropna()
+        if len(df_map) > 0:
+            st.map(df_map)
+        else:
+            st.info("No GPS coordinates recorded for online partners.")
         st.markdown("</div>", unsafe_allow_html=True)
         
     with right_col:
         st.markdown("<div class='glass-card'>", unsafe_allow_html=True)
-        # Average share donut
-        other_share = (100 - m_avg_share).round(2)
-        fig_m_share = go.Figure(data=[go.Pie(
-            labels=[selected_name, 'Other Ministries combined'],
-            values=[m_avg_share, other_share],
-            hole=0.45,
-            marker_colors=['#00d2d3', 'rgba(255,255,255,0.05)'],
-            textinfo='label+percent',
-            showlegend=False
-        )])
-        fig_m_share.update_layout(title="Average Budget Share Allocation")
-        st.plotly_chart(customize_plotly_chart(fig_m_share), use_container_width=True)
+        st.markdown("<h4>Performance Grid</h4>", unsafe_allow_html=True)
+        st.markdown("<br>", unsafe_allow_html=True)
+        
+        df_p_view = df_partners[['name', 'rating', 'completedProjects', 'walletBalance', 'deviceInfo']].copy()
+        df_p_view.rename(columns={
+            'name': 'Partner Name',
+            'rating': 'Rating',
+            'completedProjects': 'Projects',
+            'walletBalance': 'Wallet (INR)',
+            'deviceInfo': 'Camera Device'
+        }, inplace=True)
+        st.dataframe(df_p_view, hide_index=True, use_container_width=True)
         st.markdown("</div>", unsafe_allow_html=True)
 
 # ==========================================
-# 📅 YEARLY BREAKDOWN VIEW
+# ⚙️ ADMIN AUDIT LOGS VIEW
 # ==========================================
-elif menu_selection == "Yearly Breakdown":
-    st.markdown("## Yearly Breakdown")
-    st.markdown("<p style='color:#958eb6; margin-top:-15px; margin-bottom: 25px;'>Review funding shares and insights for a specific budget year</p>", unsafe_allow_html=True)
+elif menu_selection == "Admin Audit Logs":
+    st.markdown("## Platform Audit Trail")
+    st.markdown("<p style='color:#958eb6; margin-top:-15px; margin-bottom: 25px;'>Real-time tracking of platform state shifts and user actions</p>", unsafe_allow_html=True)
     
-    # Year selector
-    selected_year = st.selectbox(
-        "Select Fiscal Year",
-        options=years
-    )
+    # Audit search bar
+    log_search = st.text_input("🔍 Filter audit trail by client name or action type (e.g. USER_LOGIN)")
     
-    # Data for selected year
-    df_y = df[df['Year'] == selected_year].sort_values('Outlay (₹ Cr)', ascending=False)
-    
-    # Totals and expansion
-    y_total = df_totals[df_totals['Year'] == selected_year]['TotalOutlay'].values[0]
-    
-    idx = years.index(selected_year)
-    if idx > 0:
-        prev_yr = years[idx-1]
-        prev_total = df_totals[df_totals['Year'] == prev_yr]['TotalOutlay'].values[0]
-        yoy_growth = ((y_total - prev_total) / prev_total * 100).round(2)
-        yoy_text = f"+{yoy_growth}% YoY Expansion"
-    else:
-        yoy_text = "Base year of dataset"
-        
-    # Get top 3 allocations
-    top_3 = df_y.head(3)
-    
-    left_col, right_col = st.columns([3, 2])
-    
-    with left_col:
-        st.markdown("<div class='glass-card'>", unsafe_allow_html=True)
-        fig_donut_y = px.pie(
-            df_y,
-            values='Outlay (₹ Cr)',
-            names='MinistryName',
-            title=f"Outlay Share Distribution ({selected_year})",
-            hole=0.4,
-            color_discrete_sequence=CHART_COLORS
-        )
-        st.plotly_chart(customize_plotly_chart(fig_donut_y), use_container_width=True)
-        st.markdown("</div>", unsafe_allow_html=True)
-        
-    with right_col:
-        st.markdown("<div class='glass-card' style='height:100%;'>", unsafe_allow_html=True)
-        st.markdown("<h4>Yearly Budget Insights</h4>", unsafe_allow_html=True)
-        st.markdown(f"<p style='color:#958eb6; font-size:12px; margin-top:-10px;'>Statistics for {selected_year}</p>", unsafe_allow_html=True)
-        
-        st.markdown(f"""
-        <div style='margin-bottom: 24px; margin-top:20px;'>
-            <span style='font-size:11px; color:#958eb6; text-transform:uppercase; letter-spacing:1px;'>Total Consolidated Outlay</span>
-            <h2 style='margin:0; font-size:36px; color:#00a8ff !important;'>{format_cr(y_total)}</h2>
-        </div>
-        
-        <div style='margin-bottom: 28px;'>
-            <span style='font-size:11px; color:#958eb6; text-transform:uppercase; letter-spacing:1px;'>YoY Budget Expansion</span>
-            <h3 style='margin:0; font-size:24px; color:#00d2d3 !important;'>{yoy_text}</h3>
-        </div>
-        """, unsafe_allow_html=True)
-        
-        st.markdown("<h5 style='color:#ffffff; margin-bottom: 12px;'>Top 3 Budget Allocations</h5>", unsafe_allow_html=True)
-        
-        top_list_html = "<ol class='top-list'>"
-        for rank, (_, row) in enumerate(top_3.iterrows(), start=1):
-            top_list_html += f"""
-            <li>
-                <strong>{row['MinistryName']}</strong><br/>
-                <span style='color:#958eb6;'>Allocation:</span> {format_cr(row['Outlay (₹ Cr)'])} 
-                <span style='color:#8f7efc; margin-left: 6px;'>({row['Share (%)']}% share)</span>
-            </li>
-            """
-        top_list_html += "</ol>"
-        st.markdown(top_list_html, unsafe_allow_html=True)
-        st.markdown("</div>", unsafe_allow_html=True)
-
-# ==========================================
-# 🔄 SHARE COMPARISON VIEW
-# ==========================================
-elif menu_selection == "Share Comparison":
-    st.markdown("## Share Comparison")
-    st.markdown("<p style='color:#958eb6; margin-top:-15px; margin-bottom: 25px;'>Analyze distribution changes, absolute budget growth, and share shift between two years</p>", unsafe_allow_html=True)
-    
-    # Comparison selectboxes side-by-side
-    sel_col1, sel_col2 = st.columns(2)
-    with sel_col1:
-        year_a = st.selectbox("Base Year (A)", options=years, index=0)
-    with sel_col2:
-        year_b = st.selectbox("Target Year (B)", options=years, index=len(years)-1)
-        
-    df_a = df[df['Year'] == year_a]
-    df_b = df[df['Year'] == year_b]
-    
-    st.markdown("<br>", unsafe_allow_html=True)
-    # Side-by-side pie charts
-    chart_col1, chart_col2 = st.columns(2)
-    with chart_col1:
-        st.markdown("<div class='glass-card'>", unsafe_allow_html=True)
-        fig_a = px.pie(
-            df_a, values='Outlay (₹ Cr)', names='MinistryName',
-            title=f"Base Year ({year_a}) Distribution", hole=0.4,
-            color_discrete_sequence=CHART_COLORS
-        )
-        st.plotly_chart(customize_plotly_chart(fig_a), use_container_width=True)
-        st.markdown("</div>", unsafe_allow_html=True)
-    with chart_col2:
-        st.markdown("<div class='glass-card'>", unsafe_allow_html=True)
-        fig_b = px.pie(
-            df_b, values='Outlay (₹ Cr)', names='MinistryName',
-            title=f"Target Year ({year_b}) Distribution", hole=0.4,
-            color_discrete_sequence=CHART_COLORS
-        )
-        st.plotly_chart(customize_plotly_chart(fig_b), use_container_width=True)
-        st.markdown("</div>", unsafe_allow_html=True)
-        
-    st.markdown("<br>", unsafe_allow_html=True)
-    
-    # Grid shift analysis table
-    st.markdown("<div class='glass-card'>", unsafe_allow_html=True)
-    st.markdown("<h4>Ministry Share Shift & Absolute Growth Analysis</h4>", unsafe_allow_html=True)
-    st.markdown("<span style='color:#958eb6; font-size:12px;'>Detailing redistribution metrics and percentage growth from Base Year to Target Year</span>", unsafe_allow_html=True)
-    st.markdown("<br>", unsafe_allow_html=True)
-    
-    # Calculate grid data
-    compare_records = []
-    for m in ministries_list:
-        name = m['name']
-        
-        # Outlay A
-        row_a = df_a[df_a['MinistryName'] == name]
-        out_a = row_a['Outlay (₹ Cr)'].values[0] if len(row_a) > 0 else 0.0
-        share_a = row_a['Share (%)'].values[0] if len(row_a) > 0 else 0.0
-        
-        # Outlay B
-        row_b = df_b[df_b['MinistryName'] == name]
-        out_b = row_b['Outlay (₹ Cr)'].values[0] if len(row_b) > 0 else 0.0
-        share_b = row_b['Share (%)'].values[0] if len(row_b) > 0 else 0.0
-        
-        abs_growth = out_b - out_a
-        rel_growth = (abs_growth / out_a * 100) if out_a > 0 else 0.0
-        share_shift = share_b - share_a
-        
-        compare_records.append({
-            'Ministry': name,
-            f'Outlay in {year_a} (₹ Cr)': out_a,
-            f'Outlay in {year_b} (₹ Cr)': out_b,
-            'Absolute Growth (₹ Cr)': round(abs_growth, 2),
-            'Growth (%)': f"{rel_growth:+.2f}%" if rel_growth != 0 else "0.00%",
-            'Share Shift (%)': f"{share_shift:+.2f}%" if share_shift != 0 else "0.00%"
-        })
-        
-    df_compare = pd.DataFrame(compare_records)
-    st.dataframe(df_compare, hide_index=True, use_container_width=True)
-    st.markdown("</div>", unsafe_allow_html=True)
-
-# ==========================================
-# 📁 DATA TABLE VIEW
-# ==========================================
-elif menu_selection == "Data Table":
-    st.markdown("## Data Table")
-    st.markdown("<p style='color:#958eb6; margin-top:-15px; margin-bottom: 25px;'>Browse, search, and download the full historical budget metrics</p>", unsafe_allow_html=True)
-    
-    # Search input
-    search_query = st.text_input("🔍 Search database by Ministry Name or Fiscal Year", value="")
-    
-    # Copy dataset for filtering
-    df_view = df[['MinistryName', 'Year', 'Outlay (₹ Cr)', 'Share (%)']].copy()
-    df_view.rename(columns={'MinistryName': 'Ministry'}, inplace=True)
-    
-    if search_query:
-        # Case insensitive regex match on year and ministry
-        df_view = df_view[
-            df_view['Ministry'].str.contains(search_query, case=False, na=False) |
-            df_view['Year'].str.contains(search_query, case=False, na=False)
+    df_l_view = df_logs.copy()
+    if log_search:
+        df_l_view = df_l_view[
+            df_l_view['userName'].str.contains(log_search, case=False, na=False) |
+            df_l_view['action'].str.contains(log_search, case=False, na=False)
         ]
         
-    # Stats row counts
-    count = len(df_view)
-    st.markdown(f"<p style='color:#00d2d3; font-weight:600; font-size:13px; margin-top:-10px; margin-bottom:15px;'>Displaying {count} rows</p>", unsafe_allow_html=True)
-    
-    # Table card
     st.markdown("<div class='glass-card'>", unsafe_allow_html=True)
-    st.dataframe(df_view, hide_index=True, use_container_width=True)
+    df_l_display = df_l_view[['id', 'userName', 'action', 'entity', 'createdAt']].copy()
+    df_l_display.rename(columns={
+        'id': 'Log ID',
+        'userName': 'Triggered By',
+        'action': 'Action Type',
+        'entity': 'Target Entity',
+        'createdAt': 'Timestamp'
+    }, inplace=True)
     
-    # Download Button
-    csv = df_view.to_csv(index=False).encode('utf-8')
-    st.download_button(
-        label="📥 Export Filtered Data as CSV",
-        data=csv,
-        file_name="union_budget_filtered_data.csv",
-        mime="text/csv"
-    )
+    st.dataframe(df_l_display, hide_index=True, use_container_width=True)
     st.markdown("</div>", unsafe_allow_html=True)
