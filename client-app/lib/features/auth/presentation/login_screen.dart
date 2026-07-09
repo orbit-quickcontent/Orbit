@@ -73,7 +73,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF0D0D11), // Midnight Black
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 20.0),
@@ -161,7 +161,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 ElevatedButton(
                   onPressed: _isLoading ? null : _handleLogin,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF00F0FF), // Electric Cyan
+                    backgroundColor: Theme.of(context).primaryColor, // Theme Cyan
                     padding: const EdgeInsets.symmetric(vertical: 16),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
@@ -186,6 +186,45 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         ),
                 ),
 
+                const SizedBox(height: 32),
+                
+                // Developer Settings Toggle
+                GestureDetector(
+                  onTap: () {
+                    setState(() {
+                      _showUrlSettings = !_showUrlSettings;
+                    });
+                  },
+                  child: const Center(
+                    child: Text(
+                      'Developer Settings',
+                      style: TextStyle(
+                        color: Colors.grey,
+                        decoration: TextDecoration.underline,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ),
+                ),
+                if (_showUrlSettings) ...[
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    controller: _urlController,
+                    style: const TextStyle(color: Colors.white),
+                    decoration: _inputDecoration('Backend API URL', Icons.link),
+                    validator: (value) {
+                      if (value == null || value.isEmpty) return 'Enter URL';
+                      if (!value.startsWith('http')) return 'Must start with http/https';
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'e.g. https://your-railway-app.up.railway.app',
+                    style: TextStyle(color: Colors.grey, fontSize: 12),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
                 const SizedBox(height: 32),
               ],
             ),

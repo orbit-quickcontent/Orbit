@@ -25,6 +25,13 @@ class DioClient {
     _dio.interceptors.add(
       InterceptorsWrapper(
         onRequest: (options, handler) async {
+          // Dynamic base URL resolution
+          final prefs = await SharedPreferences.getInstance();
+          final customUrl = prefs.getString('custom_api_url');
+          if (customUrl != null && customUrl.isNotEmpty) {
+            options.baseUrl = customUrl;
+          }
+
           // Auth token injection
           final token = await _secureStorage.getToken();
           if (token != null && token.isNotEmpty) {
@@ -51,6 +58,13 @@ class DioClient {
 
   Dio get instance => _dio;
 
-  Future<void> updateBaseUrl(String newUrl) async {}
-  Future<String> getBaseUrl() async => defaultBaseUrl;
+  Future<void> updateBaseUrl(String newUrl) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('custom_api_url', newUrl);
+  }
+  
+  Future<String> getBaseUrl() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString('custom_api_url') ?? defaultBaseUrl;
+  }
 }

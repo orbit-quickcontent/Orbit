@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import '../storage/secure_storage_service.dart';
 import '../../features/auth/presentation/login_screen.dart';
 import '../../features/bookings/presentation/dashboard_home_screen.dart';
+import '../../features/bookings/presentation/main_layout_screen.dart';
 import '../../features/bookings/presentation/booking_flow_screen.dart';
 import '../../features/tracking/presentation/tracking_screen.dart';
 import '../../features/auth/presentation/profile_screen.dart';
@@ -33,7 +34,7 @@ class AppRouter {
       ),
       GoRoute(
         path: '/',
-        builder: (context, state) => const DashboardHomeScreen(),
+        builder: (context, state) => const MainLayoutScreen(),
       ),
       GoRoute(
         path: '/booking',

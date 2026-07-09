@@ -198,6 +198,45 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 ),
 
                 const SizedBox(height: 32),
+                
+                // Developer Settings Toggle
+                GestureDetector(
+                  onTap: () {
+                    setState(() {
+                      _showUrlSettings = !_showUrlSettings;
+                    });
+                  },
+                  child: const Center(
+                    child: Text(
+                      'Developer Settings',
+                      style: TextStyle(
+                        color: Colors.grey,
+                        decoration: TextDecoration.underline,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ),
+                ),
+                if (_showUrlSettings) ...[
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    controller: _urlController,
+                    style: const TextStyle(color: Colors.white),
+                    decoration: _inputDecoration('Backend API URL', Icons.link, partnerAccent),
+                    validator: (value) {
+                      if (value == null || value.isEmpty) return 'Enter URL';
+                      if (!value.startsWith('http')) return 'Must start with http/https';
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'e.g. https://your-railway-app.up.railway.app',
+                    style: TextStyle(color: Colors.grey, fontSize: 12),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+                const SizedBox(height: 32),
               ],
             ),
           ),
