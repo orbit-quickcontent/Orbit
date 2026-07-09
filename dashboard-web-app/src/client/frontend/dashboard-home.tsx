@@ -67,6 +67,7 @@ export function DashboardHome() {
   const activeBookingsList = bookings.filter(
     (b) => !["DELIVERED", "CANCELLED"].includes(b.status)
   );
+  const hasActiveBooking = !!currentBooking && !["DELIVERED", "CANCELLED"].includes(currentBooking.status);
   const completedBookings = completedBookingsList.length;
   const activeBookings = activeBookingsList.length;
 
