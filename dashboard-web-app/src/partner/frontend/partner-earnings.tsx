@@ -48,7 +48,7 @@ export function PartnerEarnings() {
   const { wallet, bankAccount } = user;
 
   const completedBookings = bookings.filter((b) => b.status === "DELIVERED");
-  const totalEarned = completedBookings.reduce((sum, b) => sum + b.packagePrice, 0);
+  const totalEarned = completedBookings.length * 700;
 
   const now = new Date();
   const currentMonth = now.getMonth();
@@ -59,19 +59,15 @@ export function PartnerEarnings() {
     .filter((b) => {
       const d = new Date(b.bookingDate);
       return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
-    })
-    .reduce((sum, b) => sum + b.packagePrice, 0);
+    }).length * 700;
 
   const weeklyEarnings = completedBookings
     .filter((b) => {
       const d = new Date(b.bookingDate);
       return getWeekNumber(d) === currentWeek && d.getFullYear() === currentYear;
-    })
-    .reduce((sum, b) => sum + b.packagePrice, 0);
+    }).length * 700;
 
-  const avgPerProject = completedBookings.length > 0
-    ? Math.round(totalEarned / completedBookings.length)
-    : 0;
+  const avgPerProject = completedBookings.length > 0 ? 700 : 0;
 
   const avgRating = reviews.length > 0
     ? (reviews.reduce((sum, r) => sum + r.partnerRating, 0) / reviews.length).toFixed(1)

@@ -118,10 +118,10 @@ export default function PartnerApp() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-background relative">
+    <div className="min-h-screen flex flex-col bg-background relative max-w-md mx-auto border-x border-white/[0.06] shadow-2xl">
       <PartnerNavbar />
-      <main className="flex-1 pb-20 px-3 sm:px-6 lg:px-8">
-        <div className="max-w-2xl mx-auto">
+      <main className="flex-1 pb-20 px-4">
+        <div className="w-full">
           <AnimatePresence mode="wait">
             {renderView()}
           </AnimatePresence>

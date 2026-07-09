@@ -67,7 +67,7 @@ export function PartnerBottomNav() {
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50">
       <div className="px-4 sm:px-6 pb-[env(safe-area-inset-bottom,8px)] pt-1">
-        <div className="orbit-nav-pill max-w-lg mx-auto">
+        <div className="orbit-nav-pill max-w-md mx-auto">
           <div className="flex items-center justify-around h-[52px] sm:h-[56px] relative">
             {NAV_ITEMS.map((navItem, idx) => {
               const isActive = getIsActive(navItem.view);

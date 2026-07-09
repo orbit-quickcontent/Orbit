@@ -401,14 +401,14 @@ export function ClientNavbar() {
                 </AnimatePresence>
               </div>
 
-              {/* Quick menu dropdown toggle (mobile) */}
+              {/* Quick menu dropdown toggle */}
               <button
                 onClick={() => {
                   setMenuOpen(!menuOpen);
                   setSearchOpen(false);
                   setNotifOpen(false);
                 }}
-                className="md:hidden w-10 h-10 rounded-full bg-white/[0.08] backdrop-blur-lg flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
+                className="w-10 h-10 rounded-full bg-white/[0.08] backdrop-blur-lg flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
               >
                 <ChevronDown
                   className={`w-4 h-4 transition-transform duration-200 ${

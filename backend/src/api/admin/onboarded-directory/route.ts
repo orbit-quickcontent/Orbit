@@ -58,10 +58,7 @@ export async function GET() {
           (b) => b.status !== "DELIVERED" && b.status !== "CANCELLED" && b.status !== "PENDING"
         );
 
-        const totalEarnings = completed.reduce((sum, b) => {
-          const pkg = packageMap.get(b.packageId);
-          return sum + (pkg?.price || 0);
-        }, 0);
+        const totalEarnings = completed.length * 700;
 
         return {
           id: p.id,

@@ -82,29 +82,15 @@ export function DashboardHome() {
       animate="show"
       className="space-y-4 sm:space-y-5"
     >
-      {/* ─── Premium Brand Typography Header ────────────────── */}
-      <motion.div variants={staggerItem} className="py-4 sm:py-6 select-none">
-        <h2 className="text-4xl sm:text-5xl font-extrabold tracking-tight text-white font-space leading-none">
-          Shoot
-        </h2>
-        <h2 className="text-4xl sm:text-5xl font-medium tracking-tight text-gradient-orbit editorial-italic leading-none mt-2">
-          In Progress.
-        </h2>
-        <p className="text-[8px] sm:text-[9.5px] text-white/20 font-bold uppercase tracking-[0.25em] mt-4">
-          Orbit v1.0.4 — Premium Access
-        </p>
-      </motion.div>
-
       {/* ─── Quick Actions (2x2 grid — compact) ──────────────── */}
-      <motion.div variants={staggerItem}>
+      <motion.div variants={staggerItem} className="pt-2">
         <div className="grid grid-cols-2 gap-3">
           {[
             {
-              icon: <span className="font-extrabold text-sm text-black">+</span>,
-              label: "BOOK NEW SHOOT",
-              desc: "INSTANT MATCHING",
-              bg: "bg-orbit-cyan",
-              iconBg: "w-8 h-8 rounded-full flex items-center justify-center bg-orbit-cyan",
+              icon: <CalendarCheck className="w-4 h-4 text-[#00BFFF]" />,
+              label: "Book Now",
+              desc: "Schedule a session",
+              iconBg: "w-8 h-8 rounded-full flex items-center justify-center bg-[#00BFFF]/10 border border-[#00BFFF]/20",
               onClick: () => {
                 if (packages.length > 0 && !selectedPackage) {
                   setSelectedPackage(packages[0]);
@@ -113,27 +99,24 @@ export function DashboardHome() {
               },
             },
             {
-              icon: <span className="font-extrabold text-[9px] text-white tracking-tighter">DNA</span>,
-              label: "TRACK ORDER",
-              desc: `${activeBookings} ACTIVE`,
-              bg: "bg-orbit-purple",
-              iconBg: "w-8 h-8 rounded-full flex items-center justify-center bg-orbit-purple",
+              icon: <Radar className="w-4 h-4 text-[#A020F0]" />,
+              label: "Track Order",
+              desc: hasActiveBooking ? `${compactStatus(currentBooking!.status)}` : "No active",
+              iconBg: "w-8 h-8 rounded-full flex items-center justify-center bg-[#A020F0]/10 border border-[#A020F0]/20",
               onClick: () => setCurrentView("tracking"),
             },
             {
-              icon: <Film className="w-4 h-4 text-white" />,
-              label: "RECENT PROJECTS",
-              desc: `${completedBookings} DELIVERED`,
-              bg: "bg-white/10",
-              iconBg: "w-8 h-8 rounded-full flex items-center justify-center bg-white/10 border border-white/5",
-              onClick: () => setActiveTab(activeTab === "done" ? null : "done"),
+              icon: <Package className="w-4 h-4 text-[#2D6A4F]" />,
+              label: "Packages",
+              desc: "View pricing",
+              iconBg: "w-8 h-8 rounded-full flex items-center justify-center bg-[#2D6A4F]/10 border border-[#2D6A4F]/20",
+              onClick: () => setCurrentView("packages"),
             },
             {
-              icon: <Star className="w-3.5 h-3.5 text-white fill-white" />,
-              label: "BRAND IDENTITY",
-              desc: "ASSETS & DNA",
-              bg: "bg-white/10",
-              iconBg: "w-8 h-8 rounded-full flex items-center justify-center bg-white/10 border border-white/5",
+              icon: <Sparkles className="w-4 h-4 text-[#FFB300]" />,
+              label: "Brand DNA",
+              desc: "Customize style",
+              iconBg: "w-8 h-8 rounded-full flex items-center justify-center bg-[#FFB300]/10 border border-[#FFB300]/20",
               onClick: () => {
                 const ugcPkg = packages.find((p) => p.tier === "PROFESSIONAL" || p.id === "pkg-professional");
                 if (ugcPkg) {
@@ -152,10 +135,10 @@ export function DashboardHome() {
               <div className={`${action.iconBg} mb-3.5 group-hover:scale-105 transition-transform duration-300`}>
                 {action.icon}
               </div>
-              <h3 className="text-[10px] sm:text-xs font-black text-white tracking-wider mb-0.5 font-space truncate">
+              <h3 className="text-sm font-extrabold text-white mb-0.5 truncate">
                 {action.label}
               </h3>
-              <p className="text-[9px] text-muted-foreground/60 font-bold uppercase tracking-wide truncate">
+              <p className="text-[10px] text-muted-foreground/60 font-semibold truncate">
                 {action.desc}
               </p>
             </button>
