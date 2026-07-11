@@ -73,3 +73,9 @@ build/
 **/build/
 .dart_tool/
 
+
+# wrangler files
+.wrangler
+.dev.vars*
+!.dev.vars.example
+!.env.example
