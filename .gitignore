@@ -60,3 +60,16 @@ partner-mobile-app/build/
 partner-mobile-app/.dart_tool/
 partner-mobile-app/.flutter-plugins
 partner-mobile-app/.flutter-plugins-dependencies
+
+# ── Custom App Builds ─────────────────────────────────────────
+Build_APKs/
+Build_Kotlin_APKs/
+
+# ── Native Android Builds ─────────────────────────────────────
+.gradle/
+.idea/
+local.properties
+build/
+**/build/
+.dart_tool/
+
