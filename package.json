@@ -1,0 +1,20 @@
+{
+  "name": "orbit-monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev:client": "yarn workspace @orbit/web-client dev",
+    "dev:editor": "yarn workspace @orbit/web-editor dev",
+    "dev:admin": "yarn workspace @orbit/web-admin dev",
+    "build:client": "yarn workspace @orbit/web-client build",
+    "build:editor": "yarn workspace @orbit/web-editor build",
+    "build:admin": "yarn workspace @orbit/web-admin build"
+  },
+  "dependencies": {
+    "typescript": "^5.3.3"
+  }
+}

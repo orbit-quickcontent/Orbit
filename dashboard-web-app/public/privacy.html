@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Privacy Policy | Orbit Marketplace</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Space+Grotesk:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #000000;
+            --card-bg: #0a0a0c;
+            --text-primary: #ffffff;
+            --text-secondary: #a1a1aa;
+            --orbit-cyan: #00f0ff;
+            --orbit-purple: #ab34fa;
+            --border-color: #1e1e24;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            font-family: 'Outfit', sans-serif;
+            line-height: 1.6;
+            padding: 2rem 1rem;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 24px;
+            padding: 3rem 2rem;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.8), 0 0 80px rgba(171, 52, 250, 0.05);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .container::before {
+            content: '';
+            position: absolute;
+            top: -150px;
+            left: -150px;
+            width: 300px;
+            height: 300px;
+            background: radial-gradient(circle, rgba(0, 240, 255, 0.15) 0%, rgba(0,0,0,0) 70%);
+            pointer-events: none;
+        }
+
+        .container::after {
+            content: '';
+            position: absolute;
+            bottom: -150px;
+            right: -150px;
+            width: 300px;
+            height: 300px;
+            background: radial-gradient(circle, rgba(171, 52, 250, 0.15) 0%, rgba(0,0,0,0) 70%);
+            pointer-events: none;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 3rem;
+        }
+
+        h1 {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 2.5rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--orbit-cyan) 0%, var(--orbit-purple) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 0.5rem;
+        }
+
+        .last-updated {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            font-weight: 300;
+        }
+
+        section {
+            margin-bottom: 2.5rem;
+        }
+
+        h2 {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 1.5rem;
+            color: var(--orbit-cyan);
+            margin-bottom: 1rem;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 0.5rem;
+        }
+
+        p {
+            color: var(--text-secondary);
+            margin-bottom: 1rem;
+            font-weight: 300;
+            font-size: 1.05rem;
+        }
+
+        ul {
+            list-style: none;
+            margin-bottom: 1rem;
+            padding-left: 0.5rem;
+        }
+
+        li {
+            color: var(--text-secondary);
+            margin-bottom: 0.5rem;
+            position: relative;
+            padding-left: 1.5rem;
+            font-weight: 300;
+        }
+
+        li::before {
+            content: '→';
+            position: absolute;
+            left: 0;
+            color: var(--orbit-purple);
+            font-weight: bold;
+        }
+
+        footer {
+            text-align: center;
+            margin-top: 4rem;
+            padding-top: 2rem;
+            border-top: 1px solid var(--border-color);
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+        }
+
+        a {
+            color: var(--orbit-cyan);
+            text-decoration: none;
+            transition: color 0.3s;
+        }
+
+        a:hover {
+            color: var(--orbit-purple);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Privacy Policy</h1>
+            <p class="last-updated">Last Updated: July 11, 2026</p>
+        </header>
+
+        <section>
+            <h2>1. Information We Collect</h2>
+            <p>Orbit collects information to provide a reliable, efficient on-demand media editing and delivery platform. We collect:</p>
+            <ul>
+                <li><strong>Personal Identifiers:</strong> Name, phone number, email address, and profile configurations.</li>
+                <li><strong>Geolocational Data:</strong> Precise GPS coordinates (when using the delivery partner application in foreground or background) to matches shoots and assign local tasks.</li>
+                <li><strong>Payment and Bank Details:</strong> Connection keys, bank account numbers, IFSC codes, and transaction histories for automated payouts.</li>
+            </ul>
+        </section>
+
+        <section>
+            <h2>2. How We Use Information</h2>
+            <p>Your information is utilized solely to facilitate marketplace operations:</p>
+            <ul>
+                <li>Matching Clients with nearby Delivery Partners for local shoot setups.</li>
+                <li>Processing project workflows (raw media downloads, cloud rendering, final delivery).</li>
+                <li>Executing bank account penny drop validation checks and routing automated payouts.</li>
+                <li>Notifying users via push alerts regarding task assignments, completions, and chat events.</li>
+            </ul>
+        </section>
+
+        <section>
+            <h2>3. Information Sharing and Disclosure</h2>
+            <p>Orbit does not sell your personal data. Information is shared strictly with payment processing integrations (Cashfree), cloud storage backends (Firebase Storage), and authorized in-house media editors assigned to your custom projects.</p>
+        </section>
+
+        <section>
+            <h2>4. Security</h2>
+            <p>We employ high-grade AES encryption, SSL transport channels, and strict server firewalls to protect database states and connected partner details.</p>
+        </section>
+
+        <section>
+            <h2>5. Contact Us</h2>
+            <p>For privacy queries, please write to us at <a href="mailto:privacy@orbitlogic.io">privacy@orbitlogic.io</a>.</p>
+        </section>
+
+        <footer>
+            &copy; 2026 Orbit Technologies Inc. All rights reserved.
+        </footer>
+    </div>
+</body>
+</html>

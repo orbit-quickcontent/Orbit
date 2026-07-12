@@ -167,32 +167,51 @@ export default function BookingStudio({ params }) {
       });
   };
 
+  const handleDownloadFile = async (fileUrl) => {
+    try {
+      const res = await fetch(`http://localhost:5000/api/media/presign?fileId=${encodeURIComponent(fileUrl)}`);
+      const data = await res.json();
+      if (data.presignedUrl) {
+        const link = document.createElement("a");
+        link.href = data.presignedUrl;
+        link.download = fileUrl.split("/").pop() || "download";
+        link.target = "_blank";
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      } else {
+        alert("Failed to get download link");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Error generating download link");
+    }
+  };
+
   const handleDeliver = async () => {
     if (!reelUrl || isDelivering) return;
     setIsDelivering(true);
 
     try {
-      const res = await fetch("http://localhost:5000/api/editor/deliver", {
+      const res = await fetch(`http://localhost:5000/api/bookings/${bookingId}/complete`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          bookingId: booking.id,
-          reelUrl: reelUrl,
-          editorId: localStorage.getItem("orbit_editor_id") || "editor_1",
+          finalMediaUrl: reelUrl
         }),
       });
       const data = await res.json();
-      if (data.success) {
-        setBooking((prev) => ({ ...prev, status: "DELIVERED", reelUrl }));
-        alert("✅ Video delivered to client successfully!");
+      if (res.ok || data.success) {
+        setBooking((prev) => ({ ...prev, status: "COMPLETED", masterReelUrl: reelUrl }));
+        alert("✅ Video completed and payout triggered successfully!");
         router.push("/dashboard");
       } else {
-        alert("Delivery failed: " + (data.error || "Unknown error"));
+        alert("Completion failed: " + (data.detail || data.error || "Unknown error"));
         setIsDelivering(false);
       }
     } catch (err) {
       console.error(err);
-      alert("Network error delivering reel. Please try again.");
+      alert("Network error completing booking. Please try again.");
       setIsDelivering(false);
     }
   };
@@ -359,11 +378,8 @@ export default function BookingStudio({ params }) {
                               , React.createElement('p', { className: "text-[10px] text-gray-500" , __self: this, __source: {fileName: _jsxFileName, lineNumber: 359}}, "Low-Resolution Fast Draft"  )
                             )
                           )
-                          , React.createElement('a', {
-                            href: url.startsWith("http") ? url : `http://localhost:5000${url}`,
-                            download: true,
-                            target: "_blank",
-                            rel: "noopener noreferrer" ,
+                          , React.createElement('button', {
+                            onClick: () => handleDownloadFile(url),
                             className: "p-2 bg-gray-900 border border-orbit-cyan/30 hover:bg-orbit-cyan/10 rounded-lg transition-colors text-orbit-cyan flex items-center space-x-1 text-xs font-semibold"            , __self: this, __source: {fileName: _jsxFileName, lineNumber: 362}}
 
                             , React.createElement(Download, { size: 12, __self: this, __source: {fileName: _jsxFileName, lineNumber: 369}} )
@@ -395,11 +411,8 @@ export default function BookingStudio({ params }) {
                               , React.createElement('p', { className: "text-[10px] text-gray-500" , __self: this, __source: {fileName: _jsxFileName, lineNumber: 395}}, "Pristine original resolution"  )
                             )
                           )
-                          , React.createElement('a', {
-                            href: url.startsWith("http") ? url : `http://localhost:5000${url}`,
-                            download: true,
-                            target: "_blank",
-                            rel: "noopener noreferrer" ,
+                          , React.createElement('button', {
+                            onClick: () => handleDownloadFile(url),
                             className: "p-2 bg-gray-900 border border-orbit-purple/30 hover:bg-orbit-purple/10 rounded-lg transition-colors text-orbit-purple flex items-center space-x-1 text-xs font-semibold"            , __self: this, __source: {fileName: _jsxFileName, lineNumber: 398}}
 
                             , React.createElement(Download, { size: 12, __self: this, __source: {fileName: _jsxFileName, lineNumber: 405}} )

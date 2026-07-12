@@ -14,7 +14,42 @@ from typing import List, Optional, Any
 
 # Import firestoreDb
 from services.firestore_client import firestoreDb
-from services.websocket_server import start_ws_server
+from services.cashfree_client import execute_payout, validate_bank_account
+
+import firebase_admin
+from firebase_admin import credentials, auth
+
+# Initialize Firebase Admin SDK
+try:
+    project_id = os.getenv("FIREBASE_PROJECT_ID")
+    client_email = os.getenv("FIREBASE_CLIENT_EMAIL")
+    private_key = os.getenv("FIREBASE_PRIVATE_KEY")
+    
+    if project_id and client_email and private_key:
+        formatted_key = private_key.replace("\\n", "\n")
+        cred = credentials.Certificate({
+            "type": "service_account",
+            "project_id": project_id,
+            "private_key": formatted_key,
+            "client_email": client_email,
+            "token_url": "https://oauth2.googleapis.com/token"
+        })
+        firebase_admin.initialize_app(cred)
+        print("[Firebase] Firebase Admin SDK initialized via env variables")
+    else:
+        cred_path = os.getenv("GOOGLE_APPLICATION_CREDENTIALS", "firebase-key.json")
+        if os.path.exists(cred_path):
+            cred = credentials.Certificate(cred_path)
+            firebase_admin.initialize_app(cred)
+            print(f"[Firebase] Firebase Admin SDK initialized from file: {cred_path}")
+        else:
+            firebase_admin.initialize_app()
+            print("[Firebase] Firebase Admin SDK initialized with default app credentials")
+except Exception as e:
+    print(f"[Firebase-Err] Failed to initialize Firebase Admin SDK: {e}")
+
+from apscheduler.schedulers.background import BackgroundScheduler
+scheduler = BackgroundScheduler()
 
 app = FastAPI()
 
@@ -69,20 +104,177 @@ def validate_presigned_token(url_path: str, token: Optional[str], expires_str: O
 # --- WS Internal Calls ---
 import urllib.request
 
+WS_HOST = os.getenv("WS_HOST", "websocket-node:3003")
+
 def notify_ws_internal(path: str, body: dict):
-    url = f"http://localhost:3003{path}"
+    url = f"http://{WS_HOST}{path}"
+    data_bytes = json.dumps(body).encode('utf-8')
     try:
-        data_bytes = json.dumps(body).encode('utf-8')
         req = urllib.request.Request(
             url,
             data=data_bytes,
             headers={'Content-Type': 'application/json'},
             method='POST'
         )
-        with urllib.request.urlopen(req) as res:
+        with urllib.request.urlopen(req, timeout=5) as res:
             pass
     except Exception as e:
-        print(f"[WS-Notify-Err] Failed to notify websocket: {e}")
+        fallback_url = f"http://localhost:3003{path}"
+        try:
+            req = urllib.request.Request(
+                fallback_url,
+                data=data_bytes,
+                headers={'Content-Type': 'application/json'},
+                method='POST'
+            )
+            with urllib.request.urlopen(req, timeout=3) as res:
+                pass
+        except Exception as fe:
+            print(f"[WS-Notify-Err] Failed to notify websocket (host & fallback): {fe}")
+
+# --- Global Firebase Admin Authentication Middleware ---
+
+@app.middleware("http")
+async def firebase_auth_middleware(request: Request, call_next):
+    path = request.url.path
+    if (
+        path in ["/api/auth/send-otp", "/api/auth/verify-otp", "/api", "/docs", "/openapi.json"]
+        or path.startswith("/upload/")
+        or request.method == "OPTIONS"
+    ):
+        return await call_next(request)
+        
+    auth_header = request.headers.get("Authorization")
+    if not auth_header or not auth_header.startswith("Bearer "):
+        return JSONResponse(
+            status_code=401,
+            content={"detail": "Missing or invalid Authorization: Bearer token header"}
+        )
+        
+    token = auth_header.split(" ")[1]
+    try:
+        decoded_token = auth.verify_id_token(token)
+        request.state.user = decoded_token
+    except Exception as e:
+        return JSONResponse(
+            status_code=401,
+            content={"detail": f"Unauthorized: {e}"}
+        )
+        
+    return await call_next(request)
+
+# --- Cashfree Payout & Retry Logic ---
+
+def execute_payout_for_booking(booking_id: str):
+    b = firestoreDb.bookings.find_unique(where={"id": booking_id})
+    if not b:
+        print(f"[Payout-Err] Booking {booking_id} not found")
+        return
+        
+    existing = firestoreDb.payoutRetries.find_unique(where={"id": booking_id})
+    if existing and existing.get("status") in ["SUCCESS", "PROCESSING"]:
+        return
+
+    worker_id = b.get("partnerId") or b.get("editorId")
+    if not worker_id:
+        print(f"[Payout-Err] No assigned worker for booking {booking_id}")
+        return
+
+    profile = firestoreDb.partners.find_unique(where={"id": worker_id})
+    role = "PARTNER"
+    if not profile:
+        profile = firestoreDb.editors.find_unique(where={"id": worker_id})
+        role = "EDITOR"
+        
+    if not profile or not profile.get("encryptedAccountNumber") or not profile.get("ifscCode"):
+        print(f"[Payout-Err] Bank details not linked/incomplete for worker {worker_id}")
+        return
+
+    acc_holder = profile.get("accountHolderName") or profile.get("name") or "Worker"
+    acc_num = profile.get("encryptedAccountNumber")
+    ifsc = profile.get("ifscCode")
+    phone = profile.get("phone") or "+91 99999 99999"
+    email = profile.get("email") or "worker@orbit.io"
+    
+    amount = 1000.0 if b.get("type") in ["editing", "media"] else 700.0
+    idempotency_key = f"payout_{booking_id}_{int(time.time() * 1000)}"
+    if existing:
+        idempotency_key = existing.get("idempotencyKey")
+        
+    retry_doc = {
+        "bookingId": booking_id,
+        "amount": amount,
+        "beneficiaryBankAccount": acc_num,
+        "beneficiaryIFSC": ifsc,
+        "status": "PROCESSING",
+        "retryCount": existing.get("retryCount", 0) if existing else 0,
+        "nextRetryAt": datetime.utcnow().isoformat() + "Z",
+        "idempotencyKey": idempotency_key
+    }
+    
+    if existing:
+        firestoreDb.payoutRetries.update(where={"id": booking_id}, data=retry_doc)
+    else:
+        firestoreDb.payoutRetries.create({**retry_doc, "id": booking_id})
+
+    print(f"[Cashfree-Payout] Triggering payout of ₹{amount} to {acc_holder} for {booking_id}...")
+    res = execute_payout(
+        transfer_id=idempotency_key,
+        amount=amount,
+        account_number=acc_num,
+        ifsc=ifsc,
+        name=acc_holder,
+        phone=phone.replace("+91", "").strip(),
+        email=email
+    )
+
+    if res.get("success"):
+        print(f"[Cashfree-Payout-Success] Transfer succeeded for {booking_id}. Reference: {res.get('referenceId')}")
+        firestoreDb.payoutRetries.update(where={"id": booking_id}, data={
+            "status": "SUCCESS",
+            "errorMessage": None
+        })
+        if role == "PARTNER":
+            firestoreDb.transactions.create({
+                "partnerId": worker_id,
+                "bookingId": booking_id,
+                "type": "EARNING",
+                "amount": amount,
+                "status": "COMPLETED",
+                "description": f"Cashfree payout for booking {booking_id[:8]}..."
+            })
+    else:
+        err_msg = res.get("message") or "Unknown Cashfree error"
+        print(f"[Cashfree-Payout-Failed] Booking {booking_id}: {err_msg}")
+        
+        retry_count = existing.get("retryCount", 0) if existing else 0
+        retry_count += 1
+        
+        backoffs = [300, 900, 3600, 21600]
+        backoff = backoffs[min(retry_count - 1, len(backoffs) - 1)]
+        next_time = time.time() + backoff
+        next_retry_str = datetime.utcfromtimestamp(next_time).isoformat() + "Z"
+        
+        firestoreDb.payoutRetries.update(where={"id": booking_id}, data={
+            "status": "FAILED",
+            "retryCount": retry_count,
+            "nextRetryAt": next_retry_str,
+            "errorMessage": err_msg
+        })
+
+def check_and_retry_payouts():
+    try:
+        failed = firestoreDb.payoutRetries.find_many(where={"status": "FAILED"})
+        pending = firestoreDb.payoutRetries.find_many(where={"status": "PENDING"})
+        all_retries = failed + pending
+        
+        now_str = datetime.utcnow().isoformat() + "Z"
+        for r in all_retries:
+            next_retry = r.get("nextRetryAt")
+            if not next_retry or next_retry <= now_str:
+                execute_payout_for_booking(r["bookingId"])
+    except Exception as e:
+        print(f"[Payout-Scheduler-Err] Job check failed: {e}")
 
 # --- Pydantic Request Models ---
 
@@ -112,6 +304,7 @@ class CreateBookingBody(BaseModel):
     location: Optional[str] = None
     notes: Optional[str] = None
     razorpayPaymentId: Optional[str] = None
+    type: Optional[str] = "delivery"
 
 class AcceptBookingBody(BaseModel):
     partnerId: str
@@ -447,6 +640,7 @@ async def create_booking(body: CreateBookingBody):
     booking_id = "bok-" + str(uuid.uuid4())[:8]
     
     # CRITICAL CHANGE: Start booking at PENDING status instead of PAID directly
+    is_editing = body.type in ["editing", "media"]
     booking = firestoreDb.bookings.create({
         "id": booking_id,
         "userId": body.userId,
@@ -455,19 +649,21 @@ async def create_booking(body: CreateBookingBody):
         "timeSlot": body.timeSlot,
         "location": body.location,
         "notes": body.notes,
-        "status": "PENDING",
+        "status": "READY_TO_EDIT" if is_editing else "PENDING",
         "paymentStatus": "SUCCESS" if body.razorpayPaymentId else "UNPAID",
         "paymentId": body.razorpayPaymentId,
         "paymentMethod": "razorpay" if body.razorpayPaymentId else None,
-        "syncPercentage": 0
+        "syncPercentage": 100 if is_editing else 0,
+        "type": body.type or "delivery"
     })
 
-    # Trigger automatic dispatch immediately
-    try:
-        # Call dispatch route logic directly (inline)
-        dispatch_booking_logic(booking_id)
-    except Exception as e:
-        print(f"[Dispatch-Err] Failed to auto-dispatch: {e}")
+    # Trigger automatic dispatch immediately only if delivery (shoot) task
+    if not is_editing:
+        try:
+            # Call dispatch route logic directly (inline)
+            dispatch_booking_logic(booking_id)
+        except Exception as e:
+            print(f"[Dispatch-Err] Failed to auto-dispatch: {e}")
 
     # Re-fetch booking with resolved relationships
     return {"booking": {
@@ -637,14 +833,33 @@ async def dispatch_booking(booking_id: str):
 async def accept_booking(booking_id: str, body: AcceptBookingBody):
     partner_id = body.partnerId
     
-    # Verify partner bank details
+    # Verify partner bank details via Cashfree (Penny Drop check)
     partner = firestoreDb.partners.find_unique(where={"id": partner_id})
     if not partner:
         raise HTTPException(status_code=404, detail="Partner profile not found")
-    if partner.get("verificationStatus") != "VERIFIED":
+        
+    acc_num = partner.get("encryptedAccountNumber")
+    ifsc = partner.get("ifscCode")
+    holder = partner.get("accountHolderName") or partner.get("name") or "Partner"
+    phone = partner.get("phone") or "+91 99999 99999"
+    
+    if not acc_num or not ifsc:
         raise HTTPException(
             status_code=403,
-            detail="Accepting bookings requires a connected and verified bank account. Link your bank details in Profile settings."
+            detail="Please verify your bank account details in settings before accepting tasks."
+        )
+        
+    val_res = validate_bank_account(
+        account_number=acc_num,
+        ifsc=ifsc,
+        name=holder,
+        phone=phone.replace("+91", "").strip()
+    )
+    
+    if not val_res.get("success") or val_res.get("accountStatus") != "VALID":
+        raise HTTPException(
+            status_code=403,
+            detail="Please verify your bank account details in settings before accepting tasks."
         )
 
     booking = firestoreDb.bookings.find_unique(where={"id": booking_id})
@@ -888,10 +1103,42 @@ async def get_editor_booking_details(booking_id: str):
 
 @app.post("/api/editor/bookings/{booking_id}")
 async def accept_editor_booking(booking_id: str, body: AcceptEditorBookingBody):
-    # Set editorId and change status to EDITING as per flow
     b = firestoreDb.bookings.find_unique(where={"id": booking_id})
     if not b:
         raise HTTPException(status_code=404, detail="Booking not found")
+
+    # Load editor profile & perform Cashfree Penny Drop validation
+    editor_id = body.editorId
+    editor = firestoreDb.editors.find_unique(where={"id": editor_id})
+    if not editor:
+        raise HTTPException(
+            status_code=403,
+            detail="Please verify your bank account details in settings before accepting tasks."
+        )
+
+    acc_num = editor.get("encryptedAccountNumber")
+    ifsc = editor.get("ifscCode")
+    holder = editor.get("accountHolderName") or editor.get("name") or "Editor"
+    phone = editor.get("phone") or "+91 99999 99999"
+
+    if not acc_num or not ifsc:
+        raise HTTPException(
+            status_code=403,
+            detail="Please verify your bank account details in settings before accepting tasks."
+        )
+
+    val_res = validate_bank_account(
+        account_number=acc_num,
+        ifsc=ifsc,
+        name=holder,
+        phone=phone.replace("+91", "").strip()
+    )
+
+    if not val_res.get("success") or val_res.get("accountStatus") != "VALID":
+        raise HTTPException(
+            status_code=403,
+            detail="Please verify your bank account details in settings before accepting tasks."
+        )
 
     updated = firestoreDb.bookings.update(
         where={"id": booking_id},
@@ -1103,6 +1350,24 @@ async def get_upload_presigned_url(body: PresignedUrlBody):
         "signedGetUrl": f"http://localhost:5000{signed}"
     }
 
+@app.get("/api/media/presign")
+async def get_media_presigned_url(fileId: str):
+    # If the fileId is already a full local/absolute URL path (e.g. starting with /upload/)
+    url_path = fileId
+    if fileId.startswith("http"):
+        # Extract path
+        try:
+            from urllib.parse import urlparse
+            url_path = urlparse(fileId).path
+        except:
+            pass
+            
+    signed = generate_presigned_url(url_path)
+    # Check if host is from request or localhost
+    return {
+        "presignedUrl": f"http://localhost:5000{signed}"
+    }
+
 @app.put("/api/upload/mock-s3")
 async def mock_s3_upload(request: Request, key: str = Query(...)):
     body_data = await request.body()
@@ -1198,16 +1463,64 @@ async def get_audit_logs():
     return {"auditLogs": all_logs}
 
 
+class CompleteBookingBody(BaseModel):
+    finalMediaUrl: str
+
+@app.post("/api/bookings/{booking_id}/complete")
+async def complete_booking(booking_id: str, body: CompleteBookingBody):
+    b = firestoreDb.bookings.find_unique(where={"id": booking_id})
+    if not b:
+        raise HTTPException(status_code=404, detail="Booking not found")
+
+    updated = firestoreDb.bookings.update(
+        where={"id": booking_id},
+        data={
+            "status": "COMPLETED",
+            "masterReelUrl": body.finalMediaUrl,
+            "completedAt": datetime.utcnow().isoformat() + "Z"
+        }
+    )
+
+    try:
+        execute_payout_for_booking(booking_id)
+    except Exception as e:
+        print(f"[Payout-Trigger-Err] Failed: {e}")
+
+    notify_ws_internal("/internal/notify-client", {
+        "bookingId": booking_id,
+        "event": "booking:status-update",
+        "payload": {
+            "bookingId": booking_id,
+            "status": "COMPLETED",
+            "previousStatus": b.get("status"),
+            "reelUrl": generate_presigned_url(body.finalMediaUrl)
+        }
+    })
+
+    return {"success": True, "booking": updated}
+
+@app.post("/api/admin/payouts/retry/{booking_id}")
+async def force_retry_payout(booking_id: str):
+    try:
+        execute_payout_for_booking(booking_id)
+        return {"success": True, "message": "Payout execution attempted"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 # Mount the normal upload directory static files on /upload path as fallback
 app.mount("/upload", StaticFiles(directory=PUBLIC_UPLOAD_DIR), name="upload")
 
 def start_server():
     print("[Server] Starting FastAPI production REST API server on port 5000...")
-    # Start WS server in a separate background thread/process
-    import threading
-    t = threading.Thread(target=start_ws_server, daemon=True)
-    t.start()
     
+    # Start Payout retry scheduler background job
+    try:
+        scheduler.add_job(check_and_retry_payouts, "interval", minutes=5, id="payout_retry_job")
+        scheduler.start()
+        print("[Scheduler] Payout retry scheduler started successfully (runs every 5m)")
+    except Exception as e:
+        print(f"[Scheduler-Err] Failed to start: {e}")
+        
     # Start FastAPI
     uvicorn.run(app, host="0.0.0.0", port=5000)
 

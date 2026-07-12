@@ -311,6 +311,8 @@ class FirestoreDB:
         self.clientUsers = FirestoreCollection("client_users")
         self.partnerUsers = FirestoreCollection("partner_users")
         self.partners = FirestoreCollection("partner_profiles")
+        self.editors = FirestoreCollection("editor_profiles")
+        self.payoutRetries = FirestoreCollection("payout_retries")
         self.bookings = FirestoreCollection("bookings")
         self.packages = FirestoreCollection("packages")
         self.workDispatches = FirestoreCollection("work_dispatches")

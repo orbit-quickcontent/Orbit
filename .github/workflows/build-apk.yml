@@ -1,0 +1,111 @@
+name: Build Release APKs
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  build-client:
+    name: Build Client APK
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Restructure Monorepo Layout
+        run: |
+          mkdir -p apps packages
+          if [ -d "client_app" ]; then
+            echo "Moving client_app to apps/mobile-client"
+            mv client_app apps/mobile-client
+          fi
+          if [ -d "dashboard-web-app" ]; then
+            echo "Moving dashboard-web-app to apps/web-client"
+            mv dashboard-web-app apps/web-client
+          fi
+          if [ -d "backend" ]; then
+            echo "Moving backend to apps/backend-api"
+            mv backend apps/backend-api
+          fi
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.24.x'
+          channel: 'stable'
+
+      - name: Install dependencies
+        working-directory: apps/mobile-client
+        run: flutter pub get
+
+      - name: Build APK
+        working-directory: apps/mobile-client
+        run: flutter build apk --release
+
+      - name: Upload Client APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: client-app-release-apk
+          path: apps/mobile-client/build/app/outputs/flutter-apk/app-release.apk
+
+  build-partner:
+    name: Build Partner APK
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Restructure Monorepo Layout
+        run: |
+          mkdir -p apps packages
+          if [ -d "partner_app" ]; then
+            echo "Moving partner_app to apps/mobile-partner"
+            mv partner_app apps/mobile-partner
+          fi
+          if [ -d "editor-web-app" ]; then
+            echo "Moving editor-web-app to apps/web-editor"
+            mv editor-web-app apps/web-editor
+          fi
+          if [ -d "orbit_client/backend/mini-services/orbit-ws" ]; then
+            echo "Moving websocket to apps/websocket-node"
+            mv orbit_client/backend/mini-services/orbit-ws apps/websocket-node
+          fi
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.24.x'
+          channel: 'stable'
+
+      - name: Install dependencies
+        working-directory: apps/mobile-partner
+        run: flutter pub get
+
+      - name: Build APK
+        working-directory: apps/mobile-partner
+        run: flutter build apk --release
+
+      - name: Upload Partner APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: partner-app-release-apk
+          path: apps/mobile-partner/build/app/outputs/flutter-apk/app-release.apk
