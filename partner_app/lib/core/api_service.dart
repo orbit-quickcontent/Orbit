@@ -8,7 +8,7 @@ class ApiService {
 
   ApiService()
       : _dio = Dio(BaseOptions(
-          baseUrl: const String.fromEnvironment('API_URL', defaultValue: 'http://10.0.2.2:5000/api'),
+          baseUrl: const String.fromEnvironment('API_URL', defaultValue: 'https://two-impalas-sniff.loca.lt/api'),
           connectTimeout: const Duration(seconds: 10),
           receiveTimeout: const Duration(seconds: 10),
           headers: {'Content-Type': 'application/json'},

@@ -1,10 +1,12 @@
-import 'dart:convert';
-import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:webview_flutter/webview_flutter.dart';
-import 'package:geolocator/geolocator.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:firebase_messaging/firebase_messaging.dart';
+import 'features/auth/auth_screen.dart';
+import 'features/auth/otp_screen.dart';
+import 'features/booking/booking_flow_screen.dart';
+import 'features/home/home_screen.dart';
+import 'core/storage_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -13,161 +15,57 @@ void main() async {
   } catch (e) {
     debugPrint("[Firebase] Initialization skipped or already set: $e");
   }
-  runApp(const OrbitClientApp());
+  runApp(const ProviderScope(child: OrbitClientApp()));
 }
+
+final _router = GoRouter(
+  initialLocation: '/',
+  redirect: (context, state) async {
+    final storage = StorageService();
+    final user = await storage.getUser();
+    final loggingIn = state.matchedLocation == '/login' || state.matchedLocation == '/otp';
+    if (user == null && !loggingIn) {
+      return '/login';
+    }
+    if (user != null && loggingIn) {
+      return '/';
+    }
+    return null;
+  },
+  routes: [
+    GoRoute(
+      path: '/',
+      builder: (context, state) => const HomeScreen(),
+    ),
+    GoRoute(
+      path: '/login',
+      builder: (context, state) => const AuthScreen(),
+    ),
+    GoRoute(
+      path: '/otp',
+      builder: (context, state) {
+        final email = state.extra as String? ?? '';
+        return OtpScreen(email: email);
+      },
+    ),
+    GoRoute(
+      path: '/booking',
+      builder: (context, state) => const BookingFlowScreen(),
+    ),
+  ],
+);
 
 class OrbitClientApp extends StatelessWidget {
   const OrbitClientApp({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
+    return MaterialApp.router(
       title: 'Orbit Client',
       theme: ThemeData.dark(),
       debugShowCheckedModeBanner: false,
-      home: const OrbitWebViewScreen(),
+      routerConfig: _router,
     );
   }
 }
 
-class OrbitWebViewScreen extends StatefulWidget {
-  const OrbitWebViewScreen({super.key});
-
-  @override
-  State<OrbitWebViewScreen> createState() => _OrbitWebViewScreenState();
-}
-
-class _OrbitWebViewScreenState extends State<OrbitWebViewScreen> {
-  WebViewController? _controller;
-  String? _pushToken;
-
-  @override
-  void initState() {
-    super.initState();
-    _initPermissionsAndPush();
-    if (!Platform.environment.containsKey('FLUTTER_TEST')) {
-      _initWebView();
-    }
-  }
-
-  Future<void> _initPermissionsAndPush() async {
-    // Request location permissions
-    try {
-      LocationPermission permission = await Geolocator.checkPermission();
-      if (permission == LocationPermission.denied) {
-        await Geolocator.requestPermission();
-      }
-    } catch (e) {
-      debugPrint("[Geolocator] Permission check error: $e");
-    }
-
-    // Request notification permissions
-    try {
-      FirebaseMessaging messaging = FirebaseMessaging.instance;
-      NotificationSettings settings = await messaging.requestPermission(
-        alert: true,
-        announcement: false,
-        badge: true,
-        carPlay: false,
-        criticalAlert: false,
-        provisional: false,
-        sound: true,
-      );
-      if (settings.authorizationStatus == AuthorizationStatus.authorized) {
-        _pushToken = await messaging.getToken();
-        debugPrint("[Push] Token generated: $_pushToken");
-        _injectPushToken();
-      }
-    } catch (e) {
-      debugPrint("[Push] Permission or token error: $e");
-    }
-  }
-
-  void _initWebView() {
-    // Default to the target local address (or tunnel) for web-client
-    const webUrl = String.fromEnvironment('WEB_URL', defaultValue: 'http://10.0.2.2:3000');
-    
-    _controller = WebViewController()
-      ..setJavaScriptMode(JavaScriptMode.unrestricted)
-      ..setBackgroundColor(const Color(0x00000000))
-      ..setNavigationDelegate(
-        NavigationDelegate(
-          onPageFinished: (String url) {
-            _injectPushToken();
-          },
-        ),
-      )
-      ..addJavaScriptChannel(
-        'OrbitNative',
-        onMessageReceived: (JavaScriptMessage message) async {
-          final data = jsonDecode(message.message);
-          final action = data['action'] as String?;
-          final callbackId = data['callbackId'] as String?;
-
-          if (action == 'getLocation') {
-            _handleGetLocation(callbackId);
-          } else if (action == 'getPushToken') {
-            _handleGetPushToken(callbackId);
-          }
-        },
-      )
-      ..loadRequest(Uri.parse(webUrl));
-  }
-
-  Future<void> _injectPushToken() async {
-    if (_pushToken != null && _controller != null) {
-      final js = "if (window.updatePushToken) { window.updatePushToken('$_pushToken'); }";
-      try {
-        await _controller!.runJavaScript(js);
-      } catch (e) {
-        debugPrint("[JS-Inject-Err] Failed to inject token: $e");
-      }
-    }
-  }
-
-  Future<void> _handleGetLocation(String? callbackId) async {
-    try {
-      final pos = await Geolocator.getCurrentPosition(
-        locationSettings: const LocationSettings(
-          accuracy: LocationAccuracy.high,
-        ),
-      );
-      final result = {
-        'success': true,
-        'latitude': pos.latitude,
-        'longitude': pos.longitude,
-      };
-      _sendCallback(callbackId, result);
-    } catch (e) {
-      _sendCallback(callbackId, {'success': false, 'error': e.toString()});
-    }
-  }
-
-  void _handleGetPushToken(String? callbackId) {
-    if (_pushToken != null) {
-      _sendCallback(callbackId, {'success': true, 'token': _pushToken});
-    } else {
-      _sendCallback(callbackId, {'success': false, 'error': 'Token not available'});
-    }
-  }
-
-  void _sendCallback(String? callbackId, Map<String, dynamic> data) {
-    if (callbackId == null || _controller == null) return;
-    final jsonStr = jsonEncode(data);
-    final js = "if (window.onOrbitNativeCallback) { window.onOrbitNativeCallback('$callbackId', $jsonStr); }";
-    _controller!.runJavaScript(js).catchError((e) {
-      debugPrint("[JS-Callback-Err] Failed callback: $e");
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      body: SafeArea(
-        child: _controller == null
-            ? const SizedBox()
-            : WebViewWidget(controller: _controller!),
-      ),
-    );
-  }
-}
