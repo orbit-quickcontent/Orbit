@@ -43,7 +43,7 @@ class _TrackingViewState extends ConsumerState<TrackingView> {
         _reloadBookings();
       },
       onNotifyClient: (event, data) {
-        print("[Tracking] Live WebSocket Update: $event -> $data");
+        debugPrint("[Tracking] Live WebSocket Update: $event -> $data");
         _reloadBookings();
       },
     );
@@ -115,7 +115,13 @@ class _TrackingViewState extends ConsumerState<TrackingView> {
           children: [
             Icon(Icons.radar, size: 48, color: OrbitTheme.textMuted),
             SizedBox(height: 16),
-            Text('No bookings found', style: TextStyle(color: OrbitTheme.textSecondary, fontWeight: FontWeight.bold)),
+            Text(
+              'No bookings found',
+              style: TextStyle(
+                color: OrbitTheme.textSecondary,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
           ],
         ),
       );
@@ -131,7 +137,10 @@ class _TrackingViewState extends ConsumerState<TrackingView> {
     return ListView(
       padding: const EdgeInsets.all(16.0),
       children: [
-        const Text('Track Order Status', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900)),
+        const Text(
+          'Track Order Status',
+          style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900),
+        ),
         const SizedBox(height: 16),
 
         // Booking Info Card
@@ -148,11 +157,22 @@ class _TrackingViewState extends ConsumerState<TrackingView> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(activeBooking.packageName, style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 15)),
+                  Text(
+                    activeBooking.packageName,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w900,
+                      fontSize: 15,
+                    ),
+                  ),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 4,
+                    ),
                     decoration: BoxDecoration(
-                      color: _getStatusColor(activeBooking.status).withOpacity(0.1),
+                      color: _getStatusColor(
+                        activeBooking.status,
+                      ).withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Text(
@@ -169,7 +189,10 @@ class _TrackingViewState extends ConsumerState<TrackingView> {
               const SizedBox(height: 6),
               Text(
                 'Scheduled: ${activeBooking.bookingDate} @ ${activeBooking.timeSlot}',
-                style: const TextStyle(color: OrbitTheme.textSecondary, fontSize: 11),
+                style: const TextStyle(
+                  color: OrbitTheme.textSecondary,
+                  fontSize: 11,
+                ),
               ),
               const SizedBox(height: 20),
 
@@ -185,19 +208,29 @@ class _TrackingViewState extends ConsumerState<TrackingView> {
                           width: 16,
                           height: 16,
                           decoration: BoxDecoration(
-                            color: isDone ? OrbitTheme.clientCyan : OrbitTheme.border,
+                            color: isDone
+                                ? OrbitTheme.clientCyan
+                                : OrbitTheme.border,
                             shape: BoxShape.circle,
-                            border: isCurrent ? Border.all(color: Colors.white, width: 2) : null,
+                            border: isCurrent
+                                ? Border.all(color: Colors.white, width: 2)
+                                : null,
                           ),
                           child: isDone
-                              ? const Icon(Icons.check, size: 10, color: Colors.black)
+                              ? const Icon(
+                                  Icons.check,
+                                  size: 10,
+                                  color: Colors.black,
+                                )
                               : null,
                         ),
                         if (index < 7)
                           Expanded(
                             child: Container(
                               height: 2,
-                              color: isDone ? OrbitTheme.clientCyan : OrbitTheme.border,
+                              color: isDone
+                                  ? OrbitTheme.clientCyan
+                                  : OrbitTheme.border,
                             ),
                           ),
                       ],
@@ -209,10 +242,34 @@ class _TrackingViewState extends ConsumerState<TrackingView> {
               const Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text('Booked', style: TextStyle(fontSize: 9, color: OrbitTheme.textSecondary)),
-                  Text('Dispatched', style: TextStyle(fontSize: 9, color: OrbitTheme.textSecondary)),
-                  Text('Shooting', style: TextStyle(fontSize: 9, color: OrbitTheme.textSecondary)),
-                  Text('Delivered', style: TextStyle(fontSize: 9, color: OrbitTheme.textSecondary)),
+                  Text(
+                    'Booked',
+                    style: TextStyle(
+                      fontSize: 9,
+                      color: OrbitTheme.textSecondary,
+                    ),
+                  ),
+                  Text(
+                    'Dispatched',
+                    style: TextStyle(
+                      fontSize: 9,
+                      color: OrbitTheme.textSecondary,
+                    ),
+                  ),
+                  Text(
+                    'Shooting',
+                    style: TextStyle(
+                      fontSize: 9,
+                      color: OrbitTheme.textSecondary,
+                    ),
+                  ),
+                  Text(
+                    'Delivered',
+                    style: TextStyle(
+                      fontSize: 9,
+                      color: OrbitTheme.textSecondary,
+                    ),
+                  ),
                 ],
               ),
             ],
@@ -223,7 +280,8 @@ class _TrackingViewState extends ConsumerState<TrackingView> {
         const SizedBox(height: 24),
         if (activeBooking.status == 'SYNCING')
           _buildSyncProgressCard(activeBooking)
-        else if (activeBooking.status == 'EDITING' || activeBooking.status == 'READY_TO_EDIT')
+        else if (activeBooking.status == 'EDITING' ||
+            activeBooking.status == 'READY_TO_EDIT')
           _buildEditingCountdownCard(activeBooking)
         else if (activeBooking.status == 'DELIVERED')
           _buildDeliveredVideoCard(activeBooking)
@@ -231,11 +289,14 @@ class _TrackingViewState extends ConsumerState<TrackingView> {
           _buildWaitingPartnerCard(activeBooking),
 
         const SizedBox(height: 28),
-        const Text('Booking History', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+        const Text(
+          'Booking History',
+          style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+        ),
         const SizedBox(height: 12),
 
         // History items
-        ...bookings.map((booking) => _buildHistoryItem(booking)).toList(),
+        ...bookings.map((booking) => _buildHistoryItem(booking)),
       ],
     );
   }
@@ -246,15 +307,24 @@ class _TrackingViewState extends ConsumerState<TrackingView> {
       decoration: BoxDecoration(
         color: OrbitTheme.cardBackground,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: OrbitTheme.clientCyan.withOpacity(0.2)),
+        border: Border.all(color: OrbitTheme.clientCyan.withValues(alpha: 0.2)),
       ),
       child: Column(
         children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text('Raw footage syncing...', style: TextStyle(fontWeight: FontWeight.bold)),
-              Text('${booking.syncPercentage}%', style: const TextStyle(fontWeight: FontWeight.bold, color: OrbitTheme.clientCyan)),
+              const Text(
+                'Raw footage syncing...',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              Text(
+                '${booking.syncPercentage}%',
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: OrbitTheme.clientCyan,
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 12),
@@ -265,7 +335,10 @@ class _TrackingViewState extends ConsumerState<TrackingView> {
             borderRadius: BorderRadius.circular(4),
           ),
           const SizedBox(height: 8),
-          const Text('Uploading high-quality files securely to our editing studio.', style: TextStyle(fontSize: 10, color: OrbitTheme.textSecondary)),
+          const Text(
+            'Uploading high-quality files securely to our editing studio.',
+            style: TextStyle(fontSize: 10, color: OrbitTheme.textSecondary),
+          ),
         ],
       ),
     );
@@ -277,7 +350,7 @@ class _TrackingViewState extends ConsumerState<TrackingView> {
       decoration: BoxDecoration(
         color: OrbitTheme.cardBackground,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: OrbitTheme.clientPurple.withOpacity(0.2)),
+        border: Border.all(color: OrbitTheme.clientPurple.withValues(alpha: 0.2)),
       ),
       child: Column(
         children: [
@@ -286,16 +359,26 @@ class _TrackingViewState extends ConsumerState<TrackingView> {
             children: [
               Icon(Icons.hourglass_bottom, color: OrbitTheme.clientPurple),
               SizedBox(width: 8),
-              Text('Professional Editing Pipeline Active', style: TextStyle(fontWeight: FontWeight.bold)),
+              Text(
+                'Professional Editing Pipeline Active',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
             ],
           ),
           const SizedBox(height: 16),
           Text(
             '~${booking.editCountdown ?? 45} mins remaining',
-            style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: OrbitTheme.clientPurple),
+            style: const TextStyle(
+              fontSize: 22,
+              fontWeight: FontWeight.w900,
+              color: OrbitTheme.clientPurple,
+            ),
           ),
           const SizedBox(height: 8),
-          const Text('Our custom editor team is crafting your cinematic reels.', style: TextStyle(fontSize: 10, color: OrbitTheme.textSecondary)),
+          const Text(
+            'Our custom editor team is crafting your cinematic reels.',
+            style: TextStyle(fontSize: 10, color: OrbitTheme.textSecondary),
+          ),
         ],
       ),
     );
@@ -307,7 +390,7 @@ class _TrackingViewState extends ConsumerState<TrackingView> {
       decoration: BoxDecoration(
         color: const Color(0xFF0F1A13),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.greenAccent.withOpacity(0.2)),
+        border: Border.all(color: Colors.greenAccent.withValues(alpha: 0.2)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -316,7 +399,13 @@ class _TrackingViewState extends ConsumerState<TrackingView> {
             children: [
               Icon(Icons.check_circle, color: Colors.greenAccent),
               SizedBox(width: 8),
-              Text('Your Cinematic Reel is Ready!', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
+              Text(
+                'Your Cinematic Reel is Ready!',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 16),
@@ -329,7 +418,11 @@ class _TrackingViewState extends ConsumerState<TrackingView> {
               border: Border.all(color: OrbitTheme.border),
             ),
             child: const Center(
-              child: Icon(Icons.play_circle_fill, color: Colors.white, size: 54),
+              child: Icon(
+                Icons.play_circle_fill,
+                color: Colors.white,
+                size: 54,
+              ),
             ),
           ),
           const SizedBox(height: 16),
@@ -340,15 +433,21 @@ class _TrackingViewState extends ConsumerState<TrackingView> {
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.greenAccent,
                 foregroundColor: Colors.black,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
               ),
               icon: const Icon(Icons.download),
-              label: const Text('Download Edited Reel', style: TextStyle(fontWeight: FontWeight.bold)),
+              label: const Text(
+                'Download Edited Reel',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
               onPressed: () async {
                 final url = Uri.parse(booking.masterReelUrl ?? '');
                 if (await canLaunchUrl(url)) {
                   await launchUrl(url, mode: LaunchMode.externalApplication);
                 } else {
+                  if (!mounted) return;
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(content: Text('Downloading video file...')),
                   );
@@ -378,7 +477,10 @@ class _TrackingViewState extends ConsumerState<TrackingView> {
               booking.status == 'PENDING'
                   ? 'Waiting for payment confirmation.'
                   : 'Assigning nearest filmmaker partner to your slot.',
-              style: const TextStyle(fontSize: 12, color: OrbitTheme.textSecondary),
+              style: const TextStyle(
+                fontSize: 12,
+                color: OrbitTheme.textSecondary,
+              ),
             ),
           ),
         ],
@@ -387,7 +489,9 @@ class _TrackingViewState extends ConsumerState<TrackingView> {
   }
 
   Widget _buildHistoryItem(BookingInfo booking) {
-    final date = DateFormat('dd MMM').format(DateTime.parse(booking.bookingDate));
+    final date = DateFormat(
+      'dd MMM',
+    ).format(DateTime.parse(booking.bookingDate));
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.all(12),
@@ -400,17 +504,35 @@ class _TrackingViewState extends ConsumerState<TrackingView> {
         children: [
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-            decoration: BoxDecoration(color: OrbitTheme.border, borderRadius: BorderRadius.circular(8)),
-            child: Text(date, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+            decoration: BoxDecoration(
+              color: OrbitTheme.border,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Text(
+              date,
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+            ),
           ),
           const SizedBox(width: 16),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(booking.packageName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                Text(
+                  booking.packageName,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13,
+                  ),
+                ),
                 const SizedBox(height: 2),
-                Text(booking.location.split('@')[0], style: const TextStyle(color: OrbitTheme.textSecondary, fontSize: 10)),
+                Text(
+                  booking.location.split('@')[0],
+                  style: const TextStyle(
+                    color: OrbitTheme.textSecondary,
+                    fontSize: 10,
+                  ),
+                ),
               ],
             ),
           ),
@@ -419,7 +541,9 @@ class _TrackingViewState extends ConsumerState<TrackingView> {
             style: TextStyle(
               fontSize: 10,
               fontWeight: FontWeight.bold,
-              color: booking.status == 'DELIVERED' ? Colors.greenAccent : OrbitTheme.clientCyan,
+              color: booking.status == 'DELIVERED'
+                  ? Colors.greenAccent
+                  : OrbitTheme.clientCyan,
             ),
           ),
         ],

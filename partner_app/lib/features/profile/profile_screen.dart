@@ -198,7 +198,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               color: OrbitTheme.cardBackground,
               borderRadius: BorderRadius.circular(16),
               border: Border.all(
-                color: isLinked ? Colors.greenAccent.withOpacity(0.2) : OrbitTheme.border,
+                color: isLinked ? Colors.greenAccent.withValues(alpha: 0.2) : OrbitTheme.border,
                 style: isLinked ? BorderStyle.solid : BorderStyle.none, // dashed if not linked
               ),
             ),
@@ -219,7 +219,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                       ),
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(color: Colors.greenAccent.withOpacity(0.15), borderRadius: BorderRadius.circular(6)),
+                        decoration: BoxDecoration(color: Colors.greenAccent.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(6)),
                         child: const Text('LINKED', style: TextStyle(color: Colors.greenAccent, fontSize: 8, fontWeight: FontWeight.bold)),
                       ),
                     ],

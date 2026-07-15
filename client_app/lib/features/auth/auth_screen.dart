@@ -36,18 +36,20 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
     setState(() => _isLoading = true);
     await Future.delayed(const Duration(seconds: 1));
     final email = '${provider.toLowerCase()}user@orbitlogic.io';
-    final name = '${provider} User';
-    
+    final name = '$provider User';
+
     final api = ref.read(apiServiceProvider);
-    final user = await api.registerOrLoginUser(UserProfile(
-      id: 'usr-${DateTime.now().millisecondsSinceEpoch}',
-      name: name,
-      email: email,
-      phone: '+919999988888',
-      avatarType: 'color',
-      avatar: 'from-orbit-cyan to-orbit-purple',
-      avatarEmoji: _selectedAvatarPreset,
-    ));
+    final user = await api.registerOrLoginUser(
+      UserProfile(
+        id: 'usr-${DateTime.now().millisecondsSinceEpoch}',
+        name: name,
+        email: email,
+        phone: '+919999988888',
+        avatarType: 'color',
+        avatar: 'from-orbit-cyan to-orbit-purple',
+        avatarEmoji: _selectedAvatarPreset,
+      ),
+    );
 
     if (user != null) {
       final storage = StorageService();
@@ -82,26 +84,20 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
     setState(() => _isLoading = false);
     if (otp != null && mounted) {
       // Save temp state inside ref or pass user
-      final tempUser = UserProfile(
-        id: 'usr-${DateTime.now().millisecondsSinceEpoch}',
-        name: name,
-        email: email,
-        phone: phone,
-        avatarType: 'color',
-        avatarEmoji: _selectedAvatarPreset,
-      );
       context.push('/otp', extra: email);
     } else {
       // Offline / permission mock bypass fallback
       final storage = StorageService();
-      await storage.saveUser(UserProfile(
-        id: 'usr-demo',
-        name: name,
-        email: email,
-        phone: phone,
-        avatarType: 'color',
-        avatarEmoji: _selectedAvatarPreset,
-      ));
+      await storage.saveUser(
+        UserProfile(
+          id: 'usr-demo',
+          name: name,
+          email: email,
+          phone: phone,
+          avatarType: 'color',
+          avatarEmoji: _selectedAvatarPreset,
+        ),
+      );
       if (mounted) context.go('/');
     }
   }
@@ -152,7 +148,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
               style: TextStyle(color: OrbitTheme.textSecondary, fontSize: 13),
             ),
             const SizedBox(height: 32),
-            
+
             // Social Login Buttons
             Row(
               children: [
@@ -162,11 +158,22 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                       backgroundColor: Colors.white,
                       foregroundColor: Colors.black,
                       padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                     ),
-                    icon: const Icon(Icons.g_mobiledata, size: 28, color: Colors.red),
-                    label: const Text('Google', style: TextStyle(fontWeight: FontWeight.bold)),
-                    onPressed: _isLoading ? null : () => _socialMockLogin('Google'),
+                    icon: const Icon(
+                      Icons.g_mobiledata,
+                      size: 28,
+                      color: Colors.red,
+                    ),
+                    label: const Text(
+                      'Google',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    onPressed: _isLoading
+                        ? null
+                        : () => _socialMockLogin('Google'),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -182,28 +189,43 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                       ),
                     ),
                     icon: const Icon(Icons.apple, size: 20),
-                    label: const Text('Apple', style: TextStyle(fontWeight: FontWeight.bold)),
-                    onPressed: _isLoading ? null : () => _socialMockLogin('Apple'),
+                    label: const Text(
+                      'Apple',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    onPressed: _isLoading
+                        ? null
+                        : () => _socialMockLogin('Apple'),
                   ),
                 ),
               ],
             ),
-            
+
             const SizedBox(height: 24),
             const Row(
               children: [
                 Expanded(child: Divider(color: OrbitTheme.border)),
                 Padding(
                   padding: EdgeInsets.symmetric(horizontal: 16.0),
-                  child: Text('OR EMAIL', style: TextStyle(color: OrbitTheme.textMuted, fontSize: 10, fontWeight: FontWeight.bold)),
+                  child: Text(
+                    'OR EMAIL',
+                    style: TextStyle(
+                      color: OrbitTheme.textMuted,
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                 ),
                 Expanded(child: Divider(color: OrbitTheme.border)),
               ],
             ),
             const SizedBox(height: 24),
-            
+
             // Avatar Presets Picker
-            const Text('Choose Your Profile Emoji', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+            const Text(
+              'Choose Your Profile Emoji',
+              style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+            ),
             const SizedBox(height: 12),
             Wrap(
               spacing: 8,
@@ -214,9 +236,13 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                   child: Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: isSelected ? OrbitTheme.clientCyan.withOpacity(0.15) : OrbitTheme.cardBackground,
+                      color: isSelected
+                          ? OrbitTheme.clientCyan.withValues(alpha: 0.15)
+                          : OrbitTheme.cardBackground,
                       border: Border.all(
-                        color: isSelected ? OrbitTheme.clientCyan : OrbitTheme.border,
+                        color: isSelected
+                            ? OrbitTheme.clientCyan
+                            : OrbitTheme.border,
                       ),
                       shape: BoxShape.circle,
                     ),
@@ -225,9 +251,9 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                 );
               }).toList(),
             ),
-            
+
             const SizedBox(height: 32),
-            
+
             // Input Fields
             TextField(
               controller: _nameController,
@@ -235,7 +261,10 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                 labelText: 'Full Name *',
                 filled: true,
                 fillColor: OrbitTheme.cardBackground,
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide.none,
+                ),
               ),
             ),
             const SizedBox(height: 16),
@@ -246,7 +275,10 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                 labelText: 'Email *',
                 filled: true,
                 fillColor: OrbitTheme.cardBackground,
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide.none,
+                ),
               ),
             ),
             const SizedBox(height: 16),
@@ -258,11 +290,14 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                 prefixText: '+91 ',
                 filled: true,
                 fillColor: OrbitTheme.cardBackground,
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide.none,
+                ),
               ),
             ),
             const SizedBox(height: 32),
-            
+
             SizedBox(
               width: double.infinity,
               height: 52,
@@ -275,7 +310,9 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.transparent,
                     shadowColor: Colors.transparent,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                   ),
                   onPressed: _isLoading ? null : _handleEmailSubmit,
                   child: _isLoading
@@ -283,7 +320,14 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                       : const Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Text('Verify & Continue', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.white)),
+                            Text(
+                              'Verify & Continue',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                                color: Colors.white,
+                              ),
+                            ),
                             SizedBox(width: 8),
                             Icon(Icons.arrow_forward, color: Colors.white),
                           ],

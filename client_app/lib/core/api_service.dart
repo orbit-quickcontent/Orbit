@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import '../models/user.dart';
 import '../models/booking.dart';
 import '../models/package.dart';
@@ -22,7 +23,7 @@ class ApiService {
         return res.data['devOtp'] as String?;
       }
     } catch (e) {
-      print("[API Error] sendOtp: $e");
+      debugPrint("[API Error] sendOtp: $e");
     }
     return null;
   }
@@ -33,7 +34,7 @@ class ApiService {
       final res = await _dio.post('/auth/verify-otp', data: {'email': email, 'otp': otp});
       return res.statusCode == 200;
     } catch (e) {
-      print("[API Error] verifyOtp: $e");
+      debugPrint("[API Error] verifyOtp: $e");
     }
     return false;
   }
@@ -46,7 +47,7 @@ class ApiService {
         return UserProfile.fromJson(res.data['user'] ?? res.data);
       }
     } catch (e) {
-      print("[API Error] registerOrLoginUser: $e");
+      debugPrint("[API Error] registerOrLoginUser: $e");
     }
     return null;
   }
@@ -60,7 +61,7 @@ class ApiService {
         return list.map((item) => PackageInfo.fromJson(item)).toList();
       }
     } catch (e) {
-      print("[API Error] fetchPackages: $e");
+      debugPrint("[API Error] fetchPackages: $e");
     }
     return [];
   }
@@ -74,7 +75,7 @@ class ApiService {
         return list.map((item) => BookingInfo.fromJson(item)).toList();
       }
     } catch (e) {
-      print("[API Error] fetchClientBookings: $e");
+      debugPrint("[API Error] fetchClientBookings: $e");
     }
     return [];
   }
@@ -103,7 +104,7 @@ class ApiService {
         return BookingInfo.fromJson(res.data['booking'] ?? res.data);
       }
     } catch (e) {
-      print("[API Error] createBooking: $e");
+      debugPrint("[API Error] createBooking: $e");
     }
     return null;
   }

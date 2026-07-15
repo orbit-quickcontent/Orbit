@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import '../models/partner_profile.dart';
 import '../models/booking.dart';
 
@@ -21,7 +22,7 @@ class ApiService {
         return PartnerProfile.fromJson(res.data['partner'] ?? res.data);
       }
     } catch (e) {
-      print("[API Error] fetchPartnerProfile: $e");
+      debugPrint("[API Error] fetchPartnerProfile: $e");
     }
     return null;
   }
@@ -32,7 +33,7 @@ class ApiService {
       final res = await _dio.patch('/partners/$partnerId', data: {'availability': availability});
       return res.statusCode == 200;
     } catch (e) {
-      print("[API Error] updateAvailability: $e");
+      debugPrint("[API Error] updateAvailability: $e");
     }
     return false;
   }
@@ -46,7 +47,7 @@ class ApiService {
         return list.map((item) => BookingInfo.fromJson(item)).toList();
       }
     } catch (e) {
-      print("[API Error] fetchAvailableBookings: $e");
+      debugPrint("[API Error] fetchAvailableBookings: $e");
     }
     return [];
   }
@@ -59,7 +60,7 @@ class ApiService {
         return BookingInfo.fromJson(res.data['booking'] ?? res.data);
       }
     } catch (e) {
-      print("[API Error] acceptBooking: $e");
+      debugPrint("[API Error] acceptBooking: $e");
     }
     return null;
   }
@@ -70,7 +71,7 @@ class ApiService {
       final res = await _dio.post('/bookings/$bookingId/decline', data: {'partnerId': partnerId});
       return res.statusCode == 200;
     } catch (e) {
-      print("[API Error] declineBooking: $e");
+      debugPrint("[API Error] declineBooking: $e");
     }
     return false;
   }
@@ -81,7 +82,7 @@ class ApiService {
       final res = await _dio.post('/bookings/$bookingId/sync-complete', data: {'footageUrls': urls});
       return res.statusCode == 200;
     } catch (e) {
-      print("[API Error] syncComplete: $e");
+      debugPrint("[API Error] syncComplete: $e");
     }
     return false;
   }
@@ -104,7 +105,7 @@ class ApiService {
         return res.data;
       }
     } catch (e) {
-      print("[API Error] linkBankAccount: $e");
+      debugPrint("[API Error] linkBankAccount: $e");
     }
     return null;
   }
@@ -115,7 +116,7 @@ class ApiService {
       final res = await _dio.post('/partners/$partnerId/withdraw', data: {'amount': amount});
       return res.statusCode == 200;
     } catch (e) {
-      print("[API Error] withdrawWallet: $e");
+      debugPrint("[API Error] withdrawWallet: $e");
     }
     return false;
   }

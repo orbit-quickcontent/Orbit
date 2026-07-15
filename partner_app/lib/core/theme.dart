@@ -27,7 +27,6 @@ class OrbitTheme {
         primary: partnerPurple,
         secondary: partnerCyan,
         surface: cardBackground,
-        background: background,
       ),
       textTheme: const TextTheme(
         headlineLarge: TextStyle(fontSize: 28, fontWeight: FontWeight.w900, color: textPrimary),

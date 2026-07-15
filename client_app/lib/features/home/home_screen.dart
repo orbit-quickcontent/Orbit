@@ -6,7 +6,6 @@ import '../../core/api_service.dart';
 import '../../core/storage_service.dart';
 import '../../models/user.dart';
 import '../../models/booking.dart';
-import '../booking/booking_flow_screen.dart';
 import '../tracking/tracking_view.dart';
 
 final userProfileProvider = StateProvider<UserProfile?>((ref) => null);
@@ -33,7 +32,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final profile = await storage.getUser();
     if (profile != null && mounted) {
       ref.read(userProfileProvider.notifier).state = profile;
-      
+
       final api = ApiService();
       final bookings = await api.fetchClientBookings(profile.id);
       ref.read(bookingsListProvider.notifier).state = bookings;
@@ -54,7 +53,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     }
 
     final views = [
-      _HomeFeed(user: user, onNavigate: (index) => setState(() => _currentIndex = index)),
+      _HomeFeed(
+        user: user,
+        onNavigate: (index) => setState(() => _currentIndex = index),
+      ),
       const _PackagesView(),
       const TrackingView(),
       _ProfileView(user: user, onLogout: _logout),
@@ -66,7 +68,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           children: [
             // Custom Header Navbar (matches design images!)
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+              padding: const EdgeInsets.symmetric(
+                horizontal: 16.0,
+                vertical: 12.0,
+              ),
               child: Row(
                 children: [
                   // Avatar with initials
@@ -75,7 +80,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     backgroundColor: OrbitTheme.clientCyan,
                     child: Text(
                       user.name.isNotEmpty ? user.name[0].toUpperCase() : 'U',
-                      style: const TextStyle(fontWeight: FontWeight.w900, color: Colors.white, fontSize: 14),
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w900,
+                        color: Colors.white,
+                        fontSize: 14,
+                      ),
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -84,10 +93,20 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text('Good morning', style: TextStyle(color: OrbitTheme.textSecondary, fontSize: 11)),
+                        const Text(
+                          'Good morning',
+                          style: TextStyle(
+                            color: OrbitTheme.textSecondary,
+                            fontSize: 11,
+                          ),
+                        ),
                         Text(
                           'Hi, ${user.name.split(' ')[0]}',
-                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: Colors.white),
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w900,
+                            color: Colors.white,
+                          ),
                         ),
                       ],
                     ),
@@ -106,15 +125,27 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           showModalBottomSheet(
                             context: context,
                             backgroundColor: OrbitTheme.cardBackground,
-                            shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+                            shape: const RoundedRectangleBorder(
+                              borderRadius: BorderRadius.vertical(
+                                top: Radius.circular(20),
+                              ),
+                            ),
                             builder: (context) => Container(
                               padding: const EdgeInsets.all(24),
                               child: Column(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
                                   ListTile(
-                                    leading: const Icon(Icons.person, color: OrbitTheme.clientCyan),
-                                    title: const Text('My Profile', style: TextStyle(fontWeight: FontWeight.bold)),
+                                    leading: const Icon(
+                                      Icons.person,
+                                      color: OrbitTheme.clientCyan,
+                                    ),
+                                    title: const Text(
+                                      'My Profile',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
                                     onTap: () {
                                       Navigator.pop(context);
                                       setState(() => _currentIndex = 3);
@@ -122,8 +153,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                   ),
                                   const Divider(color: OrbitTheme.border),
                                   ListTile(
-                                    leading: const Icon(Icons.logout, color: Colors.redAccent),
-                                    title: const Text('Log Out', style: TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold)),
+                                    leading: const Icon(
+                                      Icons.logout,
+                                      color: Colors.redAccent,
+                                    ),
+                                    title: const Text(
+                                      'Log Out',
+                                      style: TextStyle(
+                                        color: Colors.redAccent,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
                                     onTap: () {
                                       Navigator.pop(context);
                                       _logout();
@@ -140,7 +180,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 ],
               ),
             ),
-            
+
             // Subtitle
             const Padding(
               padding: EdgeInsets.symmetric(horizontal: 16.0),
@@ -148,7 +188,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 alignment: Alignment.centerLeft,
                 child: Text(
                   'Ready to create something cinematic?',
-                  style: TextStyle(color: OrbitTheme.textSecondary, fontSize: 13),
+                  style: TextStyle(
+                    color: OrbitTheme.textSecondary,
+                    fontSize: 13,
+                  ),
                 ),
               ),
             ),
@@ -166,7 +209,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           decoration: BoxDecoration(
             color: const Color(0xCC050505),
             borderRadius: BorderRadius.circular(28),
-            border: Border.all(color: OrbitTheme.clientCyan.withOpacity(0.12)),
+            border: Border.all(color: OrbitTheme.clientCyan.withValues(alpha: 0.12)),
           ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
@@ -221,7 +264,7 @@ class _NavIconBtn extends StatelessWidget {
         width: 38,
         height: 38,
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.08),
+          color: Colors.white.withValues(alpha: 0.08),
           shape: BoxShape.circle,
         ),
         child: Icon(icon, color: Colors.white, size: 20),
@@ -255,7 +298,9 @@ class _BottomNavItem extends StatelessWidget {
         children: [
           Icon(
             isActive ? activeIcon : icon,
-            color: isActive ? OrbitTheme.clientCyan : OrbitTheme.textSecondary.withOpacity(0.5),
+            color: isActive
+                ? OrbitTheme.clientCyan
+                : OrbitTheme.textSecondary.withValues(alpha: 0.5),
             size: 22,
           ),
           const SizedBox(height: 3),
@@ -263,7 +308,9 @@ class _BottomNavItem extends StatelessWidget {
             label,
             style: TextStyle(
               fontSize: 9,
-              color: isActive ? OrbitTheme.clientCyan : OrbitTheme.textSecondary.withOpacity(0.5),
+              color: isActive
+                  ? OrbitTheme.clientCyan
+                  : OrbitTheme.textSecondary.withValues(alpha: 0.5),
               fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
             ),
           ),
@@ -283,7 +330,9 @@ class _HomeFeed extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final bookings = ref.watch(bookingsListProvider);
-    final hasActive = bookings.any((b) => b.status != 'DELIVERED' && b.status != 'CANCELLED');
+    final hasActive = bookings.any(
+      (b) => b.status != 'DELIVERED' && b.status != 'CANCELLED',
+    );
 
     return ListView(
       padding: const EdgeInsets.all(16.0),
@@ -327,15 +376,21 @@ class _HomeFeed extends ConsumerWidget {
             ),
           ],
         ),
-        
+
         const SizedBox(height: 28),
-        
+
         // Horizontal list packages preview
         const Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text('Our Packages', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-            Text('View All >', style: TextStyle(color: OrbitTheme.clientCyan, fontSize: 12)),
+            Text(
+              'Our Packages',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            ),
+            Text(
+              'View All >',
+              style: TextStyle(color: OrbitTheme.clientCyan, fontSize: 12),
+            ),
           ],
         ),
         const SizedBox(height: 12),
@@ -348,14 +403,14 @@ class _HomeFeed extends ConsumerWidget {
                 title: 'Personalized',
                 price: '₹1,999/session',
                 bullet: '1 Cinematic Reel',
-                color: OrbitTheme.clientCyan.withOpacity(0.05),
+                color: OrbitTheme.clientCyan.withValues(alpha: 0.05),
               ),
               const SizedBox(width: 12),
               _PkgItemCard(
                 title: 'Professional (UGC)',
                 price: '₹4,999/session',
                 bullet: '3 Cinematic Reels',
-                color: OrbitTheme.clientPurple.withOpacity(0.05),
+                color: OrbitTheme.clientPurple.withValues(alpha: 0.05),
                 isPopular: true,
               ),
             ],
@@ -377,47 +432,93 @@ class _HomeFeed extends ConsumerWidget {
             children: [
               Column(
                 children: [
-                  Text('60 min', style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16, color: OrbitTheme.clientCyan)),
+                  Text(
+                    '60 min',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w900,
+                      fontSize: 16,
+                      color: OrbitTheme.clientCyan,
+                    ),
+                  ),
                   SizedBox(height: 4),
-                  Text('Delivery Guarantee', style: TextStyle(fontSize: 10, color: OrbitTheme.textSecondary)),
+                  Text(
+                    'Delivery Guarantee',
+                    style: TextStyle(
+                      fontSize: 10,
+                      color: OrbitTheme.textSecondary,
+                    ),
+                  ),
                 ],
               ),
               Column(
                 children: [
-                  Text('4K HDR', style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16, color: OrbitTheme.clientCyan)),
+                  Text(
+                    '4K HDR',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w900,
+                      fontSize: 16,
+                      color: OrbitTheme.clientCyan,
+                    ),
+                  ),
                   SizedBox(height: 4),
-                  Text('Native Quality', style: TextStyle(fontSize: 10, color: OrbitTheme.textSecondary)),
+                  Text(
+                    'Native Quality',
+                    style: TextStyle(
+                      fontSize: 10,
+                      color: OrbitTheme.textSecondary,
+                    ),
+                  ),
                 ],
               ),
               Column(
                 children: [
-                  Text('500+', style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16, color: OrbitTheme.clientCyan)),
+                  Text(
+                    '500+',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w900,
+                      fontSize: 16,
+                      color: OrbitTheme.clientCyan,
+                    ),
+                  ),
                   SizedBox(height: 4),
-                  Text('Reels Delivered', style: TextStyle(fontSize: 10, color: OrbitTheme.textSecondary)),
+                  Text(
+                    'Reels Delivered',
+                    style: TextStyle(
+                      fontSize: 10,
+                      color: OrbitTheme.textSecondary,
+                    ),
+                  ),
                 ],
               ),
             ],
           ),
         ),
-        
+
         const SizedBox(height: 24),
-        
+
         // Large Promo CTA Card
         Container(
           padding: const EdgeInsets.all(24),
           decoration: BoxDecoration(
             gradient: LinearGradient(
-              colors: [OrbitTheme.clientCyan.withOpacity(0.2), OrbitTheme.clientPurple.withOpacity(0.2)],
+              colors: [
+                OrbitTheme.clientCyan.withValues(alpha: 0.2),
+                OrbitTheme.clientPurple.withValues(alpha: 0.2),
+              ],
             ),
             borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: OrbitTheme.clientCyan.withOpacity(0.2)),
+            border: Border.all(color: OrbitTheme.clientCyan.withValues(alpha: 0.2)),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const Text(
                 'Ready to Create\nSomething Cinematic?',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, height: 1.2),
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w900,
+                  height: 1.2,
+                ),
               ),
               const SizedBox(height: 8),
               const Text(
@@ -429,11 +530,19 @@ class _HomeFeed extends ConsumerWidget {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.white,
                   foregroundColor: Colors.black,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 12,
+                  ),
                 ),
                 icon: const Icon(Icons.bolt, color: OrbitTheme.clientCyan),
-                label: const Text('Book a Session Now', style: TextStyle(fontWeight: FontWeight.bold)),
+                label: const Text(
+                  'Book a Session Now',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
                 onPressed: () => context.push('/booking'),
               ),
             ],
@@ -478,15 +587,28 @@ class _GridCard extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: color.withOpacity(0.1),
+                color: color.withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
               child: Icon(icon, color: color, size: 20),
             ),
             const SizedBox(height: 12),
-            Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.white)),
+            Text(
+              title,
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 13,
+                color: Colors.white,
+              ),
+            ),
             const SizedBox(height: 2),
-            Text(desc, style: const TextStyle(color: OrbitTheme.textSecondary, fontSize: 10)),
+            Text(
+              desc,
+              style: const TextStyle(
+                color: OrbitTheme.textSecondary,
+                fontSize: 10,
+              ),
+            ),
           ],
         ),
       ),
@@ -526,23 +648,55 @@ class _PkgItemCard extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(title, style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 13)),
+              Text(
+                title,
+                style: const TextStyle(
+                  fontWeight: FontWeight.w900,
+                  fontSize: 13,
+                ),
+              ),
               if (isPopular)
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                  decoration: BoxDecoration(color: OrbitTheme.clientPurple, borderRadius: BorderRadius.circular(4)),
-                  child: const Text('POPULAR', style: TextStyle(fontSize: 7, fontWeight: FontWeight.bold)),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 6,
+                    vertical: 2,
+                  ),
+                  decoration: BoxDecoration(
+                    color: OrbitTheme.clientPurple,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: const Text(
+                    'POPULAR',
+                    style: TextStyle(fontSize: 7, fontWeight: FontWeight.bold),
+                  ),
                 ),
             ],
           ),
           const SizedBox(height: 6),
-          Text(price, style: const TextStyle(color: OrbitTheme.clientCyan, fontSize: 12, fontWeight: FontWeight.bold)),
+          Text(
+            price,
+            style: const TextStyle(
+              color: OrbitTheme.clientCyan,
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
           const SizedBox(height: 12),
           Row(
             children: [
-              const Icon(Icons.check_circle_outline, color: Colors.greenAccent, size: 12),
+              const Icon(
+                Icons.check_circle_outline,
+                color: Colors.greenAccent,
+                size: 12,
+              ),
               const SizedBox(width: 6),
-              Text(bullet, style: const TextStyle(fontSize: 10, color: OrbitTheme.textSecondary)),
+              Text(
+                bullet,
+                style: const TextStyle(
+                  fontSize: 10,
+                  color: OrbitTheme.textSecondary,
+                ),
+              ),
             ],
           ),
         ],
@@ -558,16 +712,6 @@ class _PackagesView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return const Center(child: Text('Packages Screen Details Here'));
-  }
-}
-
-// ─── Placeholder Tracking ─────────────────────────────────────────────────────
-class _TrackingView extends StatelessWidget {
-  const _TrackingView();
-
-  @override
-  Widget build(BuildContext context) {
-    return const Center(child: Text('Order Status Tracking Here'));
   }
 }
 
@@ -595,37 +739,81 @@ class _ProfileView extends StatelessWidget {
               CircleAvatar(
                 radius: 36,
                 backgroundColor: OrbitTheme.clientCyan,
-                child: Text(user.name.isNotEmpty ? user.name[0].toUpperCase() : 'U', style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Colors.white)),
+                child: Text(
+                  user.name.isNotEmpty ? user.name[0].toUpperCase() : 'U',
+                  style: const TextStyle(
+                    fontSize: 28,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
               ),
               const SizedBox(height: 12),
-              Text(user.name, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900)),
+              Text(
+                user.name,
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
               const SizedBox(height: 4),
-              Text(user.email, style: const TextStyle(color: OrbitTheme.textSecondary, fontSize: 12)),
+              Text(
+                user.email,
+                style: const TextStyle(
+                  color: OrbitTheme.textSecondary,
+                  fontSize: 12,
+                ),
+              ),
               if (user.phone.isNotEmpty) ...[
                 const SizedBox(height: 4),
-                Text(user.phone, style: const TextStyle(color: OrbitTheme.textSecondary, fontSize: 12)),
+                Text(
+                  user.phone,
+                  style: const TextStyle(
+                    color: OrbitTheme.textSecondary,
+                    fontSize: 12,
+                  ),
+                ),
               ],
             ],
           ),
         ),
         const SizedBox(height: 24),
         ListTile(
-          leading: const Icon(Icons.shield_outlined, color: OrbitTheme.clientCyan),
-          title: const Text('Privacy Shield', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+          leading: const Icon(
+            Icons.shield_outlined,
+            color: OrbitTheme.clientCyan,
+          ),
+          title: const Text(
+            'Privacy Shield',
+            style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+          ),
           trailing: const Icon(Icons.chevron_right, size: 16),
           onTap: () {},
         ),
         const Divider(color: OrbitTheme.border),
         ListTile(
-          leading: const Icon(Icons.settings_outlined, color: OrbitTheme.clientCyan),
-          title: const Text('App Settings', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+          leading: const Icon(
+            Icons.settings_outlined,
+            color: OrbitTheme.clientCyan,
+          ),
+          title: const Text(
+            'App Settings',
+            style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+          ),
           trailing: const Icon(Icons.chevron_right, size: 16),
           onTap: () {},
         ),
         const Divider(color: OrbitTheme.border),
         ListTile(
           leading: const Icon(Icons.logout, color: Colors.redAccent),
-          title: const Text('Log Out', style: TextStyle(color: Colors.redAccent, fontSize: 13, fontWeight: FontWeight.bold)),
+          title: const Text(
+            'Log Out',
+            style: TextStyle(
+              color: Colors.redAccent,
+              fontSize: 13,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
           trailing: const Icon(Icons.chevron_right, size: 16),
           onTap: onLogout,
         ),
