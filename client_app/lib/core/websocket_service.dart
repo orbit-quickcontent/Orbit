@@ -1,7 +1,8 @@
-import 'package:socket_io_client/socket_io_client.dart' as IO;
+import 'package:flutter/foundation.dart';
+import 'package:socket_io_client/socket_io_client.dart' as socket_io;
 
 class WebSocketService {
-  IO.Socket? _socket;
+  socket_io.Socket? _socket;
   final String _wsUrl = const String.fromEnvironment('WS_URL', defaultValue: 'http://10.0.2.2:3003');
 
   void connect({
@@ -10,8 +11,8 @@ class WebSocketService {
   }) {
     if (_socket != null && _socket!.connected) return;
 
-    print("[WS] Connecting to $_wsUrl...");
-    _socket = IO.io(_wsUrl, IO.OptionBuilder()
+    debugPrint("[WS] Connecting to $_wsUrl...");
+    _socket = socket_io.io(_wsUrl, socket_io.OptionBuilder()
         .setTransports(['websocket', 'polling'])
         .setPath('/socket.io/')
         .enableReconnection()
@@ -19,11 +20,11 @@ class WebSocketService {
         .build());
 
     _socket!.onConnect((_) {
-      print("[WS] Connected to Socket server!");
+      debugPrint("[WS] Connected to Socket server!");
     });
 
     _socket!.on('booking:partner-assigned', (data) {
-      print("[WS] Partner Assigned event received: $data");
+      debugPrint("[WS] Partner Assigned event received: $data");
       final String bId = data['bookingId'] ?? '';
       final String pId = data['partnerId'] ?? '';
       final String pName = data['partnerName'] ?? '';
@@ -31,18 +32,18 @@ class WebSocketService {
     });
 
     _socket!.onAny((event, data) {
-      print("[WS] Event received: $event -> $data");
+      debugPrint("[WS] Event received: $event -> $data");
       if (data is Map<String, dynamic>) {
         onNotifyClient(event, data);
       }
     });
 
-    _socket!.onDisconnect((_) => print("[WS] Disconnected from server"));
+    _socket!.onDisconnect((_) => debugPrint("[WS] Disconnected from server"));
   }
 
   void subscribeToBooking(String bookingId) {
     if (_socket == null || !_socket!.connected) return;
-    print("[WS] Subscribing to booking room: $bookingId");
+    debugPrint("[WS] Subscribing to booking room: $bookingId");
     _socket!.emit('client:subscribe', {'bookingId': bookingId});
   }
 

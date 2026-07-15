@@ -26,9 +26,8 @@ class _BookingFlowScreenState extends ConsumerState<BookingFlowScreen> {
 
   // Brand DNA
   String _brandLogoName = '';
-  String _brandColorHex = '#00BFFF';
   String _brandFont = 'Inter';
-  
+
   // Date/Time
   DateTime? _selectedDate;
   String _selectedTimeSlot = '10:00 AM';
@@ -65,7 +64,9 @@ class _BookingFlowScreenState extends ConsumerState<BookingFlowScreen> {
 
   void _nextStep() {
     if (_currentStep == 0) {
-      if (_nameController.text.isEmpty || _emailController.text.isEmpty || _phoneController.text.isEmpty) {
+      if (_nameController.text.isEmpty ||
+          _emailController.text.isEmpty ||
+          _phoneController.text.isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Please fill out all contact details.')),
         );
@@ -75,13 +76,17 @@ class _BookingFlowScreenState extends ConsumerState<BookingFlowScreen> {
     if (_currentStep == 1) {
       if (!_bookRightNow && _selectedDate == null) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Please choose a date or select "Book Right Now".')),
+          const SnackBar(
+            content: Text('Please choose a date or select "Book Right Now".'),
+          ),
         );
         return;
       }
       if (_locationController.text.isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Please enter a location coordinates/address.')),
+          const SnackBar(
+            content: Text('Please enter a location coordinates/address.'),
+          ),
         );
         return;
       }
@@ -107,6 +112,11 @@ class _BookingFlowScreenState extends ConsumerState<BookingFlowScreen> {
         : DateFormat('yyyy-MM-dd').format(_selectedDate!);
     final slotStr = _bookRightNow ? 'RIGHT_NOW' : _selectedTimeSlot;
 
+    String notes = _notesController.text;
+    if (_selectedPackageId == 'pkg-professional') {
+      notes += '\nBrand Logo: $_brandLogoName | Font: $_brandFont';
+    }
+
     final api = ApiService();
     final booking = await api.createBooking(
       userId: user.id,
@@ -114,15 +124,16 @@ class _BookingFlowScreenState extends ConsumerState<BookingFlowScreen> {
       bookingDate: bookingDateStr,
       timeSlot: slotStr,
       location: _locationController.text,
-      notes: _notesController.text,
+      notes: notes,
     );
 
     setState(() => _isSubmitting = false);
     if (booking != null && mounted) {
       // Reload bookings and route back
       final updatedBookings = await api.fetchClientBookings(user.id);
+      if (!mounted) return;
       ref.read(bookingsListProvider.notifier).state = updatedBookings;
-      
+
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('🎉 Session Booked Successfully!'),
@@ -145,14 +156,19 @@ class _BookingFlowScreenState extends ConsumerState<BookingFlowScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(stepsTitle[_currentStep], style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16)),
+        title: Text(
+          stepsTitle[_currentStep],
+          style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16),
+        ),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: _prevStep,
         ),
       ),
       body: _isSubmitting
-          ? const Center(child: CircularProgressIndicator(color: OrbitTheme.clientCyan))
+          ? const Center(
+              child: CircularProgressIndicator(color: OrbitTheme.clientCyan),
+            )
           : SingleChildScrollView(
               padding: const EdgeInsets.all(20),
               child: Column(
@@ -167,7 +183,9 @@ class _BookingFlowScreenState extends ConsumerState<BookingFlowScreen> {
                           height: 4,
                           margin: const EdgeInsets.symmetric(horizontal: 4),
                           decoration: BoxDecoration(
-                            color: isActive ? OrbitTheme.clientCyan : OrbitTheme.border,
+                            color: isActive
+                                ? OrbitTheme.clientCyan
+                                : OrbitTheme.border,
                             borderRadius: BorderRadius.circular(2),
                           ),
                         ),
@@ -190,11 +208,19 @@ class _BookingFlowScreenState extends ConsumerState<BookingFlowScreen> {
                         OutlinedButton(
                           style: OutlinedButton.styleFrom(
                             side: const BorderSide(color: OrbitTheme.border),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 24,
+                              vertical: 16,
+                            ),
                           ),
                           onPressed: _prevStep,
-                          child: const Text('Back', style: TextStyle(color: Colors.white)),
+                          child: const Text(
+                            'Back',
+                            style: TextStyle(color: Colors.white),
+                          ),
                         )
                       else
                         const SizedBox(),
@@ -208,18 +234,34 @@ class _BookingFlowScreenState extends ConsumerState<BookingFlowScreen> {
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.transparent,
                             shadowColor: Colors.transparent,
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                            padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 16),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 28,
+                              vertical: 16,
+                            ),
                           ),
-                          onPressed: _currentStep == 2 ? _submitBooking : _nextStep,
+                          onPressed: _currentStep == 2
+                              ? _submitBooking
+                              : _nextStep,
                           child: Row(
                             children: [
                               Text(
-                                _currentStep == 2 ? 'Complete Payment' : 'Next Step',
-                                style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
+                                _currentStep == 2
+                                    ? 'Complete Payment'
+                                    : 'Next Step',
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                ),
                               ),
                               const SizedBox(width: 8),
-                              const Icon(Icons.arrow_forward, size: 16, color: Colors.white),
+                              const Icon(
+                                Icons.arrow_forward,
+                                size: 16,
+                                color: Colors.white,
+                              ),
                             ],
                           ),
                         ),
@@ -236,24 +278,39 @@ class _BookingFlowScreenState extends ConsumerState<BookingFlowScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text('Contact Information', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+        const Text(
+          'Contact Information',
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+        ),
         const SizedBox(height: 16),
         TextField(
           controller: _nameController,
-          decoration: const InputDecoration(labelText: 'Full Name *', prefixIcon: Icon(Icons.person)),
+          decoration: const InputDecoration(
+            labelText: 'Full Name *',
+            prefixIcon: Icon(Icons.person),
+          ),
         ),
         const SizedBox(height: 16),
         TextField(
           controller: _emailController,
-          decoration: const InputDecoration(labelText: 'Email *', prefixIcon: Icon(Icons.email)),
+          decoration: const InputDecoration(
+            labelText: 'Email *',
+            prefixIcon: Icon(Icons.email),
+          ),
         ),
         const SizedBox(height: 16),
         TextField(
           controller: _phoneController,
-          decoration: const InputDecoration(labelText: 'Phone *', prefixIcon: Icon(Icons.phone)),
+          decoration: const InputDecoration(
+            labelText: 'Phone *',
+            prefixIcon: Icon(Icons.phone),
+          ),
         ),
         const SizedBox(height: 32),
-        const Text('Select Tier Package', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+        const Text(
+          'Select Tier Package',
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+        ),
         const SizedBox(height: 12),
 
         // Package Selector cards
@@ -273,20 +330,32 @@ class _BookingFlowScreenState extends ConsumerState<BookingFlowScreen> {
 
         if (_selectedPackageId == 'pkg-professional') ...[
           const SizedBox(height: 32),
-          const Text('Brand DNA assets', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+          const Text(
+            'Brand DNA assets',
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+          ),
           const SizedBox(height: 16),
           TextField(
-            decoration: const InputDecoration(labelText: 'Brand Logo Title', helperText: 'Shown at start of Reels'),
+            decoration: const InputDecoration(
+              labelText: 'Brand Logo Title',
+              helperText: 'Shown at start of Reels',
+            ),
             onChanged: (val) => _brandLogoName = val,
           ),
           const SizedBox(height: 16),
           DropdownButtonFormField<String>(
-            value: _brandFont,
+            initialValue: _brandFont,
             decoration: const InputDecoration(labelText: 'Preferred Typeface'),
             items: const [
               DropdownMenuItem(value: 'Inter', child: Text('Inter Sans')),
-              DropdownMenuItem(value: 'SpaceGrotesk', child: Text('Space Grotesk')),
-              DropdownMenuItem(value: 'CinematicSerif', child: Text('Playfair Serif')),
+              DropdownMenuItem(
+                value: 'SpaceGrotesk',
+                child: Text('Space Grotesk'),
+              ),
+              DropdownMenuItem(
+                value: 'CinematicSerif',
+                child: Text('Playfair Serif'),
+              ),
             ],
             onChanged: (val) => setState(() => _brandFont = val ?? 'Inter'),
           ),
@@ -295,7 +364,12 @@ class _BookingFlowScreenState extends ConsumerState<BookingFlowScreen> {
     );
   }
 
-  Widget _buildPackageCard({required String id, required String name, required int price, required String desc}) {
+  Widget _buildPackageCard({
+    required String id,
+    required String name,
+    required int price,
+    required String desc,
+  }) {
     final isSelected = _selectedPackageId == id;
     return GestureDetector(
       onTap: () {
@@ -308,7 +382,9 @@ class _BookingFlowScreenState extends ConsumerState<BookingFlowScreen> {
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: isSelected ? OrbitTheme.clientCyan.withOpacity(0.06) : OrbitTheme.cardBackground,
+          color: isSelected
+              ? OrbitTheme.clientCyan.withValues(alpha: 0.06)
+              : OrbitTheme.cardBackground,
           border: Border.all(
             color: isSelected ? OrbitTheme.clientCyan : OrbitTheme.border,
             width: isSelected ? 2 : 1,
@@ -319,22 +395,39 @@ class _BookingFlowScreenState extends ConsumerState<BookingFlowScreen> {
           children: [
             Icon(
               isSelected ? Icons.radio_button_checked : Icons.radio_button_off,
-              color: isSelected ? OrbitTheme.clientCyan : OrbitTheme.textSecondary,
+              color: isSelected
+                  ? OrbitTheme.clientCyan
+                  : OrbitTheme.textSecondary,
             ),
             const SizedBox(width: 16),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                  Text(
+                    name,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                    ),
+                  ),
                   const SizedBox(height: 4),
-                  Text(desc, style: const TextStyle(fontSize: 11, color: OrbitTheme.textSecondary)),
+                  Text(
+                    desc,
+                    style: const TextStyle(
+                      fontSize: 11,
+                      color: OrbitTheme.textSecondary,
+                    ),
+                  ),
                 ],
               ),
             ),
             Text(
               '₹$price',
-              style: const TextStyle(fontWeight: FontWeight.w900, color: OrbitTheme.clientCyan),
+              style: const TextStyle(
+                fontWeight: FontWeight.w900,
+                color: OrbitTheme.clientCyan,
+              ),
             ),
           ],
         ),
@@ -353,11 +446,15 @@ class _BookingFlowScreenState extends ConsumerState<BookingFlowScreen> {
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
               gradient: _bookRightNow
-                  ? const LinearGradient(colors: [Color(0xFFFFB300), Color(0xFFFF6D00)])
+                  ? const LinearGradient(
+                      colors: [Color(0xFFFFB300), Color(0xFFFF6D00)],
+                    )
                   : null,
               color: _bookRightNow ? null : OrbitTheme.cardBackground,
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: _bookRightNow ? Colors.amberAccent : OrbitTheme.border),
+              border: Border.all(
+                color: _bookRightNow ? Colors.amberAccent : OrbitTheme.border,
+              ),
             ),
             child: Row(
               children: [
@@ -369,12 +466,21 @@ class _BookingFlowScreenState extends ConsumerState<BookingFlowScreen> {
                     children: [
                       const Text(
                         'Book Right Now!',
-                        style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16, color: Colors.white),
+                        style: TextStyle(
+                          fontWeight: FontWeight.w900,
+                          fontSize: 16,
+                          color: Colors.white,
+                        ),
                       ),
                       const SizedBox(height: 2),
                       Text(
                         'Partner accepts and dispatches immediately.',
-                        style: TextStyle(fontSize: 11, color: _bookRightNow ? Colors.white70 : OrbitTheme.textSecondary),
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: _bookRightNow
+                              ? Colors.white70
+                              : OrbitTheme.textSecondary,
+                        ),
                       ),
                     ],
                   ),
@@ -383,7 +489,8 @@ class _BookingFlowScreenState extends ConsumerState<BookingFlowScreen> {
                   value: _bookRightNow,
                   activeColor: Colors.white,
                   checkColor: Colors.amber,
-                  onChanged: (val) => setState(() => _bookRightNow = val ?? false),
+                  onChanged: (val) =>
+                      setState(() => _bookRightNow = val ?? false),
                 ),
               ],
             ),
@@ -392,10 +499,17 @@ class _BookingFlowScreenState extends ConsumerState<BookingFlowScreen> {
 
         if (!_bookRightNow) ...[
           const SizedBox(height: 28),
-          const Text('Choose Date & Time Slot', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+          const Text(
+            'Choose Date & Time Slot',
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+          ),
           const SizedBox(height: 16),
           ListTile(
-            title: Text(_selectedDate == null ? 'Select Booking Date' : DateFormat('EEE, dd MMMM yyyy').format(_selectedDate!)),
+            title: Text(
+              _selectedDate == null
+                  ? 'Select Booking Date'
+                  : DateFormat('EEE, dd MMMM yyyy').format(_selectedDate!),
+            ),
             trailing: const Icon(Icons.calendar_month),
             shape: RoundedRectangleBorder(
               side: const BorderSide(color: OrbitTheme.border),
@@ -415,19 +529,34 @@ class _BookingFlowScreenState extends ConsumerState<BookingFlowScreen> {
           ),
           const SizedBox(height: 16),
           DropdownButtonFormField<String>(
-            value: _selectedTimeSlot,
-            decoration: const InputDecoration(labelText: 'Time Slot hour/minute'),
+            initialValue: _selectedTimeSlot,
+            decoration: const InputDecoration(
+              labelText: 'Time Slot hour/minute',
+            ),
             items: const [
-              DropdownMenuItem(value: '10:00 AM', child: Text('10:00 AM - 11:30 AM')),
-              DropdownMenuItem(value: '12:00 PM', child: Text('12:00 PM - 01:30 PM')),
-              DropdownMenuItem(value: '03:00 PM', child: Text('03:00 PM - 04:30 PM')),
+              DropdownMenuItem(
+                value: '10:00 AM',
+                child: Text('10:00 AM - 11:30 AM'),
+              ),
+              DropdownMenuItem(
+                value: '12:00 PM',
+                child: Text('12:00 PM - 01:30 PM'),
+              ),
+              DropdownMenuItem(
+                value: '03:00 PM',
+                child: Text('03:00 PM - 04:30 PM'),
+              ),
             ],
-            onChanged: (val) => setState(() => _selectedTimeSlot = val ?? '10:00 AM'),
+            onChanged: (val) =>
+                setState(() => _selectedTimeSlot = val ?? '10:00 AM'),
           ),
         ],
 
         const SizedBox(height: 32),
-        const Text('Shoot Location', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+        const Text(
+          'Shoot Location',
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+        ),
         const SizedBox(height: 16),
         TextField(
           controller: _locationController,
@@ -438,7 +567,14 @@ class _BookingFlowScreenState extends ConsumerState<BookingFlowScreen> {
               onPressed: () {
                 _locationController.text = 'Orbit Studio @ Noida Sector 62';
               },
-              child: const Text('LOCATE ME', style: TextStyle(color: OrbitTheme.clientCyan, fontSize: 10, fontWeight: FontWeight.bold)),
+              child: const Text(
+                'LOCATE ME',
+                style: TextStyle(
+                  color: OrbitTheme.clientCyan,
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
             ),
           ),
         ),
@@ -459,7 +595,10 @@ class _BookingFlowScreenState extends ConsumerState<BookingFlowScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text('Confirm & Pay', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+        const Text(
+          'Confirm & Pay',
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+        ),
         const SizedBox(height: 16),
         Container(
           padding: const EdgeInsets.all(20),
@@ -472,29 +611,52 @@ class _BookingFlowScreenState extends ConsumerState<BookingFlowScreen> {
             children: [
               _buildReviewRow('Selected Package', _selectedPackageName),
               const Divider(color: OrbitTheme.border, height: 24),
-              _buildReviewRow('Scheduled Slot', _bookRightNow ? 'Instant Dispatch' : DateFormat('yyyy-MM-dd').format(_selectedDate ?? DateTime.now())),
+              _buildReviewRow(
+                'Scheduled Slot',
+                _bookRightNow
+                    ? 'Instant Dispatch'
+                    : DateFormat(
+                        'yyyy-MM-dd',
+                      ).format(_selectedDate ?? DateTime.now()),
+              ),
               const Divider(color: OrbitTheme.border, height: 24),
               _buildReviewRow('Location', _locationController.text),
               const Divider(color: OrbitTheme.border, height: 24),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text('Total Amount', style: TextStyle(fontWeight: FontWeight.bold)),
-                  Text('₹$_selectedPackagePrice', style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 18, color: OrbitTheme.clientCyan)),
+                  const Text(
+                    'Total Amount',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  Text(
+                    '₹$_selectedPackagePrice',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w900,
+                      fontSize: 18,
+                      color: OrbitTheme.clientCyan,
+                    ),
+                  ),
                 ],
               ),
             ],
           ),
         ),
         const SizedBox(height: 32),
-        const Text('UPI ID / Mock Payment Method', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+        const Text(
+          'UPI ID / Mock Payment Method',
+          style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+        ),
         const SizedBox(height: 12),
         TextField(
           decoration: InputDecoration(
             hintText: 'Enter UPI ID (e.g. user@paytm)',
             filled: true,
             fillColor: OrbitTheme.cardBackground,
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide.none,
+            ),
           ),
         ),
       ],
@@ -506,7 +668,10 @@ class _BookingFlowScreenState extends ConsumerState<BookingFlowScreen> {
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: const TextStyle(color: OrbitTheme.textSecondary, fontSize: 12)),
+        Text(
+          label,
+          style: const TextStyle(color: OrbitTheme.textSecondary, fontSize: 12),
+        ),
         const SizedBox(width: 16),
         Expanded(
           child: Text(

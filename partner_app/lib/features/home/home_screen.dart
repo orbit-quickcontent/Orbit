@@ -178,7 +178,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   // Online offline toggle
                   Switch(
                     value: _isOnline,
-                    activeColor: Colors.greenAccent,
+                    activeThumbColor: Colors.greenAccent,
                     onChanged: _toggleOnline,
                   ),
                 ],
@@ -198,7 +198,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           decoration: BoxDecoration(
             color: const Color(0xCC050505),
             borderRadius: BorderRadius.circular(28),
-            border: Border.all(color: OrbitTheme.partnerPurple.withOpacity(0.12)),
+            border: Border.all(color: OrbitTheme.partnerPurple.withValues(alpha: 0.12)),
           ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
@@ -264,7 +264,7 @@ class _BottomNavItem extends StatelessWidget {
         children: [
           Icon(
             isActive ? activeIcon : icon,
-            color: isActive ? OrbitTheme.partnerPurple : OrbitTheme.textSecondary.withOpacity(0.5),
+            color: isActive ? OrbitTheme.partnerPurple : OrbitTheme.textSecondary.withValues(alpha: 0.5),
             size: 22,
           ),
           const SizedBox(height: 3),
@@ -272,7 +272,7 @@ class _BottomNavItem extends StatelessWidget {
             label,
             style: TextStyle(
               fontSize: 9,
-              color: isActive ? OrbitTheme.partnerPurple : OrbitTheme.textSecondary.withOpacity(0.5),
+              color: isActive ? OrbitTheme.partnerPurple : OrbitTheme.textSecondary.withValues(alpha: 0.5),
               fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
             ),
           ),
@@ -291,6 +291,7 @@ class _AvailableWorkFeed extends ConsumerWidget {
   void _acceptJob(BuildContext context, WidgetRef ref, BookingInfo booking) async {
     final api = ApiService();
     final updatedBooking = await api.acceptBooking(booking.id, partnerId);
+    if (!context.mounted) return;
     if (updatedBooking != null) {
       ref.read(activeWorkBookingProvider.notifier).state = updatedBooking;
       ref.read(availableDispatchesProvider.notifier).update((state) => state.where((b) => b.id != booking.id).toList());

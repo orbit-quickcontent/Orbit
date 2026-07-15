@@ -1,8 +1,9 @@
-import 'package:socket_io_client/socket_io_client.dart' as IO;
+import 'package:flutter/foundation.dart';
+import 'package:socket_io_client/socket_io_client.dart' as socket_io;
 import '../models/booking.dart';
 
 class WebSocketService {
-  IO.Socket? _socket;
+  socket_io.Socket? _socket;
   final String _wsUrl = const String.fromEnvironment('WS_URL', defaultValue: 'http://10.0.2.2:3003');
 
   void connect({
@@ -13,8 +14,8 @@ class WebSocketService {
   }) {
     if (_socket != null && _socket!.connected) return;
 
-    print("[WS] Partner connecting to $_wsUrl...");
-    _socket = IO.io(_wsUrl, IO.OptionBuilder()
+    debugPrint("[WS] Partner connecting to $_wsUrl...");
+    _socket = socket_io.io(_wsUrl, socket_io.OptionBuilder()
         .setTransports(['websocket', 'polling'])
         .setPath('/socket.io/')
         .enableReconnection()
@@ -22,36 +23,36 @@ class WebSocketService {
         .build());
 
     _socket!.onConnect((_) {
-      print("[WS] Partner connected! ID: $partnerId");
+      debugPrint("[WS] Partner connected! ID: $partnerId");
       if (isOnline) {
         _socket!.emit('partner:online', {'partnerId': partnerId});
       }
     });
 
     _socket!.on('booking:dispatched', (data) {
-      print("[WS] New dispatch offer: $data");
+      debugPrint("[WS] New dispatch offer: $data");
       final Map<String, dynamic> bookingJson = data['booking'] ?? {};
       onBookingDispatched(BookingInfo.fromJson(bookingJson));
     });
 
     _socket!.on('booking:accepted-by-other', (data) {
-      print("[WS] Booking accepted by other: $data");
+      debugPrint("[WS] Booking accepted by other: $data");
       final String bId = data['bookingId'] ?? '';
       onBookingAcceptedByOther(bId);
     });
 
-    _socket!.onDisconnect((_) => print("[WS] Partner disconnected"));
+    _socket!.onDisconnect((_) => debugPrint("[WS] Partner disconnected"));
   }
 
   void goOnline(String partnerId) {
     if (_socket == null || !_socket!.connected) return;
-    print("[WS] Partner online signal: $partnerId");
+    debugPrint("[WS] Partner online signal: $partnerId");
     _socket!.emit('partner:online', {'partnerId': partnerId});
   }
 
   void goOffline(String partnerId) {
     if (_socket == null || !_socket!.connected) return;
-    print("[WS] Partner offline signal: $partnerId");
+    debugPrint("[WS] Partner offline signal: $partnerId");
     _socket!.emit('partner:offline', {'partnerId': partnerId});
   }
 

@@ -66,7 +66,7 @@ class _EarningsScreenState extends ConsumerState<EarningsScreen> {
         Container(
           padding: const EdgeInsets.all(24),
           decoration: BoxDecoration(
-            gradient: LinearGradient(colors: [OrbitTheme.partnerPurple.withOpacity(0.15), Colors.black]),
+            gradient: LinearGradient(colors: [OrbitTheme.partnerPurple.withValues(alpha: 0.15), Colors.black]),
             borderRadius: BorderRadius.circular(20),
             border: Border.all(color: OrbitTheme.border),
           ),

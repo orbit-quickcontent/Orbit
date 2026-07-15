@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 import 'package:geolocator/geolocator.dart';
@@ -10,7 +11,7 @@ void main() async {
   try {
     await Firebase.initializeApp();
   } catch (e) {
-    print("[Firebase] Initialization skipped or already set: $e");
+    debugPrint("[Firebase] Initialization skipped or already set: $e");
   }
   runApp(const OrbitPartnerApp());
 }
@@ -55,7 +56,7 @@ class _OrbitWebViewScreenState extends State<OrbitWebViewScreen> {
         await Geolocator.requestPermission();
       }
     } catch (e) {
-      print("[Geolocator] Permission check error: $e");
+      debugPrint("[Geolocator] Permission check error: $e");
     }
 
     // Request notification permissions
@@ -72,11 +73,11 @@ class _OrbitWebViewScreenState extends State<OrbitWebViewScreen> {
       );
       if (settings.authorizationStatus == AuthorizationStatus.authorized) {
         _pushToken = await messaging.getToken();
-        print("[Push] Token generated: $_pushToken");
+        debugPrint("[Push] Token generated: $_pushToken");
         _injectPushToken();
       }
     } catch (e) {
-      print("[Push] Permission or token error: $e");
+      debugPrint("[Push] Permission or token error: $e");
     }
   }
 
@@ -117,7 +118,7 @@ class _OrbitWebViewScreenState extends State<OrbitWebViewScreen> {
       try {
         await _controller.runJavaScript(js);
       } catch (e) {
-        print("[JS-Inject-Err] Failed to inject token: $e");
+        debugPrint("[JS-Inject-Err] Failed to inject token: $e");
       }
     }
   }
@@ -125,7 +126,9 @@ class _OrbitWebViewScreenState extends State<OrbitWebViewScreen> {
   Future<void> _handleGetLocation(String? callbackId) async {
     try {
       final pos = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high,
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.high,
+        ),
       );
       final result = {
         'success': true,
@@ -151,7 +154,7 @@ class _OrbitWebViewScreenState extends State<OrbitWebViewScreen> {
     final jsonStr = jsonEncode(data);
     final js = "if (window.onOrbitNativeCallback) { window.onOrbitNativeCallback('$callbackId', $jsonStr); }";
     _controller.runJavaScript(js).catchError((e) {
-      print("[JS-Callback-Err] Failed callback: $e");
+      debugPrint("[JS-Callback-Err] Failed callback: $e");
     });
   }
 

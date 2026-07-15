@@ -92,7 +92,7 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
               width: 72,
               height: 72,
               decoration: BoxDecoration(
-                color: OrbitTheme.clientCyan.withOpacity(0.1),
+                color: OrbitTheme.clientCyan.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(20),
               ),
               child: const Center(

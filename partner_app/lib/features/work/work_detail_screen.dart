@@ -317,7 +317,7 @@ class _WorkDetailScreenState extends ConsumerState<WorkDetailScreen> {
               onTap: () => _toggleClip(clip),
             ),
           );
-        }).toList(),
+        }),
 
         const SizedBox(height: 24),
         SizedBox(
@@ -345,7 +345,7 @@ class _WorkDetailScreenState extends ConsumerState<WorkDetailScreen> {
       decoration: BoxDecoration(
         color: OrbitTheme.cardBackground,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: OrbitTheme.partnerPurple.withOpacity(0.2)),
+        border: Border.all(color: OrbitTheme.partnerPurple.withValues(alpha: 0.2)),
       ),
       child: Column(
         children: [
