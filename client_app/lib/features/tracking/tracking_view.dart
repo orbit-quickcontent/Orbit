@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:intl/intl.dart';
+import 'package:go_router/go_router.dart';
 import '../../core/theme.dart';
 import '../../core/api_service.dart';
 import '../../core/websocket_service.dart';
@@ -109,20 +110,70 @@ class _TrackingViewState extends ConsumerState<TrackingView> {
   Widget build(BuildContext context) {
     final bookings = ref.watch(bookingsListProvider);
     if (bookings.isEmpty) {
-      return const Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.radar, size: 48, color: OrbitTheme.textMuted),
-            SizedBox(height: 16),
-            Text(
-              'No bookings found',
-              style: TextStyle(
-                color: OrbitTheme.textSecondary,
-                fontWeight: FontWeight.bold,
-              ),
+      return Center(
+        child: Container(
+          margin: const EdgeInsets.all(16),
+          padding: const EdgeInsets.fromLTRB(24, 28, 24, 24),
+          decoration: BoxDecoration(
+            color: OrbitTheme.cardBackground,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: OrbitTheme.clientCyan.withValues(alpha: 0.20),
             ),
-          ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 58,
+                height: 58,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: LinearGradient(
+                    colors: [
+                      OrbitTheme.clientCyan.withValues(alpha: 0.18),
+                      OrbitTheme.clientPurple.withValues(alpha: 0.16),
+                    ],
+                  ),
+                ),
+                child: const Icon(
+                  Icons.cloud_outlined,
+                  color: OrbitTheme.clientCyan,
+                  size: 30,
+                ),
+              ),
+              const SizedBox(height: 20),
+              const Text(
+                'No Active Booking',
+                style: TextStyle(fontSize: 19, fontWeight: FontWeight.w900),
+              ),
+              const SizedBox(height: 10),
+              const Text(
+                'Book a session to start tracking your edit in real-time.',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: OrbitTheme.textSecondary, height: 1.45),
+              ),
+              const SizedBox(height: 20),
+              DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: OrbitTheme.clientGradient,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: TextButton.icon(
+                  onPressed: () => context.go('/'),
+                  icon: const Text(
+                    'Browse Packages',
+                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900),
+                  ),
+                  label: const Icon(
+                    Icons.arrow_forward,
+                    color: Colors.white,
+                    size: 18,
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       );
     }

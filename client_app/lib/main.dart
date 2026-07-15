@@ -7,6 +7,7 @@ import 'features/auth/otp_screen.dart';
 import 'features/booking/booking_flow_screen.dart';
 import 'features/home/home_screen.dart';
 import 'core/storage_service.dart';
+import 'core/theme.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -62,7 +63,7 @@ class OrbitClientApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp.router(
       title: 'Orbit Client',
-      theme: ThemeData.dark(),
+      theme: OrbitTheme.darkTheme,
       debugShowCheckedModeBanner: false,
       routerConfig: _router,
     );

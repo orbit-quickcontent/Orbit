@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import '../../core/theme.dart';
 import '../../core/api_service.dart';
 import '../home/home_screen.dart';
+import 'widgets/booking_ui.dart';
 
 class BookingFlowScreen extends ConsumerStatefulWidget {
   const BookingFlowScreen({super.key});
@@ -156,9 +157,19 @@ class _BookingFlowScreenState extends ConsumerState<BookingFlowScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(
-          stepsTitle[_currentStep],
-          style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16),
+        toolbarHeight: 86,
+        title: Column(
+          children: [
+            const Text(
+              'Book Your Session',
+              style: TextStyle(fontWeight: FontWeight.w900, fontSize: 21),
+            ),
+            const SizedBox(height: 3),
+            Text(
+              '${_currentStep + 1} of 3 · ${stepsTitle[_currentStep]}',
+              style: const TextStyle(color: OrbitTheme.textSecondary, fontSize: 12),
+            ),
+          ],
         ),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
@@ -174,25 +185,13 @@ class _BookingFlowScreenState extends ConsumerState<BookingFlowScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Progress indicator steps
-                  Row(
-                    children: List.generate(3, (index) {
-                      final isActive = index <= _currentStep;
-                      return Expanded(
-                        child: Container(
-                          height: 4,
-                          margin: const EdgeInsets.symmetric(horizontal: 4),
-                          decoration: BoxDecoration(
-                            color: isActive
-                                ? OrbitTheme.clientCyan
-                                : OrbitTheme.border,
-                            borderRadius: BorderRadius.circular(2),
-                          ),
-                        ),
-                      );
-                    }),
+                  const BookingHeader(
+                    title: 'Book your shoot',
+                    subtitle: 'A cinematic session, built around your brief.',
                   ),
-                  const SizedBox(height: 32),
+                  const SizedBox(height: 28),
+                  ProgressStepper(currentStep: _currentStep),
+                  const SizedBox(height: 30),
 
                   if (_currentStep == 0) _buildStepDetails(),
                   if (_currentStep == 1) _buildStepSchedule(),
