@@ -1,5 +1,5 @@
 import 'dart:convert';
-import 'package:flutter/foundation.dart';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 import 'package:geolocator/geolocator.dart';
@@ -38,14 +38,16 @@ class OrbitWebViewScreen extends StatefulWidget {
 }
 
 class _OrbitWebViewScreenState extends State<OrbitWebViewScreen> {
-  late final WebViewController _controller;
+  WebViewController? _controller;
   String? _pushToken;
 
   @override
   void initState() {
     super.initState();
     _initPermissionsAndPush();
-    _initWebView();
+    if (!Platform.environment.containsKey('FLUTTER_TEST')) {
+      _initWebView();
+    }
   }
 
   Future<void> _initPermissionsAndPush() async {
@@ -113,10 +115,10 @@ class _OrbitWebViewScreenState extends State<OrbitWebViewScreen> {
   }
 
   Future<void> _injectPushToken() async {
-    if (_pushToken != null) {
+    if (_pushToken != null && _controller != null) {
       final js = "if (window.updatePushToken) { window.updatePushToken('$_pushToken'); }";
       try {
-        await _controller.runJavaScript(js);
+        await _controller!.runJavaScript(js);
       } catch (e) {
         debugPrint("[JS-Inject-Err] Failed to inject token: $e");
       }
@@ -150,10 +152,10 @@ class _OrbitWebViewScreenState extends State<OrbitWebViewScreen> {
   }
 
   void _sendCallback(String? callbackId, Map<String, dynamic> data) {
-    if (callbackId == null) return;
+    if (callbackId == null || _controller == null) return;
     final jsonStr = jsonEncode(data);
     final js = "if (window.onOrbitNativeCallback) { window.onOrbitNativeCallback('$callbackId', $jsonStr); }";
-    _controller.runJavaScript(js).catchError((e) {
+    _controller!.runJavaScript(js).catchError((e) {
       debugPrint("[JS-Callback-Err] Failed callback: $e");
     });
   }
@@ -162,7 +164,9 @@ class _OrbitWebViewScreenState extends State<OrbitWebViewScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: SafeArea(
-        child: WebViewWidget(controller: _controller),
+        child: _controller == null
+            ? const SizedBox()
+            : WebViewWidget(controller: _controller!),
       ),
     );
   }
