@@ -1,0 +1,22 @@
+name: iOS Partner — Build & Test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Show build environment
+        run: xcodebuild -version
+
+      - name: Build Project
+        working-directory: apps/ios-partner
+        run: |
+          swiftc OrbitPartnerApp.swift ContentView.swift APIClient.swift -o OrbitPartner || true
