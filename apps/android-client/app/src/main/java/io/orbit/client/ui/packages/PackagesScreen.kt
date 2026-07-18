@@ -125,7 +125,7 @@ fun PackageCard(
                         modifier = Modifier.size(16.dp)
                     )
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text(text = feature, style = MaterialTheme.typography.bodyMedium, color = OnSurface)
+                    Text(text = feature, style = MaterialTheme.typography.bodyMedium, color = Color.White)
                 }
             }
 

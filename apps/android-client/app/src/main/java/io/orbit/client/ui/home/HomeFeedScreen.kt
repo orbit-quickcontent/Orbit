@@ -155,7 +155,7 @@ fun HomeFeedScreen(
 
             LazyRow(
                 horizontalArrangement = Arrangement.spacedBy(16.dp),
-                contentPadding = PaddingValues(trailing = 16.dp)
+                contentPadding = PaddingValues(end = 16.dp)
             ) {
                 items(uiState.packages) { pkg ->
                     HorizontalPackageItem(pkg = pkg, onClick = onNavigateToBooking)

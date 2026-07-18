@@ -2,7 +2,6 @@ package io.orbit.client.data.repository
 
 import io.orbit.client.data.remote.OrbitApiService
 import io.orbit.client.data.remote.dto.CreateBookingRequest
-import io.orbit.client.data.remote.dto.toDomain
 import io.orbit.client.domain.model.Booking
 import io.orbit.client.domain.model.BookingStatus
 import io.orbit.client.domain.model.Package
